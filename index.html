@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TripMate - 여행 일정 추천</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>TripMate</h1>
+    <p class="subtitle">여행 조건을 입력하면 취향에 맞는 일정을 추천해 드려요</p>
+  </header>
+
+  <main>
+    <form id="trip-form">
+      <div class="field-group">
+        <label for="start-date">여행 시작일</label>
+        <input type="date" id="start-date" name="startDate" required>
+      </div>
+
+      <div class="field-group">
+        <label for="end-date">여행 종료일</label>
+        <input type="date" id="end-date" name="endDate" required>
+      </div>
+
+      <div class="field-group">
+        <label for="budget">총 예산 (원)</label>
+        <input type="number" id="budget" name="budget" min="0" step="10000" placeholder="예: 300000" required>
+      </div>
+
+      <div class="field-group">
+        <label for="people">인원 수</label>
+        <input type="number" id="people" name="people" min="1" step="1" placeholder="예: 2" required>
+      </div>
+    </form>
+  </main>
+</body>
+</html>
