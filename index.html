@@ -14,22 +14,60 @@
     </header>
 
     <main>
-      <!-- 로그인 화면 자리: 실제 로그인 동작은 6차시(Supabase 연결)에 구현 -->
-      <form class="card" onsubmit="return false;">
+      <form id="login-form" class="card" method="post" novalidate>
         <div class="field-group">
           <label for="email">이메일</label>
-          <input type="email" id="email" name="email" placeholder="example@email.com">
+          <input type="email" id="email" placeholder="example@email.com">
         </div>
         <div class="field-group">
           <label for="password">비밀번호</label>
-          <input type="password" id="password" name="password" placeholder="비밀번호">
+          <input type="password" id="password" placeholder="비밀번호">
         </div>
-        <!-- 임시: 비밀번호가 주소창에 남지 않도록 폼 제출 대신 링크로 이동 -->
-        <a href="condition.html" class="submit-btn">로그인</a>
+        <p class="error-text" id="message" role="alert"></p>
+        <button type="submit" class="submit-btn" id="login-btn">로그인</button>
         <p class="helper-text">아직 계정이 없나요? <a href="signup.html">회원가입</a></p>
-        <p class="helper-text muted">※ 임시: 지금은 로그인 버튼을 누르면 조건 입력 화면으로 바로 이동합니다.</p>
       </form>
     </main>
   </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase.js"></script>
+  <script>
+    const form = document.getElementById('login-form');
+    const message = document.getElementById('message');
+    const button = document.getElementById('login-btn');
+
+    // 안내 문구 표시 (ok=true면 초록색, 아니면 빨간색)
+    function show(text, ok) {
+      message.textContent = text;
+      message.style.color = ok ? 'var(--accent)' : '';
+    }
+
+    // 이미 로그인된 상태(세션이 브라우저에 남아 있음)면 바로 조건 입력으로
+    sb.auth.getSession().then(({ data }) => {
+      if (data.session) location.href = 'condition.html';
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      if (!email || !password) return show('이메일과 비밀번호를 입력해 주세요.');
+
+      button.disabled = true;
+      show('로그인 중...', true);
+
+      const { error } = await sb.auth.signInWithPassword({ email, password });
+
+      button.disabled = false;
+      if (error) {
+        // Supabase 영어 오류 메시지를 자주 나오는 것만 한국어로 바꿔 표시
+        if (error.message.includes('Email not confirmed')) return show('메일 인증이 아직 안 됐어요. 받은 메일의 링크를 먼저 눌러 주세요.');
+        if (error.message.includes('Invalid login credentials')) return show('이메일 또는 비밀번호가 맞지 않아요.');
+        return show('로그인 실패: ' + error.message);
+      }
+      location.href = 'condition.html';
+    });
+  </script>
 </body>
 </html>

@@ -1,6 +1,7 @@
 // 조건 입력 화면 스크립트
 // 입력: 사용자가 폼에 넣은 날짜·예산·인원·출발 위치(departure.js)·이동수단·취향 태그(선택 순서 포함)·템포
-// 출력: 검사를 통과하면 하나의 객체(tripCondition)로 묶어 콘솔에 출력 (4차시 추천 알고리즘의 입력이 됨)
+// 출력: 검사를 통과하면 하나의 객체(condition)로 묶어 Supabase trips 테이블에 저장한 뒤 '내 여행'(record.html)으로 이동
+//       (5차시에는 저장 후 추천 결과 화면 result.html로 이동하도록 바꿀 예정)
 
 // ---------- 0. 날짜 제한 ----------
 // 시작일은 오늘부터, 종료일은 시작일부터 고를 수 있게 min 값을 정함
@@ -161,7 +162,7 @@ function validateCondition(c) {
 
 // ---------- 4. 추천받기 버튼 ----------
 
-function handleSubmit(event) {
+async function handleSubmit(event) {
   event.preventDefault();   // 페이지 새로고침 막기
 
   const condition = collectCondition();
@@ -176,11 +177,46 @@ function handleSubmit(event) {
 
   errorText.textContent = '';
   console.log('입력된 여행 조건:', condition);
-  console.table(condition);
+
+  // DB에 저장 (열 이름은 sql/schema.sql 의 trips 테이블과 같음, user_id는 DB가 자동으로 채움)
+  const button = document.getElementById('submit-btn');
+  button.disabled = true;
+  const { data, error } = await sb.from('trips').insert({
+    start_date: condition.startDate,
+    end_date: condition.endDate,
+    days: condition.days,
+    budget_min: condition.budgetMin,
+    budget_max: condition.budgetMax,
+    people: condition.people,
+    departure_address: condition.departure.address,
+    departure_lat: condition.departure.lat,
+    departure_lng: condition.departure.lng,
+    transport: condition.transport,
+    tags: condition.tags,
+    tempo: condition.tempo
+  }).select().single();
+  button.disabled = false;
+
+  if (error) {
+    errorText.textContent = '저장 실패: ' + error.message;
+    console.error(error);
+    return;
+  }
+  console.log('저장된 여행:', data);
+  location.href = 'record.html?saved=' + data.id;
+}
+
+// 로그인 확인 후 닉네임을 위쪽 메뉴에 표시
+async function showUser() {
+  const user = await requireLogin();
+  if (!user) return;
+  const { data } = await sb.from('users').select('nickname').eq('id', user.id).single();
+  document.getElementById('nav-user').textContent = (data ? data.nickname : user.email) + '님';
 }
 
 // ---------- 5. 시작 ----------
 
+showUser();
 setupDateLimits();
 setupSingleSelect('transport-group');
 setupSingleSelect('tempo-group');

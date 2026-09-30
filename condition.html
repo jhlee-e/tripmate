@@ -10,6 +10,11 @@
 </head>
 <body>
   <div class="page">
+    <nav class="top-nav">
+      <span id="nav-user"></span>
+      <a href="record.html">내 여행</a>
+      <button type="button" class="link-btn" onclick="logout()">로그아웃</button>
+    </nav>
     <header>
       <h1>TripMate</h1>
       <p class="subtitle">여행 조건을 입력하면 취향에 맞는 일정을 추천해 드려요</p>
@@ -84,7 +89,7 @@
         </div>
 
         <p class="error-text" id="error-text" role="alert"></p>
-        <button type="submit" class="submit-btn">추천받기</button>
+        <button type="submit" class="submit-btn" id="submit-btn">추천받기</button>
       </form>
     </main>
   </div>
@@ -92,6 +97,9 @@
   <!-- 지도(Leaflet)와 주소 검색(다음 우편번호 서비스) -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
+  <!-- 로그인·DB (Supabase) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase.js"></script>
   <script src="js/departure.js"></script>
   <script src="js/condition.js"></script>
 </body>
