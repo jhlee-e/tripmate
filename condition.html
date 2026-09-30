@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TripMate - 여행 조건 입력</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="page">
+    <header>
+      <h1>TripMate</h1>
+      <p class="subtitle">여행 조건을 입력하면 취향에 맞는 일정을 추천해 드려요</p>
+    </header>
+
+    <main>
+      <form id="trip-form" class="card trip-form" novalidate>
+        <div class="field-group">
+          <label for="start-date">여행 시작일</label>
+          <input type="date" id="start-date" name="startDate" required>
+        </div>
+
+        <div class="field-group">
+          <label for="end-date">여행 종료일</label>
+          <input type="date" id="end-date" name="endDate" required>
+        </div>
+
+        <div class="field-group">
+          <label for="budget-min">총 예산 (원)</label>
+          <div class="range-inputs">
+            <input type="number" id="budget-min" name="budgetMin" min="0" step="10000" placeholder="최소 예: 200000" required>
+            <span class="range-divider">~</span>
+            <input type="number" id="budget-max" name="budgetMax" min="0" step="10000" placeholder="최대 예: 500000" required>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label for="people">인원 수</label>
+          <input type="number" id="people" name="people" min="1" step="1" placeholder="예: 2" required>
+        </div>
+
+        <div class="field-group">
+          <label for="departure">출발 지역</label>
+          <select id="departure" name="departure" required>
+            <option value="">출발 지역을 선택하세요</option>
+            <option value="서울">서울</option>
+            <option value="인천">인천</option>
+            <option value="대전">대전</option>
+            <option value="세종">세종</option>
+            <option value="대구">대구</option>
+            <option value="부산">부산</option>
+            <option value="광주">광주</option>
+            <option value="울산">울산</option>
+          </select>
+        </div>
+
+        <div class="field-group">
+          <span class="group-label">주 이동 수단</span>
+          <div class="chip-row" id="transport-group" data-mode="single">
+            <button type="button" class="chip" data-value="대중교통">🚌 대중교통</button>
+            <button type="button" class="chip" data-value="자동차">🚗 자동차</button>
+            <button type="button" class="chip" data-value="도보">🚶 도보</button>
+            <button type="button" class="chip" data-value="자전거">🚲 자전거</button>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <span class="group-label">여행 취향 <small>여러 개 선택 가능 · 처음 고른 태그가 가장 크게 반영돼요</small></span>
+          <div class="chip-row" id="tag-group" data-mode="multi">
+            <button type="button" class="chip" data-value="힐링">🌿 힐링·자연</button>
+            <button type="button" class="chip" data-value="역사">🏯 역사·문화</button>
+            <button type="button" class="chip" data-value="액티브">🏄 액티브·체험</button>
+            <button type="button" class="chip" data-value="미식">🍜 미식</button>
+            <button type="button" class="chip" data-value="쇼핑">🛍️ 쇼핑</button>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <span class="group-label">여행 템포</span>
+          <div class="chip-row tempo-row" id="tempo-group" data-mode="single">
+            <button type="button" class="chip" data-value="알차게">알차게<small>많이 둘러보기</small></button>
+            <button type="button" class="chip" data-value="균형있게">균형있게<small>적당히 둘러보기</small></button>
+            <button type="button" class="chip" data-value="여유롭게">여유롭게<small>천천히 깊게 보기</small></button>
+          </div>
+        </div>
+
+        <p class="error-text" id="error-text" role="alert"></p>
+        <button type="submit" class="submit-btn">추천받기</button>
+      </form>
+    </main>
+  </div>
+
+  <script src="js/condition.js"></script>
+</body>
+</html>
