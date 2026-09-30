@@ -168,3 +168,10 @@ insert into public.users (id, nickname)
 select id, coalesce(nullif(raw_user_meta_data->>'nickname', ''), '여행자')
 from auth.users
 on conflict (id) do nothing;
+
+-- 11. 테이블 사용 권한(GRANT) — 로그인한 사용자(authenticated)가 테이블에 접근할 수 있게 허용
+--     (어떤 행을 볼 수 있는지는 위 8번 RLS가 따로 제한함)
+grant usage on schema public to anon, authenticated;
+grant select, insert, update, delete on all tables in schema public to authenticated;
+grant select on all tables in schema public to anon;
+grant usage, select on all sequences in schema public to authenticated;
