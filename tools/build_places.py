@@ -129,15 +129,42 @@ def download_all(key):
     return all_items
 
 
+def to_float(v):
+    """좌표 문자열을 숫자로. 'null'·빈칸처럼 숫자가 아니면 0 (→ 좌표 없음으로 제외)"""
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+# 주소 첫 단어(시·도) 표기가 제각각이라 하나로 맞춤 — 원본에서 실제로 나온 표기들 ('경남', '강원도', '부산시', 오타 등)
+SIDO_ALIAS = {
+    '서울': '서울특별시', '부산': '부산광역시', '부산광역': '부산광역시', '부산시': '부산광역시',
+    '대구': '대구광역시', '인천': '인천광역시', '울산': '울산광역시', '대전': '대전광역시',
+    '광주특별시': '광주광역시', '광주광역사': '광주광역시', '광주': '광주광역시',
+    '경기': '경기도', '강원': '강원특별자치도', '강원도': '강원특별자치도',
+    '충북': '충청북도', '충남': '충청남도', '경북': '경상북도', '경남': '경상남도',
+    '전북': '전북특별자치도', '전라북도': '전북특별자치도', '전북특별자치시': '전북특별자치도',
+    '전라남도': '전남광주통합특별시', '전남': '전남광주통합특별시', '전남광주': '전남광주통합특별시',
+    '전남광주통합특별': '전남광주통합특별시', '전남광주통특별시': '전남광주통합특별시',
+    '제주': '제주특별자치도', '제주특별자치': '제주특별자치도',
+}
+MERGED = '전남광주통합특별시'   # 원본 주소에 나오는 통합 시·도 (옛 광주광역시 구 + 전라남도 시·군)
+
+
 def region_of(addr):
     """주소 첫 두 단어로 지역 이름 결정. 예) '강원특별자치도 강릉시 ...' → ('강원특별자치도', '강릉')"""
     parts = (addr or '').split()
     if not parts:
         return None, None
-    sido = parts[0]
+    sido = SIDO_ALIAS.get(parts[0], parts[0])
     if sido in METRO:
         return sido, METRO[sido]
-    if len(parts) >= 2 and parts[1][-1] in '시군':
+    if len(parts) < 2:
+        return None, None
+    if sido == MERGED and parts[1][-1] == '구':          # 옛 광주광역시의 구 → 광주 한 지역으로
+        return sido, '광주'
+    if parts[1][-1] in '시군':
         return sido, parts[1][:-1] if len(parts[1]) > 2 else parts[1]   # '강릉시'→'강릉', '고성군'→'고성'
     return None, None
 
@@ -153,7 +180,7 @@ def defaults_for(item):
 def to_place(item, region, sido):
     d = defaults_for(item)
     ct = int(item['contenttypeid'])
-    lat, lng = float(item['mapy']), float(item['mapx'])
+    lat, lng = to_float(item['mapy']), to_float(item['mapx'])
     name = item.get('title', '').strip()
     return {
         'id': int(item['contentid']),
@@ -197,7 +224,7 @@ def main():
     groups = defaultdict(lambda: defaultdict(list))
     skipped = 0
     for it in items:
-        if not it.get('mapx') or not it.get('mapy') or float(it['mapx']) == 0:
+        if to_float(it.get('mapx')) == 0 or to_float(it.get('mapy')) == 0:
             skipped += 1
             continue
         sido, region = region_of(it.get('addr1'))
@@ -211,13 +238,13 @@ def main():
     # 이름이 겹치는 지역은 '고성(강원)'·'광주(경기)'처럼 시·도 약칭을 붙임 (광역시는 그대로)
     SHORT = {'경상남도': '경남', '경상북도': '경북', '전라남도': '전남', '전라북도': '전북',
              '전북특별자치도': '전북', '충청남도': '충남', '충청북도': '충북', '경기도': '경기',
-             '강원도': '강원', '강원특별자치도': '강원', '제주특별자치도': '제주'}
+             '강원도': '강원', '강원특별자치도': '강원', '제주특별자치도': '제주', MERGED: '전남'}
     name_count = defaultdict(int)
     for sido, region in groups:
         name_count[region] += 1
     by_region, sido_of = {}, {}
     for (sido, region), types in groups.items():
-        label = region if (name_count[region] == 1 or sido in METRO) else f'{region}({SHORT.get(sido, sido[:2])})'
+        label = region if (name_count[region] == 1 or sido in METRO or (sido, region) == (MERGED, '광주')) else f'{region}({SHORT.get(sido, sido[:2])})'
         by_region[label] = {t: [to_place(it, label, sido) for it in lst] for t, lst in types.items()}
         sido_of[label] = sido
 
