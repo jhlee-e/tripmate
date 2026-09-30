@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TripMate - 여행 조건 입력</title>
+<!-- 지도 라이브러리 Leaflet (오픈소스) -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -18,11 +20,13 @@
         <div class="field-group">
           <label for="start-date">여행 시작일</label>
           <input type="date" id="start-date" name="startDate" required>
+          <p class="field-warning" id="start-date-warning"></p>
         </div>
 
         <div class="field-group">
           <label for="end-date">여행 종료일</label>
           <input type="date" id="end-date" name="endDate" required>
+          <p class="field-warning" id="end-date-warning"></p>
         </div>
 
         <div class="field-group">
@@ -40,18 +44,13 @@
         </div>
 
         <div class="field-group">
-          <label for="departure">출발 지역</label>
-          <select id="departure" name="departure" required>
-            <option value="">출발 지역을 선택하세요</option>
-            <option value="서울">서울</option>
-            <option value="인천">인천</option>
-            <option value="대전">대전</option>
-            <option value="세종">세종</option>
-            <option value="대구">대구</option>
-            <option value="부산">부산</option>
-            <option value="광주">광주</option>
-            <option value="울산">울산</option>
-          </select>
+          <label for="departure-address">출발 위치</label>
+          <div class="address-row">
+            <input type="text" id="departure-address" placeholder="주소 검색 또는 지도를 눌러 선택" readonly>
+            <button type="button" class="small-btn" id="address-search-btn">주소 검색</button>
+          </div>
+          <div id="departure-map" class="departure-map"></div>
+          <p class="map-hint" id="departure-hint">지도를 누르거나 핀을 끌어서 위치를 정확히 맞출 수 있어요.</p>
         </div>
 
         <div class="field-group">
@@ -90,6 +89,10 @@
     </main>
   </div>
 
+  <!-- 지도(Leaflet)와 주소 검색(다음 우편번호 서비스) -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
+  <script src="js/departure.js"></script>
   <script src="js/condition.js"></script>
 </body>
 </html>

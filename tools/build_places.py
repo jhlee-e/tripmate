@@ -1,0 +1,252 @@
+# -*- coding: utf-8 -*-
+"""
+places.json 생성 스크립트 (한국관광공사 TourAPI 4.0, KorService2)
+
+입력: tools/tourapi_key.txt 에 넣은 공공데이터포털 인증키
+출력: data/places.json  (장소 목록 — 명소·식당·숙소, 합의한 구조)
+      data/regions.json (지역 목록 — 지역 이름, 중심 좌표, 장소 수)
+
+실행: tripmate 폴더에서  python tools/build_places.py
+     (파이썬 기본 라이브러리만 사용, 설치할 것 없음)
+
+※ 태그 점수·비용·체류 시간은 TourAPI에 없는 값이라, 아래 표의 '분류별 기본값'으로 채웁니다.
+   이 기본값은 Claude가 정한 초안(추정치)이므로 이재훈이 검토·수정해야 합니다.
+"""
+import json, os, sys, time, urllib.parse, urllib.request
+from collections import defaultdict
+
+BASE = 'https://apis.data.go.kr/B551011/KorService2/areaBasedList2'
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(HERE)
+RAW_DIR = os.path.join(HERE, 'raw')          # 받아 온 원본(재실행 시 API 호출 절약용)
+
+# ---------------------------------------------------------------
+# 1. 가져올 콘텐츠 종류 (TourAPI contentTypeId)
+#    12 관광지 / 14 문화시설 / 28 레포츠 / 38 쇼핑 / 39 음식점 / 32 숙박
+#    (15 축제·행사는 날짜가 바뀌어서, 25 여행코스는 장소가 아니어서 제외)
+# ---------------------------------------------------------------
+CONTENT_TYPES = [12, 14, 28, 38, 39, 32]
+PLACE_TYPE = {12: '명소', 14: '명소', 28: '명소', 38: '명소', 39: '식당', 32: '숙소'}
+
+# 지역(시·군)당 최대 개수 — 파일 크기 조절용
+MAX_PER_REGION = {'명소': 15, '식당': 8, '숙소': 5}
+
+# ---------------------------------------------------------------
+# 2. 분류별 기본값 (★ Claude 초안 — 검토 필요)
+#    키: TourAPI 분류코드 cat2(없으면 cat1, 그것도 없으면 contentTypeId)
+#    tags: 힐링·역사·액티브·미식·쇼핑 (0~5)
+#    cost: 명소·식당 = 1인 원, 숙소 = 1박 객실 요금(원)  ← 실제 요금 아님, 평균 추정치
+#    stayMin: 머무는 시간(분)
+# ---------------------------------------------------------------
+DEFAULTS = {
+    'A0101': dict(tags=[5, 0, 2, 0, 0], cost=0,     stayMin=90),   # 자연관광지 (산·해변·계곡 등)
+    'A0102': dict(tags=[5, 1, 1, 0, 0], cost=0,     stayMin=60),   # 관광자원 (희귀동식물·기암괴석 등)
+    'A0201': dict(tags=[1, 5, 0, 0, 0], cost=3000,  stayMin=70),   # 역사관광지 (고궁·사찰·유적)
+    'A0202': dict(tags=[5, 0, 1, 1, 0], cost=5000,  stayMin=120),  # 휴양관광지 (공원·온천·수목원)
+    'A0203': dict(tags=[2, 2, 5, 0, 0], cost=10000, stayMin=90),   # 체험관광지 (농어촌·전통체험)
+    'A0204': dict(tags=[0, 2, 3, 0, 1], cost=5000,  stayMin=60),   # 산업관광지
+    'A0205': dict(tags=[2, 3, 0, 0, 1], cost=0,     stayMin=40),   # 건축·조형물 (다리·타워 등)
+    'A0206': dict(tags=[1, 4, 1, 0, 0], cost=5000,  stayMin=70),   # 문화시설 (박물관·미술관)
+    'A03':   dict(tags=[1, 0, 5, 0, 0], cost=30000, stayMin=120),  # 레포츠
+    'A04':   dict(tags=[0, 0, 0, 1, 5], cost=0,     stayMin=60),   # 쇼핑 (시장·아울렛)
+    'A05':   dict(tags=[0, 0, 0, 5, 0], cost=12000, stayMin=60),   # 음식점
+    'B02':   dict(tags=[1, 0, 0, 0, 0], cost=80000, stayMin=0),    # 숙박
+    # 분류코드가 비어 있을 때 쓰는 contentTypeId별 기본값
+    12: dict(tags=[3, 2, 1, 0, 0], cost=0,     stayMin=60),
+    14: dict(tags=[1, 4, 1, 0, 0], cost=5000,  stayMin=70),
+    28: dict(tags=[1, 0, 5, 0, 0], cost=30000, stayMin=120),
+    38: dict(tags=[0, 0, 0, 1, 5], cost=0,     stayMin=60),
+    39: dict(tags=[0, 0, 0, 5, 0], cost=12000, stayMin=60),
+    32: dict(tags=[1, 0, 0, 0, 0], cost=80000, stayMin=0),
+}
+TAG_NAMES = ['힐링', '역사', '액티브', '미식', '쇼핑']
+
+# 특별시·광역시·특별자치시는 도시 전체를 한 지역으로, 도는 시·군 단위로 나눔
+METRO = {'서울특별시': '서울', '부산광역시': '부산', '대구광역시': '대구', '인천광역시': '인천',
+         '광주광역시': '광주', '대전광역시': '대전', '울산광역시': '울산', '세종특별자치시': '세종'}
+
+
+def read_key():
+    path = os.path.join(HERE, 'tourapi_key.txt')
+    if not os.path.exists(path):
+        sys.exit('tools/tourapi_key.txt 파일이 없습니다. 공공데이터포털 인증키를 붙여 넣어 저장해 주세요.')
+    key = open(path, encoding='utf-8').read().strip()
+    # '인코딩' 키(%가 들어 있음)면 한 번 풀어서 사용 → 아래에서 다시 인코딩
+    return urllib.parse.unquote(key)
+
+
+calls = 0
+
+def fetch_page(key, content_type, page):
+    """TourAPI 목록 한 페이지(최대 1000개)를 받아 item 리스트로 돌려줌"""
+    global calls
+    params = {
+        'serviceKey': key, 'MobileOS': 'WIN', 'MobileApp': 'TripMate', '_type': 'json',
+        'numOfRows': 1000, 'pageNo': page, 'arrange': 'C', 'contentTypeId': content_type,
+    }
+    url = BASE + '?' + urllib.parse.urlencode(params)
+    for attempt in range(3):
+        try:
+            calls += 1
+            with urllib.request.urlopen(url, timeout=60) as res:
+                text = res.read().decode('utf-8')
+            data = json.loads(text)
+            body = data['response']['body']
+            items = body.get('items') or {}
+            items = items.get('item', []) if isinstance(items, dict) else []
+            if isinstance(items, dict):
+                items = [items]
+            return items, int(body.get('totalCount', 0))
+        except json.JSONDecodeError:
+            sys.exit('API가 JSON이 아닌 응답을 보냈습니다(인증키 오류일 가능성):\n' + text[:500])
+        except Exception as e:
+            print('  재시도', attempt + 1, e)
+            time.sleep(3)
+    sys.exit('API 호출이 계속 실패했습니다. 인터넷 연결과 인증키를 확인해 주세요.')
+
+
+def download_all(key):
+    """콘텐츠 종류별로 전국 데이터를 모두 받아 raw 폴더에 저장 (이미 받은 건 건너뜀)"""
+    os.makedirs(RAW_DIR, exist_ok=True)
+    all_items = []
+    for ct in CONTENT_TYPES:
+        cache = os.path.join(RAW_DIR, f'type_{ct}.json')
+        if os.path.exists(cache):
+            items = json.load(open(cache, encoding='utf-8'))
+            print(f'[{ct}] 저장된 원본 사용: {len(items)}개')
+        else:
+            items, page = [], 1
+            while True:
+                chunk, total = fetch_page(key, ct, page)
+                items += chunk
+                print(f'[{ct}] {page}페이지 — {len(items)}/{total}')
+                if not chunk or len(items) >= total:
+                    break
+                page += 1
+                time.sleep(0.3)
+            json.dump(items, open(cache, 'w', encoding='utf-8'), ensure_ascii=False)
+        all_items += items
+    return all_items
+
+
+def region_of(addr):
+    """주소 첫 두 단어로 지역 이름 결정. 예) '강원특별자치도 강릉시 ...' → ('강원특별자치도', '강릉')"""
+    parts = (addr or '').split()
+    if not parts:
+        return None, None
+    sido = parts[0]
+    if sido in METRO:
+        return sido, METRO[sido]
+    if len(parts) >= 2 and parts[1][-1] in '시군':
+        return sido, parts[1][:-1] if len(parts[1]) > 2 else parts[1]   # '강릉시'→'강릉', '고성군'→'고성'
+    return None, None
+
+
+def defaults_for(item):
+    ct = int(item.get('contenttypeid') or 0)
+    for code in (item.get('cat2'), item.get('cat1')):
+        if code and code in DEFAULTS:
+            return DEFAULTS[code]
+    return DEFAULTS.get(ct)
+
+
+def to_place(item, region, sido):
+    d = defaults_for(item)
+    ct = int(item['contenttypeid'])
+    lat, lng = float(item['mapy']), float(item['mapx'])
+    name = item.get('title', '').strip()
+    return {
+        'id': int(item['contentid']),
+        'region': region,
+        'sido': sido,
+        'name': name,
+        'type': PLACE_TYPE[ct],
+        'category': item.get('cat2') or item.get('cat1') or str(ct),
+        'tags': dict(zip(TAG_NAMES, d['tags'])),
+        'lat': round(lat, 6), 'lng': round(lng, 6),
+        'cost': d['cost'],
+        'stayMin': d['stayMin'],
+        'address': item.get('addr1', ''),
+        'photo': item.get('firstimage', ''),
+        'photoLicense': item.get('cpyrhtDivCd', ''),
+        'link': 'https://map.kakao.com/link/map/' + urllib.parse.quote(name) + f',{lat},{lng}',
+    }
+
+
+def pick_balanced(places, limit):
+    """사진 있는 것 우선, 분류(category)가 골고루 섞이도록 돌아가며 limit개 고르기"""
+    groups = defaultdict(list)
+    for p in places:
+        groups[p['category']].append(p)
+    for g in groups.values():
+        g.sort(key=lambda p: (p['photo'] == '',))      # 사진 있는 것 먼저 (원래 순서 = 최근 수정순 유지)
+    picked, order = [], sorted(groups, key=lambda c: -len(groups[c]))
+    while len(picked) < limit and any(groups[c] for c in order):
+        for c in order:
+            if groups[c] and len(picked) < limit:
+                picked.append(groups[c].pop(0))
+    return picked
+
+
+def main():
+    key = read_key()
+    items = download_all(key)
+    print(f'\n받은 원본 합계: {len(items)}개 (API 호출 {calls}회)')
+
+    # (시·도, 지역) 쌍으로 묶음 — 강원 고성군·경남 고성군처럼 이름이 같은 지역을 구분하기 위함
+    groups = defaultdict(lambda: defaultdict(list))
+    skipped = 0
+    for it in items:
+        if not it.get('mapx') or not it.get('mapy') or float(it['mapx']) == 0:
+            skipped += 1
+            continue
+        sido, region = region_of(it.get('addr1'))
+        if not region:
+            skipped += 1
+            continue
+        if int(it.get('contenttypeid') or 0) not in PLACE_TYPE:
+            continue
+        groups[(sido, region)][PLACE_TYPE[int(it['contenttypeid'])]].append(it)
+
+    # 이름이 겹치는 지역은 '고성(강원)'·'광주(경기)'처럼 시·도 약칭을 붙임 (광역시는 그대로)
+    SHORT = {'경상남도': '경남', '경상북도': '경북', '전라남도': '전남', '전라북도': '전북',
+             '전북특별자치도': '전북', '충청남도': '충남', '충청북도': '충북', '경기도': '경기',
+             '강원도': '강원', '강원특별자치도': '강원', '제주특별자치도': '제주'}
+    name_count = defaultdict(int)
+    for sido, region in groups:
+        name_count[region] += 1
+    by_region, sido_of = {}, {}
+    for (sido, region), types in groups.items():
+        label = region if (name_count[region] == 1 or sido in METRO) else f'{region}({SHORT.get(sido, sido[:2])})'
+        by_region[label] = {t: [to_place(it, label, sido) for it in lst] for t, lst in types.items()}
+        sido_of[label] = sido
+
+    places, regions = [], []
+    for region in sorted(by_region):
+        chosen = []
+        for t, limit in MAX_PER_REGION.items():
+            chosen += pick_balanced(by_region[region].get(t, []), limit)
+        if not chosen:
+            continue
+        places += chosen
+        regions.append({
+            'region': region, 'sido': sido_of[region],
+            'lat': round(sum(p['lat'] for p in chosen) / len(chosen), 5),
+            'lng': round(sum(p['lng'] for p in chosen) / len(chosen), 5),
+            'counts': {t: sum(1 for p in chosen if p['type'] == t) for t in MAX_PER_REGION},
+        })
+
+    os.makedirs(os.path.join(ROOT, 'data'), exist_ok=True)
+    json.dump(places, open(os.path.join(ROOT, 'data', 'places.json'), 'w', encoding='utf-8'),
+              ensure_ascii=False, indent=1)
+    json.dump(regions, open(os.path.join(ROOT, 'data', 'regions.json'), 'w', encoding='utf-8'),
+              ensure_ascii=False, indent=1)
+    print(f'완료: 지역 {len(regions)}곳, 장소 {len(places)}개 → data/places.json, data/regions.json')
+    print(f'좌표·주소가 없어 제외한 원본: {skipped}개')
+    few = [r['region'] for r in regions if r['counts']['명소'] < 5]
+    if few:
+        print('명소가 5개 미만인 지역:', ', '.join(few))
+
+
+if __name__ == '__main__':
+    main()
