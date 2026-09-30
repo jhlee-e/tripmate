@@ -4,8 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TripMate - 여행 조건 입력</title>
-<!-- 지도 라이브러리 Leaflet (오픈소스) -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -94,8 +92,8 @@
     </main>
   </div>
 
-  <!-- 지도(Leaflet)와 주소 검색(다음 우편번호 서비스) -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- 지도(카카오맵, 주소↔좌표 변환 services 포함)와 주소 검색(다음 우편번호 서비스) -->
+  <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=b16ac532d356919ddc87b6d14d8dbd01&libraries=services&autoload=false"></script>
   <script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
   <!-- 로그인·DB (Supabase) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
