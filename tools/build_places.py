@@ -215,6 +215,11 @@ def pick_balanced(places, limit):
     return picked
 
 
+def load_curated():
+    path = os.path.join(HERE, 'curated_places.json')
+    return json.load(open(path, encoding='utf-8')) if os.path.exists(path) else []
+
+
 def main():
     key = read_key()
     items = download_all(key)
@@ -248,11 +253,32 @@ def main():
         by_region[label] = {t: [to_place(it, label, sido) for it in lst] for t, lst in types.items()}
         sido_of[label] = sido
 
+    # 직접 고른 지역(강릉·경주·전주·여수): tools/curated_places.json 의 장소와 점수를 그대로 사용
+    curated = load_curated()
+    raw_by_id = {int(it['contentid']): it for it in items}
+    curated_by_region = defaultdict(list)
+    for c in curated:
+        it = raw_by_id.get(c['id'])
+        if not it:
+            print('  ! 원본에 없는 id:', c['id'])
+            continue
+        sido, region = region_of(it.get('addr1'))
+        curated_by_region[region].append((it, sido, c))
+
     places, regions = [], []
     for region in sorted(by_region):
         chosen = []
-        for t, limit in MAX_PER_REGION.items():
-            chosen += pick_balanced(by_region[region].get(t, []), limit)
+        if region in curated_by_region:
+            for it, sido, c in curated_by_region[region]:
+                p = to_place(it, region, sido)
+                p.update(tags=c['tags'], cost=c['cost'], stayMin=c['stayMin'],
+                         costCheck=c['costCheck'], basis=c['basis'], scoredBy=c['scoredBy'])
+                chosen.append(p)
+        else:
+            for t, limit in MAX_PER_REGION.items():
+                for p in pick_balanced(by_region[region].get(t, []), limit):
+                    p.update(costCheck='추정', basis='분류별 기본값', scoredBy='분류별 기본값(추정)')
+                    chosen.append(p)
         if not chosen:
             continue
         places += chosen
