@@ -23,12 +23,12 @@
 
       <!-- 내 여행 목록: record.js가 trips 테이블에서 불러와 채움 -->
       <section class="card">
-        <h2 class="section-title">저장한 여행</h2>
+        <h2 class="section-title">저장한 여행 <small>여행을 누르면 준비물이 열려요</small></h2>
         <ul class="trip-list" id="trip-list"></ul>
         <p class="helper-text muted" id="trip-empty">아직 저장한 여행이 없어요. <a href="condition.html">새 여행 만들기</a></p>
       </section>
 
-      <!-- 준비물 체크리스트: 위 목록에서 '준비물'을 누른 여행의 것 -->
+      <!-- 준비물 체크리스트: 위 목록에서 누른 여행의 것 -->
       <section class="card checklist-card" id="checklist-card" hidden>
         <h2 class="section-title">준비물 체크리스트 <small id="checklist-trip"></small></h2>
         <form class="address-row" id="item-form">

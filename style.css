@@ -359,3 +359,8 @@ select:focus {
 }
 .check-item label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 .check-item.done span { color: var(--text-muted); text-decoration: line-through; }
+
+/* 여행 칸 전체가 버튼처럼 눌림 */
+.trip-item { cursor: pointer; transition: border-color 0.15s, background 0.15s; }
+.trip-item:hover { border-color: var(--accent); }
+.trip-actions { justify-content: center; }
