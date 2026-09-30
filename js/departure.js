@@ -12,6 +12,9 @@ const departureMap = L.map('departure-map', {
   minZoom: 6
 }).setView(KOREA_CENTER, 6);
 
+// 오른쪽 아래 출처 표시에서 Leaflet 기본 국기 아이콘을 빼고 글자만 남김 (OpenStreetMap 출처 표시는 필수라 유지)
+departureMap.attributionControl.setPrefix('<a href="https://leafletjs.com">Leaflet</a>');
+
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
   maxZoom: 19,
   attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
