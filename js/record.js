@@ -19,6 +19,11 @@ function shortDate(d) {
   return d.slice(5).replace('-', '.');
 }
 
+// 12431231 → '12,431,231원' (세 자리마다 쉼표)
+function won(n) {
+  return Number(n).toLocaleString('ko-KR') + '원';
+}
+
 // ---------- 1. 여행 목록 ----------
 
 async function loadTrips() {
@@ -38,7 +43,7 @@ async function loadTrips() {
       '<div class="trip-info">' +
         '<strong>' + shortDate(trip.start_date) + ' ~ ' + shortDate(trip.end_date) + ' (' + trip.days + '일)</strong>' +
         '<span>' + trip.people + '명 · ' + trip.transport + ' · ' + trip.tempo + ' · 예산 ' +
-          (trip.budget_min / 10000) + '~' + (trip.budget_max / 10000) + '만 원</span>' +
+          won(trip.budget_min) + ' ~ ' + won(trip.budget_max) + '</span>' +
         '<span class="trip-tags">' + trip.tags.map(function (t) { return '#' + t; }).join(' ') + '</span>' +
         '<span class="trip-from"></span>' +
       '</div>' +
