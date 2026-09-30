@@ -3,8 +3,8 @@
 places.json 생성 스크립트 (한국관광공사 TourAPI 4.0, KorService2)
 
 입력: tools/tourapi_key.txt 에 넣은 공공데이터포털 인증키
-출력: data/places.json  (장소 목록 — 명소·식당·숙소, 합의한 구조)
-      data/regions.json (지역 목록 — 지역 이름, 중심 좌표, 장소 수)
+출력: data/places/지역이름.json (지역별 장소 전체 — 명소·식당·숙소, 합의한 구조)
+      data/regions.json (지역 목록 — 지역 이름, 파일 경로, 중심 좌표, 장소 수, 명소 태그 평균)
 
 실행: tripmate 폴더에서  python tools/build_places.py
      (파이썬 기본 라이브러리만 사용, 설치할 것 없음)
@@ -12,7 +12,7 @@ places.json 생성 스크립트 (한국관광공사 TourAPI 4.0, KorService2)
 ※ 태그 점수·비용·체류 시간은 TourAPI에 없는 값이라, 아래 표의 '분류별 기본값'으로 채웁니다.
    이 기본값은 Claude가 정한 초안(추정치)이므로 이재훈이 검토·수정해야 합니다.
 """
-import json, os, sys, time, urllib.parse, urllib.request
+import json, os, re, sys, time, urllib.parse, urllib.request
 from collections import defaultdict
 
 BASE = 'https://apis.data.go.kr/B551011/KorService2/areaBasedList2'
@@ -158,6 +158,8 @@ def region_of(addr):
     if not parts:
         return None, None
     sido = SIDO_ALIAS.get(parts[0], parts[0])
+    if sido == '광주광역시':                             # 옛 표기 → 통합 시·도의 '광주' 지역으로
+        return MERGED, '광주'
     if sido in METRO:
         return sido, METRO[sido]
     if len(parts) < 2:
@@ -220,25 +222,50 @@ def load_curated():
     return json.load(open(path, encoding='utf-8')) if os.path.exists(path) else []
 
 
+# 여행지로 보기 어려운 항목을 이름으로 걸러내는 규칙 (걸러진 목록은 tools/excluded_places.csv 로 남김)
+#  - 끝말 규칙: 괄호를 뺀 이름이 이 말로 끝날 때만 제외 ('고양 화장실전시관'·'BTS 버스정류장' 같은 명소는 남김)
+EXCLUDE_ENDINGS = ['화장실', '주차장', '관광안내소', '탐방안내소', '관광안내센터', '안내센터', '마트', '주유소', '충전소']
+#  - 포함 규칙: 이름 어디에든 들어 있으면 제외 (편의점·생활용품점·체인 매장)
+EXCLUDE_WORDS = ['편의점', '식자재', 'GS25', 'CU ', '세븐일레븐', '미니스톱', '이마트24', '다이소',
+                 'ABC마트', '올리브영', '스파오', '슈마커', '미즈노', '컨버스', '아트박스', '유니클로', '탑텐',
+                 '뉴발란스', '나이키', '아디다스', '롯데리아', '맥도날드', '버거킹', '스타벅스', '이디야',
+                 '투썸플레이스', '메가MGC', '컴포즈커피', '빽다방', '파리바게뜨', '뚜레쥬르', '폴더 ']
+
+
+def exclude_reason(it):
+    """걸러낼 이유를 돌려줌 (걸러내지 않으면 빈 문자열)"""
+    name = (it.get('title') or '').strip()
+    base = re.sub(r'\(.*?\)|\[.*?\]', '', name).strip()      # 괄호 안 설명 빼기
+    for w in EXCLUDE_ENDINGS:
+        if base.endswith(w) and base != w:
+            return '이름이 "' + w + '"로 끝남'
+    for w in EXCLUDE_WORDS:
+        if w in name + ' ':
+            return '이름에 "' + w.strip() + '"'
+    return ''
+
+
 def main():
     key = read_key()
     items = download_all(key)
     print(f'\n받은 원본 합계: {len(items)}개 (API 호출 {calls}회)')
 
     # (시·도, 지역) 쌍으로 묶음 — 강원 고성군·경남 고성군처럼 이름이 같은 지역을 구분하기 위함
-    groups = defaultdict(lambda: defaultdict(list))
-    skipped = 0
+    groups = defaultdict(list)
+    no_coord, excluded, seen = 0, [], set()
     for it in items:
-        if to_float(it.get('mapx')) == 0 or to_float(it.get('mapy')) == 0:
-            skipped += 1
+        if int(it.get('contenttypeid') or 0) not in PLACE_TYPE or it['contentid'] in seen:
             continue
+        seen.add(it['contentid'])
         sido, region = region_of(it.get('addr1'))
-        if not region:
-            skipped += 1
+        if to_float(it.get('mapx')) == 0 or to_float(it.get('mapy')) == 0 or not region:
+            no_coord += 1
             continue
-        if int(it.get('contenttypeid') or 0) not in PLACE_TYPE:
+        reason = exclude_reason(it)
+        if reason:
+            excluded.append((it['contentid'], region, it.get('title', ''), reason))
             continue
-        groups[(sido, region)][PLACE_TYPE[int(it['contenttypeid'])]].append(it)
+        groups[(sido, region)].append(it)
 
     # 이름이 겹치는 지역은 '고성(강원)'·'광주(경기)'처럼 시·도 약칭을 붙임 (광역시는 그대로)
     SHORT = {'경상남도': '경남', '경상북도': '경북', '전라남도': '전남', '전라북도': '전북',
@@ -247,58 +274,55 @@ def main():
     name_count = defaultdict(int)
     for sido, region in groups:
         name_count[region] += 1
-    by_region, sido_of = {}, {}
-    for (sido, region), types in groups.items():
-        label = region if (name_count[region] == 1 or sido in METRO or (sido, region) == (MERGED, '광주')) else f'{region}({SHORT.get(sido, sido[:2])})'
-        by_region[label] = {t: [to_place(it, label, sido) for it in lst] for t, lst in types.items()}
-        sido_of[label] = sido
 
-    # 직접 고른 지역(강릉·경주·전주·여수): tools/curated_places.json 의 장소와 점수를 그대로 사용
-    curated = load_curated()
-    raw_by_id = {int(it['contentid']): it for it in items}
-    curated_by_region = defaultdict(list)
-    for c in curated:
-        it = raw_by_id.get(c['id'])
-        if not it:
-            print('  ! 원본에 없는 id:', c['id'])
-            continue
-        sido, region = region_of(it.get('addr1'))
-        curated_by_region[region].append((it, sido, c))
+    # 직접 고른 장소(강릉·경주·전주·여수 112곳): 점수를 curated_places.json 값으로 덮어쓰고 featured 표시
+    curated = {c['id']: c for c in load_curated()}
 
-    places, regions = [], []
-    for region in sorted(by_region):
-        chosen = []
-        if region in curated_by_region:
-            for it, sido, c in curated_by_region[region]:
-                p = to_place(it, region, sido)
-                p.update(tags=c['tags'], cost=c['cost'], stayMin=c['stayMin'],
+    out_dir = os.path.join(ROOT, 'data', 'places')
+    os.makedirs(out_dir, exist_ok=True)
+    regions, total = [], 0
+    for (sido, region), lst in sorted(groups.items(), key=lambda kv: kv[0][1]):
+        label = region if (name_count[region] == 1 or sido in METRO or (sido, region) == (MERGED, '광주')) \
+            else f'{region}({SHORT.get(sido, sido[:2])})'
+        places = []
+        for it in lst:
+            p = to_place(it, label, sido)
+            c = curated.get(p['id'])
+            if c:
+                p.update(tags=c['tags'], cost=c['cost'], stayMin=c['stayMin'], featured=True,
                          costCheck=c['costCheck'], basis=c['basis'], scoredBy=c['scoredBy'])
-                chosen.append(p)
-        else:
-            for t, limit in MAX_PER_REGION.items():
-                for p in pick_balanced(by_region[region].get(t, []), limit):
-                    p.update(costCheck='추정', basis='분류별 기본값', scoredBy='분류별 기본값(추정)')
-                    chosen.append(p)
-        if not chosen:
-            continue
-        places += chosen
+            else:
+                p.update(featured=False, costCheck='추정', basis='분류별 기본값', scoredBy='분류별 기본값(추정)')
+            places.append(p)
+        places.sort(key=lambda p: (not p['featured'], p['photo'] == '', p['name']))   # 직접 고른 곳·사진 있는 곳 먼저
+        json.dump(places, open(os.path.join(out_dir, label + '.json'), 'w', encoding='utf-8'),
+                  ensure_ascii=False, separators=(',', ':'))
+        total += len(places)
+
+        # 지역 요약 — 추천 알고리즘이 지역 파일을 전부 열지 않고도 지역 점수를 계산할 수 있게 미리 계산
+        sights = [p for p in places if p['type'] == '명소']
+        tag_avg = {t: round(sum(p['tags'][t] for p in sights) / len(sights), 2) if sights else 0 for t in TAG_NAMES}
         regions.append({
-            'region': region, 'sido': sido_of[region],
-            'lat': round(sum(p['lat'] for p in chosen) / len(chosen), 5),
-            'lng': round(sum(p['lng'] for p in chosen) / len(chosen), 5),
-            'counts': {t: sum(1 for p in chosen if p['type'] == t) for t in MAX_PER_REGION},
+            'region': label, 'sido': sido, 'file': 'data/places/' + label + '.json',
+            'lat': round(sum(p['lat'] for p in places) / len(places), 5),
+            'lng': round(sum(p['lng'] for p in places) / len(places), 5),
+            'counts': {t: sum(1 for p in places if p['type'] == t) for t in ('명소', '식당', '숙소')},
+            'featured': sum(1 for p in places if p['featured']),
+            'tagAvg': tag_avg,
         })
 
-    os.makedirs(os.path.join(ROOT, 'data'), exist_ok=True)
-    json.dump(places, open(os.path.join(ROOT, 'data', 'places.json'), 'w', encoding='utf-8'),
-              ensure_ascii=False, indent=1)
     json.dump(regions, open(os.path.join(ROOT, 'data', 'regions.json'), 'w', encoding='utf-8'),
               ensure_ascii=False, indent=1)
-    print(f'완료: 지역 {len(regions)}곳, 장소 {len(places)}개 → data/places.json, data/regions.json')
-    print(f'좌표·주소가 없어 제외한 원본: {skipped}개')
-    few = [r['region'] for r in regions if r['counts']['명소'] < 5]
-    if few:
-        print('명소가 5개 미만인 지역:', ', '.join(few))
+    with open(os.path.join(HERE, 'excluded_places.csv'), 'w', encoding='utf-8-sig') as f:
+        f.write('id,지역,이름,걸러낸 이유\n')
+        for row in excluded:
+            f.write(','.join('"' + str(v).replace('"', "'") + '"' for v in row) + '\n')
+
+    print(f'완료: 지역 {len(regions)}곳, 장소 {total}개 → data/places/지역.json, data/regions.json')
+    print(f'좌표·주소가 없어 제외: {no_coord}개 / 규칙으로 걸러냄: {len(excluded)}개 (tools/excluded_places.csv)')
+    no_lodging = [r['region'] for r in regions if r['counts']['숙소'] == 0]
+    if no_lodging:
+        print('숙소가 없는 지역:', ', '.join(no_lodging))
 
 
 if __name__ == '__main__':

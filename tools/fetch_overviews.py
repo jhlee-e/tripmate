@@ -2,12 +2,12 @@
 """
 장소 소개글 받기 (TourAPI KorService2 · 공통정보조회 detailCommon2)
 
-입력: data/places.json 의 장소 id(contentId), tools/tourapi_key.txt 인증키
+입력: data/places/지역.json 들의 장소 id(contentId), tools/tourapi_key.txt 인증키
 출력: tools/raw/overviews.json  — { "장소id": {"overview": 소개글, "homepage": ..., "cat3": ...}, ... }
 
 실행: tripmate 폴더에서  python tools/fetch_overviews.py
  - 이미 받은 장소는 건너뛰므로, 하루 호출 한도에 걸려 멈추면 다음 날 같은 명령을 다시 실행하면 이어서 받음
- - 강릉·경주·전주·여수를 가장 먼저 받음 (5차시 알고리즘 개발용)
+ - 직접 고른 장소(featured) → 강릉·경주·전주·여수 → 나머지 지역 순서로 받음
  - 한 번 실행에 최대 950회만 호출 (개발계정 하루 한도 1,000회 가정 — 마이페이지에서 실제 한도 확인)
 """
 import json, os, sys, time, urllib.parse, urllib.request
@@ -48,8 +48,11 @@ def fetch(key, content_id):
 
 def main():
     key = read_key()
-    places = json.load(open(os.path.join(ROOT, 'data', 'places.json'), encoding='utf-8'))
-    places.sort(key=lambda p: (p['region'] not in PRIORITY, p['region']))   # 4개 지역 먼저
+    folder = os.path.join(ROOT, 'data', 'places')
+    places = []
+    for fn in os.listdir(folder):
+        places += json.load(open(os.path.join(folder, fn), encoding='utf-8'))
+    places.sort(key=lambda p: (not p.get('featured'), p['region'] not in PRIORITY, p['region']))
     done = json.load(open(OUT, encoding='utf-8')) if os.path.exists(OUT) else {}
     todo = [p for p in places if str(p['id']) not in done]
     print(f'전체 {len(places)}곳 중 받은 것 {len(done)}곳, 남은 것 {len(todo)}곳 (이번 실행 최대 {MAX_CALLS}회)')
