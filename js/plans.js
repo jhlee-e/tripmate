@@ -9,7 +9,7 @@ async function start() {
   if (!trip || !region) { status.textContent = '여행 정보를 찾을 수 없어요.'; return; }
   document.getElementById('trip-summary').textContent = tripSummary(trip);
   document.getElementById('title').textContent = region + ' 일정안 비교';
-  document.getElementById('back-link').href = 'result.html?trip=' + trip.id;
+  document.getElementById('back-link').href = 'result.html?trip=' + trip.id + '&round=' + (Number(param('round')) || 0);   // 같은 회차 추천으로 돌아감
 
   try {
     const places = await loadPlaces(region);

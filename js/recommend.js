@@ -121,11 +121,34 @@ function cuisineOf(p) {
   return '한식(기타)';
 }
 
+// ---------- 1-3. 정해진 랜덤 (같은 여행·같은 회차면 항상 같은 값) ----------
+// 지역 점수에 ±10% 랜덤을 곱함 (이재훈 결정) — 같은 여행은 새로고침해도 그대로, '다시 추천'을 누르면 회차가 바뀌어 달라짐
+const REGION_JITTER = 0.10;
+
+// 글자 → 32비트 정수 (FNV-1a 해시)
+function hashText(text) {
+  let h = 2166136261;
+  for (let i = 0; i < text.length; i++) { h ^= text.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+}
+// 0 이상 1 미만 수 하나 (mulberry32 난수 한 번)
+function seededRandom(seedText) {
+  let t = (hashText(seedText) + 0x6D2B79F5) >>> 0;
+  t = Math.imul(t ^ (t >>> 15), t | 1);
+  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+}
+// 입력: 여행 id, 회차, 지역 이름 / 출력: 0.9 ~ 1.1 사이 배수
+function regionJitter(tripId, round, region) {
+  return 1 + REGION_JITTER * (2 * seededRandom(tripId + '|' + round + '|' + region) - 1);
+}
+
 // ---------- 2. 여행지(지역) 순위 ----------
 // 입력: trip, regions.json 배열 / 출력: 점수 높은 순 [{ region, score, oneWayMin, distKm, info }]
 // 지역 점수 = 취향 점수(지역 명소 태그 평균) × (1 + 인기 상위 10곳 평균/5) × (1 − 왕복 이동 시간 ÷ 전체 활동 시간)
 //   → 오가는 데 여행 시간의 큰 몫을 쓰는 곳일수록, 여행이 짧을수록 많이 깎임 (감점 방식은 Claude 제안)
-function rankRegions(trip, regions) {
+//   마지막에 × 랜덤 배수(0.9~1.1, round = 다시 추천 회차)
+function rankRegions(trip, regions, round) {
   const tempo = TEMPO[trip.tempo];
   const dep = departureOf(trip);
   const totalActive = trip.days * tempo.hours * 60;
@@ -139,9 +162,10 @@ function rankRegions(trip, regions) {
     const oneWayMin = travelMin(distKm, trip.transport, true);
     const ratio = 2 * oneWayMin / totalActive;
     const base = withPopularity(tagScore(r.tagAvg, trip.tags), r.popTop10);
-    const score = base * (1 - ratio);
+    const jitter = regionJitter(trip.id, round || 0, r.region);
+    const score = base * (1 - ratio) * jitter;
     if (score <= 0) return;
-    out.push({ region: r.region, score: score, oneWayMin: oneWayMin, distKm: distKm, info: r });
+    out.push({ region: r.region, score: score, jitter: jitter, oneWayMin: oneWayMin, distKm: distKm, info: r });
   });
   return out.sort(function (a, b) { return b.score - a.score; });
 }

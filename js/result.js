@@ -13,7 +13,8 @@ async function start() {
 
   try {
     const regions = await loadRegions();
-    const ranked = rankRegions(trip, regions);
+    const round = Number(param('round')) || 0;   // '다시 추천'을 누른 횟수
+    const ranked = rankRegions(trip, regions, round);
     const picked = [];
     for (let i = 0; i < ranked.length && i < MAX_TRY && picked.length < RECOMMEND_COUNT; i++) {
       status.textContent = '여행지를 고르는 중… (' + ranked[i].region + ' 확인)';
@@ -26,9 +27,12 @@ async function start() {
       return;
     }
     status.textContent = '';
-    picked.forEach(function (item, i) { renderCard(trip, item, i + 1); });
+    picked.forEach(function (item, i) { renderCard(trip, item, i + 1, round); });
+    const again = document.getElementById('reroll-btn');
+    again.hidden = false;
+    again.onclick = function () { location.href = 'result.html?trip=' + trip.id + '&round=' + (round + 1); };
     document.getElementById('method-note').textContent =
-      '점수 = 고른 취향의 지역 평균 점수(1순위 1.5배) × 인기도 보정 × (1 − 왕복 이동 시간 ÷ 전체 활동 시간). ' +
+      '점수 = 고른 취향의 지역 평균 점수(1순위 1.5배) × 인기도 보정 × (1 − 왕복 이동 시간 ÷ 전체 활동 시간) × 랜덤(0.9~1.1). ' +
       '이동 시간과 비용은 직선거리로 계산한 추정값이에요.';
   } catch (e) {
     console.error(e);
@@ -36,7 +40,7 @@ async function start() {
   }
 }
 
-function renderCard(trip, item, order) {
+function renderCard(trip, item, order, round) {
   const r = item.rank, info = r.info;
   // 일정안 3개의 총비용 범위
   const totals = ['A', 'B', 'C'].map(function (k) { return computeTimeline(trip, item.plans[k]).cost.total; });
@@ -51,12 +55,12 @@ function renderCard(trip, item, order) {
 
   const card = document.createElement('a');
   card.className = 'card region-card';
-  card.href = 'plans.html?trip=' + trip.id + '&region=' + encodeURIComponent(r.region);
+  card.href = 'plans.html?trip=' + trip.id + '&region=' + encodeURIComponent(r.region) + '&round=' + round;
   card.innerHTML =
     (cover ? '<div class="photo-wrap"><img class="region-photo" src="' + esc(cover.photo) + '" alt="" loading="lazy"><small class="photo-credit">사진: 한국관광공사</small></div>' : '<div class="region-photo empty"></div>') +
     '<div class="region-body">' +
       '<div class="region-head"><span class="rank-badge">' + order + '</span><strong>' + esc(r.region) + '</strong>' +
-        '<small>' + esc(info.sido) + '</small><span class="region-score">' + r.score.toFixed(1) + '점</span></div>' +
+        '<small>' + esc(info.sido) + '</small><span class="region-score">' + r.score.toFixed(1) + '점<small>랜덤 ×' + r.jitter.toFixed(2) + '</small></span></div>' +
       '<ul class="reason-list">' +
         '<li>취향 점수(5점 만점 평균): ' + esc(tagText) + '</li>' +
         '<li>인기 명소 10곳 평균 인기도 ' + info.popTop10.toFixed(1) + ' / 5' + (cover ? ' · 대표: ' + esc(cover.name) : '') + '</li>' +

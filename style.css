@@ -497,3 +497,5 @@ a.small-btn { display: inline-flex; align-items: center; justify-content: center
 .chip.drop-target { border-color: var(--accent); background: var(--accent-light); }
 .tl-edit { margin-left: 52px; }
 .swap-box { margin-left: 52px; }
+.region-score small { display: block; font-size: 0.7rem; font-weight: 400; color: var(--text-muted); text-align: right; }
+#reroll-btn { margin-top: 18px; }
