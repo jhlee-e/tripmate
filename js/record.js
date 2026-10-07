@@ -7,9 +7,6 @@ const errorText = document.getElementById('error-text');
 let currentTripId = null;   // 지금 체크리스트를 보고 있는 여행의 id
 let importMode = false;     // true면 '불러올 여행 고르는 중' — 이때 여행 칸을 누르면 열기 대신 준비물 복사
 
-// 기본 준비물 (Claude가 임의로 정한 예시 목록 — 자유롭게 바꿔도 됨)
-const DEFAULT_ITEMS = ['신분증', '휴대폰 충전기', '보조배터리', '세면도구', '상비약', '여벌 옷'];
-
 function showError(error) {
   errorText.textContent = error ? '오류: ' + error.message : '';
   if (error) console.error(error);
@@ -25,11 +22,12 @@ function won(n) {
   return Number(n).toLocaleString('ko-KR') + '원';
 }
 
-// 인원 표시: '3명 (성인 2·청소년 1)'. 나이대 칸이 생기기 전에 저장한 여행(모두 0)은 '3명'만
+// 인원 표시: '4명 (성인 2·어린이 1·유아 1)'. 나이대 칸이 생기기 전에 저장한 여행(모두 0)은 '3명'만
 function peopleText(trip) {
   const parts = [];
   if (trip.adults) parts.push('성인 ' + trip.adults);
   if (trip.teens) parts.push('청소년 ' + trip.teens);
+  if (trip.children) parts.push('어린이 ' + trip.children);
   if (trip.infants) parts.push('유아 ' + trip.infants);
   return trip.people + '명' + (parts.length ? ' (' + parts.join('·') + ')' : '');
 }
@@ -157,10 +155,6 @@ document.getElementById('item-form').addEventListener('submit', function (e) {
   if (!item) return;
   input.value = '';
   addItems([item]);
-});
-
-document.getElementById('default-items-btn').addEventListener('click', function () {
-  addItems(DEFAULT_ITEMS);
 });
 
 // ---------- 3. 다른 여행에서 준비물 불러오기 ----------

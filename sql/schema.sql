@@ -28,9 +28,10 @@ create table public.trips (
   days              int  not null,
   budget_min        int  not null,
   budget_max        int  not null,
-  people            int  not null,               -- 합계 (= infants + teens + adults)
+  people            int  not null,               -- 합계 (= infants + children + teens + adults)
   infants           int  not null default 0,     -- 유아 0~6세
-  teens             int  not null default 0,     -- 청소년 7~18세
+  children          int  not null default 0,     -- 어린이 7~12세
+  teens             int  not null default 0,     -- 청소년 13~18세
   adults            int  not null default 0,     -- 성인 19세 이상
   departure_address text,
   departure_lat     double precision,

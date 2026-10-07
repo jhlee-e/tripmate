@@ -375,8 +375,8 @@ select:focus {
 .trip-list.picking .trip-item { opacity: 0.55; }
 .trip-list.picking .trip-item.pickable { opacity: 1; border-style: dashed; border-color: var(--accent); }
 
-/* 나이대별 인원 칸 (유아·청소년·성인 3칸 나란히) */
-.people-row { display: flex; gap: 10px; }
+/* 나이대별 인원 칸 (유아·어린이·청소년·성인 4칸 나란히) */
+.people-row { display: flex; gap: 8px; }
 .people-field { flex: 1; min-width: 0; margin-bottom: 0; text-align: center; }
 .people-field small { display: block; margin: 2px 0 6px; font-weight: 400; font-size: 0.75rem; color: var(--text-muted); }
 .people-field input { text-align: center; padding: 11px 6px; }

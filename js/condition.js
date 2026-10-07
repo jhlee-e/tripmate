@@ -1,5 +1,5 @@
 // 조건 입력 화면 스크립트
-// 입력: 사용자가 폼에 넣은 날짜·예산·나이대별 인원(유아·청소년·성인)·출발 위치(departure.js)·이동수단·취향 태그(선택 순서 포함)·템포
+// 입력: 사용자가 폼에 넣은 날짜·예산·나이대별 인원(유아·어린이·청소년·성인)·출발 위치(departure.js)·이동수단·취향 태그(선택 순서 포함)·템포
 // 출력: 검사를 통과하면 하나의 객체(condition)로 묶어 Supabase trips 테이블에 저장한 뒤 '내 여행'(record.html)으로 이동
 //       (5차시에는 저장 후 추천 결과 화면 result.html로 이동하도록 바꿀 예정)
 
@@ -117,15 +117,15 @@ function getSelectedValue(groupId) {
 }
 
 // ---------- 1-2. 나이대별 인원 ----------
-// 입력: 유아·청소년·성인 칸의 숫자 / 출력: { infants, teens, adults, total } (빈칸은 0명으로 봄)
-const PEOPLE_IDS = { infants: 'people-infants', teens: 'people-teens', adults: 'people-adults' };
+// 입력: 유아·어린이·청소년·성인 칸의 숫자 / 출력: { infants, children, teens, adults, total } (빈칸은 0명으로 봄)
+const PEOPLE_IDS = { infants: 'people-infants', children: 'people-children', teens: 'people-teens', adults: 'people-adults' };
 
 function readPeople() {
   const counts = {};
   Object.keys(PEOPLE_IDS).forEach(function (key) {
     counts[key] = Number(document.getElementById(PEOPLE_IDS[key]).value) || 0;
   });
-  counts.total = counts.infants + counts.teens + counts.adults;
+  counts.total = counts.infants + counts.children + counts.teens + counts.adults;
   return counts;
 }
 
@@ -157,7 +157,7 @@ function collectCondition() {
     days: days,
     budgetMin: Number(document.getElementById('budget-min').value),
     budgetMax: Number(document.getElementById('budget-max').value),
-    people: readPeople(),         // { infants, teens, adults, total }
+    people: readPeople(),         // { infants, children, teens, adults, total }
     departure: departure,         // { address, lat, lng } — departure.js에서 만든 값
     transport: getSelectedValue('transport-group'),
     tags: selectedTags.slice(),   // 복사본 (선택 순서 유지)
@@ -175,11 +175,11 @@ function validateCondition(c) {
   if (!c.budgetMin || !c.budgetMax) return '예산의 최소·최대 금액을 모두 입력해 주세요.';
   if (c.budgetMin > c.budgetMax) return '최소 예산이 최대 예산보다 클 수 없어요.';
   const p = c.people;
-  if ([p.infants, p.teens, p.adults].some(function (n) { return n < 0 || !Number.isInteger(n); })) {
+  if ([p.infants, p.children, p.teens, p.adults].some(function (n) { return n < 0 || !Number.isInteger(n); })) {
     return '인원 수는 0 이상의 정수로 입력해 주세요.';
   }
   if (p.total < 1) return '인원 수를 1명 이상 입력해 주세요.';
-  if (p.teens + p.adults === 0) return '유아만으로는 여행할 수 없어요. 청소년이나 성인을 1명 이상 넣어 주세요.';
+  if (p.teens + p.adults === 0) return '유아·어린이만으로는 여행할 수 없어요. 청소년이나 성인을 1명 이상 넣어 주세요.';
   if (!c.departure) return '출발 위치를 주소 검색이나 지도로 정해 주세요.';
   if (!c.transport) return '주 이동 수단을 선택해 주세요.';
   if (c.tags.length === 0) return '여행 취향을 한 개 이상 선택해 주세요.';
@@ -216,6 +216,7 @@ async function handleSubmit(event) {
     budget_max: condition.budgetMax,
     people: condition.people.total,      // 합계 (예산 ÷ 인원 계산에 사용)
     infants: condition.people.infants,
+    children: condition.people.children,
     teens: condition.people.teens,
     adults: condition.people.adults,
     departure_address: condition.departure.address,
