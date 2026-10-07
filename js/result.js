@@ -1,8 +1,9 @@
 // 여행지 추천 화면
 // 입력: 주소의 ?trip=여행번호 → 그 여행의 조건, data/regions.json, 상위 지역들의 장소 파일
-// 출력: 점수 상위 여행지 3곳 카드(사진·추천 이유·예상 비용) → 누르면 일정안 비교(plans.html)로 이동
+// 출력: 점수 상위 여행지 5곳 카드(사진·추천 이유·예상 비용) → 누르면 일정안 비교(plans.html)로 이동
 
-const MAX_TRY = 12;   // 예산 안에서 일정을 못 만드는 지역을 건너뛰며 최대 몇 곳까지 확인할지
+const RECOMMEND_COUNT = 5;   // 추천할 여행지 수 (계획서 3곳 → 5곳으로 변경, 2026-10-07)
+const MAX_TRY = 20;   // 예산 안에서 일정을 못 만드는 지역을 건너뛰며 최대 몇 곳까지 확인할지
 
 async function start() {
   const trip = await loadTripFromUrl();
@@ -14,7 +15,7 @@ async function start() {
     const regions = await loadRegions();
     const ranked = rankRegions(trip, regions);
     const picked = [];
-    for (let i = 0; i < ranked.length && i < MAX_TRY && picked.length < 3; i++) {
+    for (let i = 0; i < ranked.length && i < MAX_TRY && picked.length < RECOMMEND_COUNT; i++) {
       status.textContent = '여행지를 고르는 중… (' + ranked[i].region + ' 확인)';
       const places = await loadPlaces(ranked[i].region);
       const plans = buildPlans(trip, ranked[i].region, places);
