@@ -183,6 +183,9 @@ def defaults_for(item):
 # 세부 분류(lclsSystm3, 201가지)별 점수표 — tools/make_lcls_scores.py 로 만든 lcls_scores.json
 _LCLS_PATH = os.path.join(HERE, 'lcls_scores.json')
 LCLS = json.load(open(_LCLS_PATH, encoding='utf-8')) if os.path.exists(_LCLS_PATH) else {}
+# 제외 분류에 있어도 장소별로 추천 후보에 다시 넣는 목록 — tools/make_recommend_overrides.py
+_OV_PATH = os.path.join(HERE, 'recommend_overrides.json')
+OVERRIDES = json.load(open(_OV_PATH, encoding='utf-8')) if os.path.exists(_OV_PATH) else {}
 
 
 def to_place(item, region, sido):
@@ -195,6 +198,9 @@ def to_place(item, region, sido):
         d = defaults_for(item)
         tags, cost, stay = dict(zip(TAG_NAMES, d['tags'])), d['cost'], d['stayMin']
         cat_name, rec = item.get('cat2') or str(ct), True
+    ov = OVERRIDES.get(str(item['contentid']))
+    if ov:
+        rec = ov['recommend']
     lat, lng = to_float(item['mapy']), to_float(item['mapx'])
     name = item.get('title', '').strip()
     return {
