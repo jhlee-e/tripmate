@@ -28,7 +28,7 @@ const LOCAL_FARE = 1500;          // 여행지 안 버스 1회 요금, 1인 기�
 const DAY_START = 9 * 60;         // 09:00 시작
 const LUNCH = { from: 11 * 60 + 30, until: 14 * 60 };   // 점심을 넣는 시간대
 const DINNER_FROM = 17 * 60 + 30;
-const RETURN_AFTER = 20 * 60;   // 마지막 날 여행지에서 집으로 출발하는 시각: 20:00 이후 (이재훈 결정, 상세 화면에서 바꿀 수 있음)
+const LODGING_ARRIVE = 20 * 60;   // 숙소 도착 시각: 20:00 이후 (이재훈 결정, 상세 화면에서 바꿀 수 있음). 마지막 날 집 도착은 제한 없음
 const MEAL_STAY = 60;
 // 흔한 체인점(프랜차이즈) 이름 — 이름에 들어 있으면 추천에서 제외 (이재훈 결정: 브랜드 이름 목록 방식)
 const CHAIN_BRANDS = ['스타벅스', '투썸플레이스', '이디야', '메가커피', '메가MGC', '컴포즈커피', '빽다방', '할리스',
@@ -370,8 +370,9 @@ function buildPlan(type, trip, pool) {
       }
       const intercity = !!pos.isHome;
       const move = travelMin(distanceKm(pos, p), trip.transport, intercity);
-      // 그날 끝에 숙소로 돌아갈 시간도 활동 시간 안에 남겨 둠 (마지막 날은 20:00 이후 집으로 출발하므로 제외)
-      const back = lastDay || !lodging ? 0 : travelMin(distanceKm(p, lodging), trip.transport, false);
+      // 그날 끝에 숙소(마지막 날은 집)로 돌아갈 시간도 활동 시간 안에 남겨 둠
+      const back = lastDay || !lodging ? travelMin(distanceKm(p, dep), trip.transport, true)
+                                       : travelMin(distanceKm(p, lodging), trip.transport, false);
       // 활동 시간을 넘으면 그날 마감, 남은 곳은 다음 날로 이월 (단, 하루 최소 1곳)
       if (visited > 0 && active + mealMove + move + p.stayMin + back > limit) {
         carry = ordered.slice(i);
@@ -385,7 +386,7 @@ function buildPlan(type, trip, pool) {
       pos = p;
     }
     if (!lunch && (visited > 0 || clock <= LUNCH.until)) clock = addMeal(stops, 'lunch', pos, clock);
-    if (!dinner) clock = addMeal(stops, 'dinner', pos, clock);   // 마지막 날도 저녁 먹고 20:00 이후 출발
+    if (!dinner && (!lastDay || clock >= DINNER_FROM)) clock = addMeal(stops, 'dinner', pos, clock);   // 마지막 날은 늦게 끝날 때만 저녁
     days.push({ start: DAY_START, stops: stops });
   }
   return { type: type, region: pool.region, lodging: lodging, days: days, relax: pool.relax };
@@ -608,11 +609,11 @@ function computeTimeline(trip, plan) {
       clock = end;
       pos = stop.p;
     });
-    // 집으로 가는 날은 출발 시각(기본 20:00) 전까지 자유 시간, 귀가 이동은 활동 시간에서 뺌
-    let departMin = clock;
-    if (endPoint.isHome) departMin = Math.max(clock, plan.returnAt || RETURN_AFTER);
+    // 숙소로 가는 날: 숙소 도착이 20:00(바꿀 수 있음) 이후가 되도록 그 전까지 자유 시간 / 집으로 가는 날: 끝나는 대로 출발
     const back = leg(endPoint);
-    if (!endPoint.isHome) active += back.min;
+    active += back.min;
+    let departMin = clock;
+    if (!endPoint.isHome) departMin = Math.max(clock, (plan.lodgingArrive || LODGING_ARRIVE) - back.min);
     const endMin = departMin + back.min;
     return { start: day.start, startPoint: startPoint, endPoint: endPoint, items: items, departMin: departMin,
              freeMin: departMin - clock, backMin: back.min, backKm: back.km, endMin: endMin, activeMin: active, over: active > limit };
@@ -671,12 +672,12 @@ async function loadSavedPlan(trip, places) {
     if (row.not_before) stop.notBefore = row.not_before;
     if (days[row.day_no - 1]) days[row.day_no - 1].stops.push(stop);
   });
-  const returnAt = trip.day_starts && trip.day_starts.length > trip.days ? trip.day_starts[trip.days] : RETURN_AFTER;
-  return { type: trip.plan_type, region: trip.region, lodging: lodging, days: days, relax: 1, returnAt: returnAt };
+  const lodgingArrive = trip.day_starts && trip.day_starts.length > trip.days ? trip.day_starts[trip.days] : LODGING_ARRIVE;
+  return { type: trip.plan_type, region: trip.region, lodging: lodging, days: days, relax: 1, lodgingArrive: lodgingArrive };
 }
 
 // node로 시험할 때 쓰도록 내보내기 (브라우저에서는 무시됨)
 if (typeof module !== 'undefined') {
   module.exports = { TEMPO, rankRegions, buildPlans, buildPlan, preparePool, computeTimeline, distanceKm,
-    travelMin, budgetCaps, hhmm, PLAN_INFO, isChain, RETURN_AFTER, foodKind, cuisineOf, pickRestaurant, ensureScores, estimateMinCost, fitBudget, syncBreakfast, breakfastPlace, lodgingBreakfast };
+    travelMin, budgetCaps, hhmm, PLAN_INFO, isChain, LODGING_ARRIVE, foodKind, cuisineOf, pickRestaurant, ensureScores, estimateMinCost, fitBudget, syncBreakfast, breakfastPlace, lodgingBreakfast };
 }

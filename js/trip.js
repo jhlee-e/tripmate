@@ -108,9 +108,9 @@ function renderSchedule(trip, plan, t) {
         '<span class="mini-cost">' + (it.cost ? won(it.cost) : '') + '</span></li>';
     });
     if (day.endPoint.isHome) {
-      if (day.freeMin > 0) html += '<li class="mini-point">☕ 자유 시간 ' + durationText(day.freeMin) + '</li>';
-      html += '<li class="mini-point">' + hhmm(day.departMin) + ' 🚩 집으로 출발 → ' + hhmm(day.endMin) + ' 🏠 도착</li>';
+      html += '<li class="mini-point">' + hhmm(day.endMin) + ' 🏠 집 도착</li>';
     } else {
+      if (day.freeMin > 0) html += '<li class="mini-point">☕ 자유 시간 ' + durationText(day.freeMin) + '</li>';
       html += '<li class="mini-point">' + hhmm(day.endMin) + ' 🏨 숙소 도착 (' + esc(plan.lodging.name) + ')</li>';
     }
     sec.innerHTML = html + '</ol>';

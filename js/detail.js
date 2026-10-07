@@ -160,19 +160,18 @@ function renderDay() {
     list.appendChild(li);
   });
 
-  // 집으로 가는 날: 자유 시간 → 출발 시각(바꿀 수 있음) → 집 도착
-  if (day.endPoint.isHome) {
-    const go = pointItem(hhmm(day.departMin), '🚩 집으로 출발 <label class="return-field">출발 시각 ' +
-      '<input type="time" step="600" class="return-input" value="' + hhmm(plan.returnAt || RETURN_AFTER) + '"></label>');
-    if (day.freeMin > 0) go.insertAdjacentHTML('afterbegin', '<p class="tl-move">☕ 자유 시간 ' + durationText(day.freeMin) + '</p>');
-    go.querySelector('.return-input').addEventListener('change', function (e) {
-      const [h, m] = e.target.value.split(':').map(Number);
-      if (!Number.isNaN(h)) { plan.returnAt = h * 60 + m; refresh(true); }
-    });
-    list.appendChild(go);
+  // 숙소로 가는 날: 자유 시간 → 숙소 도착 시각(바꿀 수 있음, 모든 날 공통)
+  if (!day.endPoint.isHome && day.freeMin > 0) {
+    list.appendChild(pointItem(hhmm(day.departMin), '☕ 자유 시간 ' + durationText(day.freeMin) + ' 뒤 숙소로'));
   }
-  const endText = day.endPoint.isHome ? '🏠 집 도착' : '🏨 숙소 도착';
+  const endText = day.endPoint.isHome ? '🏠 집 도착' : '🏨 숙소 도착 <label class="return-field">도착 시각 ' +
+    '<input type="time" step="600" class="return-input" value="' + hhmm(plan.lodgingArrive || LODGING_ARRIVE) + '"> 이후</label>';
   const end = pointItem(hhmm(day.endMin), endText);
+  const arriveInput = end.querySelector('.return-input');
+  if (arriveInput) arriveInput.addEventListener('change', function (e) {
+    const [h, m] = e.target.value.split(':').map(Number);
+    if (!Number.isNaN(h)) { plan.lodgingArrive = h * 60 + m; refresh(true); }
+  });
   end.insertAdjacentHTML('afterbegin', '<p class="tl-move">↓ ' + trip.transport + ' ' + durationText(day.backMin) + ' · ' + day.backKm.toFixed(1) + 'km</p>');
   list.appendChild(end);
 }
@@ -457,8 +456,8 @@ document.getElementById('save-btn').addEventListener('click', async function () 
     // 1) 여행에 고른 여행지·일정안·총비용·날짜별 시작 시각 기록
     const up = await sb.from('trips').update({
       region: plan.region, plan_type: plan.type, total_cost: Math.round(timeline.cost.total),
-      // 날짜별 시작 시각 + 맨 끝에 집으로 출발하는 시각 (예: 3일 여행이면 [1일차, 2일차, 3일차, 귀가 출발])
-      day_starts: plan.days.map(function (d) { return d.start; }).concat([plan.returnAt || RETURN_AFTER])
+      // 날짜별 시작 시각 + 맨 끝에 숙소 도착 시각 (예: 3일 여행이면 [1일차, 2일차, 3일차, 숙소 도착])
+      day_starts: plan.days.map(function (d) { return d.start; }).concat([plan.lodgingArrive || LODGING_ARRIVE])
     }).eq('id', trip.id);
     if (up.error) throw up.error;
     // 2) 예전 장소 목록 지우고 새로 넣기 (숙소는 day_no 0)
