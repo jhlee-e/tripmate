@@ -67,6 +67,11 @@ async function loadSavedPlan(region, key) {
   }
   let lodging = null;
   data.forEach(function (row) {
+    // 숙소 조식(id 'bf-숙소id')은 장소 파일에 없으므로 숙소 정보로 다시 만듦
+    if (lodging && String(row.place_id).indexOf('bf-') === 0) {
+      days[row.day_no - 1].stops.push({ p: breakfastPlace(lodging), stay: row.stay_min, meal: row.meal || '아침', notBefore: row.not_before || undefined });
+      return;
+    }
     const p = byId[row.place_id] || { id: row.place_id, name: row.name, type: row.type, lat: row.lat, lng: row.lng,
                                       cost: 0, stayMin: row.stay_min, tags: {} };
     if (row.day_no === 0) { lodging = p; return; }
@@ -138,7 +143,7 @@ function renderDay() {
   const list = document.getElementById('timeline');
   list.innerHTML = '';
   const lastDay = curDay === timeline.days.length - 1;
-  list.appendChild(pointItem(hhmm(day.start), curDay === 0 || !plan.lodging ? '🏠 출발지에서 출발' : '🏨 숙소에서 출발'));
+  list.appendChild(pointItem(hhmm(day.start), curDay === 0 || !plan.lodging ? '🏠 출발지에서 출발 <small>(아침은 집에서 먹고 출발)</small>' : '🏨 숙소에서 출발'));
 
   let visitNo = 0;   // 식사를 빼고 센 방문 번호 (지도 번호와 같음)
   day.items.forEach(function (it, i) {
@@ -241,6 +246,11 @@ function openSwap(i, li) {
   box.innerHTML = '';
   box.appendChild(select);
   box.hidden = false;
+}
+
+// 아침 식당 후보: 추천 후보 식사 식당 (체인 제외)
+function mealRestaurants() {
+  return places.filter(function (p) { return p.type === '식당' && p.recommend && !isChain(p.name) && foodKind(p) === 'meal'; });
 }
 
 // 식당이 디저트·카페면 '디저트', 아니면 원래 끼니 이름(디저트였으면 '식사')
@@ -386,7 +396,11 @@ function renderLodging() {
     return '<option value="' + k + '"' + (plan.lodging && x.p.id === plan.lodging.id ? ' selected' : '') + '>' +
       esc(x.p.name) + ' · 1박 ' + won(x.p.cost) + ' · 일정 중심에서 ' + x.km.toFixed(1) + 'km</option>';
   }).join('');
-  select.onchange = function () { plan.lodging = list[Number(select.value)].p; refresh(true); };
+  select.onchange = function () {
+    plan.lodging = list[Number(select.value)].p;
+    syncBreakfast(trip, plan, mealRestaurants());   // 숙소가 바뀌면 조식(숙소 조식 / 근처 식당 아침)도 맞춰 바꿈
+    refresh(true);
+  };
 }
 
 // ---------- 4. 지도 ----------

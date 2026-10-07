@@ -111,6 +111,7 @@ function foodKind(p) {
   return 'meal';
 }
 function cuisineOf(p) {
+  if (p.category === 'BREAKFAST') return '숙소 조식';
   if (foodKind(p) === 'dessert') return '디저트·카페';
   const c = p.category || '';
   if (c === 'FD020100') return '중식';
@@ -154,7 +155,7 @@ function estimateMinCost(trip, r, distKm) {
     (trip.transport === '자동차' ? 30 * trip.days * CAR_WON_PER_KM               // 여행지 안 하루 약 30km (Claude 가정)
                                  : LOCAL_FARE * pay * (TEMPO[trip.tempo].count + 2) * trip.days);
   const lodging = nights > 0 ? (c.lodging || 0) * (trip.rooms || 1) * nights : 0;
-  const food = (c.meal || 12000) * pay * 2 * trip.days;
+  const food = (c.meal || 12000) * pay * (2 * trip.days + nights);   // 점심·저녁 + 숙박한 다음 날 아침
   return transport + lodging + food;
 }
 
@@ -198,7 +199,7 @@ function budgetCaps(trip) {
   const pay = payersOf(trip), count = TEMPO[trip.tempo].count;
   return {
     lodging: nights > 0 ? max * BUDGET_SHARE.lodging / (nights * rooms) : Infinity,  // 방 1개 1박
-    meal: max * BUDGET_SHARE.food / (pay * trip.days * 2),                          // 1인 1끼 (하루 2끼)
+    meal: max * BUDGET_SHARE.food / (pay * (trip.days * 2 + nights)),               // 1인 1끼 (점심·저녁 + 숙박한 다음 날 아침)
     admission: max * BUDGET_SHARE.etc / (pay * trip.days * count)                   // 1인 1곳 입장료
   };
 }
@@ -408,8 +409,88 @@ function buildPlans(trip, region, places) {
   if (!pool) return null;
   pool.region = region;
   const plans = {};
-  ['A', 'B', 'C'].forEach(function (k) { plans[k] = fitBudget(trip, buildPlan(k, trip, pool), pool); });
+  ['A', 'B', 'C'].forEach(function (k) {
+    plans[k] = fitBudget(trip, syncBreakfast(trip, buildPlan(k, trip, pool), pool.all.restaurants), pool);
+  });
   return plans;
+}
+
+// ---------- 4-1. 아침 식사 ----------
+// 첫날 아침은 집에서 먹고 출발(일정·비용에 넣지 않음, Claude 결정). 숙박한 다음 날부터는 08:00에 아침을 넣음
+// 숙소 종류별 조식 (조식 가격은 숙소 데이터에 없어 아래 자료로 정한 값):
+//   호텔: 1인 30,000원 — 신라스테이 전주 조식 현장 결제 성인 3만원 (trvlogue, 2026-05)
+//         1박 25만원 이상 호텔은 68,500원 — 서울 5성급 호텔 조식 8곳(55,000~86,000원)의 중앙값 (여행픽, 2025-11)
+//   리조트·콘도·레지던스: 1인 37,000원 — 한화리조트 설악 쏘라노 조식 성인 정상가 (CEO스코어데일리, 2024-06)
+//   게스트하우스·유스호스텔: 무료 간단 조식(토스트·시리얼 등 셀프) — 나무위키 '게스트하우스'
+//   펜션·한옥스테이·모텔·민박·홈스테이: 조식 자료가 없어 숙소 근처(3km) 식당에서 아침 (국밥·백반·분식·면 우선)
+//   어린이(7~12세)는 성인의 50% (5성급 호텔 어린이 가격이 성인의 절반), 유아는 0원(앞의 가정과 같음)
+const BREAKFAST = {
+  hotel: 30000, luxuryHotel: 68500, luxuryRoom: 250000, resort: 37000, childRate: 0.5,
+  start: 8 * 60, stay: 60
+};
+const BREAKFAST_GROUPS = ['국밥·탕', '한정식·백반', '분식·간편식', '면'];
+
+// 입력: 숙소 / 출력: { kind: 'paid' | 'free' | 'none', price }
+function lodgingBreakfast(l) {
+  const c = l && l.category || '';
+  if (c === 'AC010100') return { kind: 'paid', price: l.cost >= BREAKFAST.luxuryRoom ? BREAKFAST.luxuryHotel : BREAKFAST.hotel };
+  if (c === 'AC020100' || c === 'AC020200' || c === 'VE050200') return { kind: 'paid', price: BREAKFAST.resort };
+  if (c === 'AC060100' || c === 'AC060200') return { kind: 'free', price: 0 };
+  return { kind: 'none', price: 0 };
+}
+
+// 숙소 조식을 일정의 한 장소처럼 쓰기 위한 가짜 장소 (id 'bf-숙소id', 위치 = 숙소)
+function breakfastPlace(l) {
+  const b = lodgingBreakfast(l);
+  return { id: 'bf-' + l.id, name: l.name + ' 조식' + (b.kind === 'free' ? '(무료·간단)' : ''), type: '식당',
+           category: 'BREAKFAST', categoryName: '숙소 조식', breakfastOf: l.id, cost: b.price, lat: l.lat, lng: l.lng,
+           stayMin: BREAKFAST.stay, tags: {}, _s: 0, recommend: true };
+}
+
+// 숙소 근처 아침 식당 고르기: ① 3km 안 국밥·백반·분식·면 → ② 10km 안 같은 종류 → ③ 10km 안 한식(기타)
+//   → ④ 3km 안 아무 식사 식당 → ⑤ 가장 가까운 식당 (아침에 어울리는 메뉴 순서는 Claude 판단)
+function pickBreakfastRestaurant(lodging, restaurants, used) {
+  const near = restaurants.filter(function (r) { return !used.has(r.id); })
+    .map(function (r) { return { r: r, d: distanceKm(lodging, r), bf: BREAKFAST_GROUPS.indexOf(cuisineOf(r)) !== -1 }; })
+    .sort(function (a, b) { return a.d - b.d; });
+  const rules = [
+    function (x) { return x.bf && x.d <= 3; },
+    function (x) { return x.bf && x.d <= 10; },
+    function (x) { return cuisineOf(x.r) === '한식(기타)' && x.d <= 10; },
+    function (x) { return x.d <= 3; },
+    function () { return true; }
+  ];
+  for (let k = 0; k < rules.length; k++) {
+    const hit = near.find(rules[k]);
+    if (hit) return hit.r;
+  }
+  return null;
+}
+
+// 일정의 2일차부터 맨 앞에 아침을 넣거나(없으면), 숙소가 바뀌었으면 맞게 고침
+// 입력: trip, plan, 식사 식당 목록 / 출력: plan (days[].stops[0] = 아침, day.start = 08:00)
+function syncBreakfast(trip, plan, restaurants) {
+  if (!plan.lodging) return plan;
+  const used = new Set();
+  plan.days.forEach(function (d) { d.stops.forEach(function (st) { used.add(st.p.id); }); });
+  const b = lodgingBreakfast(plan.lodging);
+  plan.days.forEach(function (day, i) {
+    if (i === 0) return;
+    let stop = day.stops.find(function (st) { return st.meal === '아침'; });
+    if (!stop) {
+      stop = { p: null, stay: BREAKFAST.stay, notBefore: BREAKFAST.start, meal: '아침' };
+      day.stops.unshift(stop);
+      if (day.start === DAY_START) day.start = BREAKFAST.start;
+    }
+    if (b.kind !== 'none') {
+      stop.p = breakfastPlace(plan.lodging);
+    } else if (!stop.p || stop.p.breakfastOf != null) {   // 숙소 조식이 없는 숙소로 바뀜 → 근처 식당
+      if (stop.p) used.delete(stop.p.id);
+      const r = pickBreakfastRestaurant(plan.lodging, restaurants, used);
+      if (r) { stop.p = r; used.add(r.id); } else day.stops.splice(day.stops.indexOf(stop), 1);
+    }
+  });
+  return plan;
 }
 
 // ---------- 4-2. 예산 맞추기: 총비용이 최대 예산을 넘으면 더 싼 곳으로 하나씩 바꿈 ----------
@@ -451,7 +532,7 @@ function fitBudget(trip, plan, pool) {
         if (l.cost >= cur.cost) return;
         const km = distanceKm(cur, l);
         consider((cur.cost - l.cost) * rooms * nights, loss(cur, l, km, 5),
-                 function () { plan.lodging = l; }, cur, l);
+                 function () { plan.lodging = l; syncBreakfast(trip, plan, pool.all.restaurants); }, cur, l);
       });
     }
     // 식사·명소
@@ -515,7 +596,10 @@ function computeTimeline(trip, plan) {
       const arrive = clock + mv.min;
       const begin = Math.max(arrive, stop.notBefore || 0);
       const end = begin + stop.stay;
-      const c = stop.p.type === '숙소' ? 0 : (stop.p.cost || 0) * pay;
+      let c = stop.p.type === '숙소' ? 0 : (stop.p.cost || 0) * pay;
+      if (stop.p.breakfastOf != null) {   // 숙소 조식: 어린이는 성인의 50%, 유아 0원
+        c = (stop.p.cost || 0) * (pay - (trip.children || 0) * (1 - BREAKFAST.childRate));
+      }
       if (stop.p.type === '식당') cost.food += c; else cost.admission += c;
       if (!stop.meal) { active += mv.min + stop.stay; visits++; } else active += mv.min;
       items.push({ stop: stop, index: i, moveMin: mv.min, moveKm: mv.km, arrive: arrive, begin: begin, end: end, cost: c });
@@ -557,5 +641,5 @@ function loadPlaces(region) { return loadJSON('data/places/' + encodeURIComponen
 // node로 시험할 때 쓰도록 내보내기 (브라우저에서는 무시됨)
 if (typeof module !== 'undefined') {
   module.exports = { TEMPO, rankRegions, buildPlans, buildPlan, preparePool, computeTimeline, distanceKm,
-    travelMin, budgetCaps, hhmm, PLAN_INFO, isChain, foodKind, cuisineOf, pickRestaurant, ensureScores, estimateMinCost, fitBudget };
+    travelMin, budgetCaps, hhmm, PLAN_INFO, isChain, foodKind, cuisineOf, pickRestaurant, ensureScores, estimateMinCost, fitBudget, syncBreakfast, breakfastPlace, lodgingBreakfast };
 }
