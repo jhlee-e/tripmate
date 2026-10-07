@@ -1,5 +1,6 @@
 // 일정 상세 화면 (타임라인 + 지도 + 수정 + 저장)
 // 입력: 주소의 ?trip=번호&region=지역&plan=A|B|C → 추천 일정을 새로 만듦
+//       (순서 바꾸기는 항목 왼쪽 ⠿ 손잡이를 끌어서 놓기, 날짜 탭 위에 놓으면 그날 끝으로 옮김)
 //       주소에 region·plan이 없으면 → 그 여행에 저장해 둔 일정(trip_places)을 불러옴
 //       사용자의 수정(삭제·순서·다른 날로 옮기기·교체·체류 시간·추가·시작 시각·숙소)
 // 출력: 날짜별 시간표·지도 경로·예산 사용 그래프. 수정할 때마다 computeTimeline으로 다시 계산,
@@ -29,6 +30,7 @@ async function start() {
     const key = param('plan') || trip.plan_type;
     if (!region || !key) { status.textContent = '아직 고른 일정이 없어요. 여행지 추천부터 받아 주세요.'; return; }
     places = await loadPlaces(region);
+    ensureScores(places, trip);
     document.getElementById('back-link').href = 'plans.html?trip=' + trip.id + '&region=' + encodeURIComponent(region);
 
     if (param('plan')) {                       // 추천 일정 새로 만들기
@@ -119,6 +121,7 @@ function renderTabs() {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'chip' + (i === curDay ? ' selected' : '') + (d.over ? ' warn' : '');
+    b.dataset.day = i;
     b.textContent = (i + 1) + '일차' + (d.over ? ' ⚠' : '');
     b.addEventListener('click', function () { curDay = i; renderTabs(); renderDay(); renderMap(); });
     tabs.appendChild(b);
@@ -143,24 +146,26 @@ function renderDay() {
     if (!it.stop.meal) visitNo++;
     const li = document.createElement('li');
     li.className = 'tl-item' + (it.stop.meal ? ' meal' : '');
+    li.dataset.index = i;
+    const isFood = p.type === '식당';
     li.innerHTML =
       '<p class="tl-move">↓ ' + trip.transport + ' ' + durationText(it.moveMin) + ' · ' + it.moveKm.toFixed(1) + 'km' +
         (it.begin > it.arrive ? ' · ' + durationText(it.begin - it.arrive) + ' 기다림' : '') + '</p>' +
       '<div class="tl-main">' +
+        '<span class="drag-handle" title="끌어서 순서 바꾸기 (날짜 탭에 놓으면 그날로 옮김)">⠿</span>' +
         '<span class="tl-no">' + (it.stop.meal ? '🍴' : visitNo) + '</span>' +
         '<div class="tl-body">' +
           '<p class="tl-time">' + hhmm(it.begin) + ' – ' + hhmm(it.end) + (it.stop.meal ? ' · ' + esc(it.stop.meal) : '') + '</p>' +
           '<button type="button" class="tl-name link-btn"></button>' +
-          '<p class="tl-meta">' + esc(p.categoryName || p.type) + ' · ' + (it.cost ? won(it.cost) : '무료') + '</p>' +
+          '<p class="tl-meta">' + esc(isFood ? cuisineOf(p) : (p.categoryName || p.type)) + ' · ' + (it.cost ? won(it.cost) : '무료') + '</p>' +
         '</div>' +
       '</div>' +
       '<div class="tl-edit">' +
         '<label class="stay-field">체류 <input type="number" class="stay-input" min="10" step="10" value="' + it.stop.stay + '">분</label>' +
-        '<button type="button" class="icon-btn" data-act="up" title="위로">↑</button>' +
-        '<button type="button" class="icon-btn" data-act="down" title="아래로">↓</button>' +
         '<button type="button" class="icon-btn" data-act="prev" title="전날 끝으로" ' + (curDay === 0 ? 'disabled' : '') + '>◀</button>' +
         '<button type="button" class="icon-btn" data-act="next" title="다음 날 처음으로" ' + (lastDay ? 'disabled' : '') + '>▶</button>' +
         '<button type="button" class="icon-btn" data-act="swap" title="다른 장소로 교체">⇄</button>' +
+        (isFood ? '<button type="button" class="icon-btn" data-act="remeal" title="다른 종류 메뉴로 다시 추천">🔄</button>' : '') +
         '<button type="button" class="icon-btn danger" data-act="del" title="삭제">✕</button>' +
       '</div>' +
       '<div class="swap-box" hidden></div>';
@@ -173,6 +178,7 @@ function renderDay() {
     li.querySelectorAll('[data-act]').forEach(function (btn) {
       btn.addEventListener('click', function () { editStop(btn.dataset.act, i, li); });
     });
+    li.querySelector('.drag-handle').addEventListener('pointerdown', function (e) { startDrag(e, i, li); });
     list.appendChild(li);
   });
 
@@ -193,12 +199,11 @@ function pointItem(time, text) {
 
 function editStop(act, i, li) {
   const stops = plan.days[curDay].stops;
-  if (act === 'up' && i > 0) { stops.splice(i - 1, 0, stops.splice(i, 1)[0]); }
-  else if (act === 'down' && i < stops.length - 1) { stops.splice(i + 1, 0, stops.splice(i, 1)[0]); }
-  else if (act === 'prev' && curDay > 0) { plan.days[curDay - 1].stops.push(stops.splice(i, 1)[0]); }
+  if (act === 'prev' && curDay > 0) { plan.days[curDay - 1].stops.push(stops.splice(i, 1)[0]); }
   else if (act === 'next' && curDay < plan.days.length - 1) { plan.days[curDay + 1].stops.unshift(stops.splice(i, 1)[0]); }
   else if (act === 'del') { stops.splice(i, 1); }
   else if (act === 'swap') { openSwap(i, li); return; }
+  else if (act === 'remeal') { if (!remeal(i)) return; }
   else return;
   refresh(true);
 }
@@ -222,18 +227,110 @@ function openSwap(i, li) {
     .sort(function (a, b) { return a.km - b.km; }).slice(0, 15);
   const select = document.createElement('select');
   select.innerHTML = '<option value="">가까운 ' + stop.p.type + ' 중에서 고르기</option>' + candidates.map(function (c, k) {
-    return '<option value="' + k + '">' + esc(c.p.name) + ' · ' + c.km.toFixed(1) + 'km · ' + (c.p.cost ? won(c.p.cost) : '무료') + '</option>';
+    return '<option value="' + k + '">' + esc(c.p.name) + (c.p.type === '식당' ? ' · ' + cuisineOf(c.p) : '') + ' · ' +
+      c.km.toFixed(1) + 'km · ' + (c.p.cost ? won(c.p.cost) : '무료') + '</option>';
   }).join('');
   select.addEventListener('change', function () {
     if (select.value === '') return;
     const p = candidates[Number(select.value)].p;
     stop.p = p;
     if (!stop.meal) stop.stay = p.stayMin;
+    else stop.meal = mealLabel(p, stop.meal);
     refresh(true);
   });
   box.innerHTML = '';
   box.appendChild(select);
   box.hidden = false;
+}
+
+// 식당이 디저트·카페면 '디저트', 아니면 원래 끼니 이름(디저트였으면 '식사')
+function mealLabel(p, current) {
+  if (foodKind(p) === 'dessert') return '디저트';
+  return !current || current === '디저트' ? '식사' : current;
+}
+
+// 🔄 다른 메뉴로 다시 추천: 지금 메뉴 종류와 '다른 종류'의 식사 식당 중에서
+//    여행 전체에서 덜 먹은 종류 + 바로 앞 장소에서 가까운 곳을 고름 (일정 만들 때와 같은 pickRestaurant 사용)
+function remeal(i) {
+  const day = plan.days[curDay];
+  const stop = day.stops[i];
+  const current = cuisineOf(stop.p);
+  const eaten = {};
+  plan.days.forEach(function (d) {
+    d.stops.forEach(function (st) { if (st !== stop && st.p.type === '식당') eaten[cuisineOf(st.p)] = (eaten[cuisineOf(st.p)] || 0) + 1; });
+  });
+  const prev = i > 0 ? day.stops[i - 1].p : timeline.days[curDay].startPoint;
+  const from = prev.isHome ? stop.p : prev;
+  const list = places.filter(function (p) {
+    return p.type === '식당' && p.recommend && !isChain(p.name) && foodKind(p) === 'meal' && cuisineOf(p) !== current;
+  });
+  const pick = pickRestaurant(plan.type, list, from, usedIds(), eaten, current);
+  if (!pick) { showError(new Error('근처에 다른 종류의 식당이 없어요.')); return false; }
+  showError(null);
+  stop.p = pick;
+  stop.meal = mealLabel(pick, stop.meal);
+  return true;
+}
+
+// ---------- 3-2. 끌어서 순서 바꾸기 (마우스·터치 모두: pointer 이벤트) ----------
+// 입력: ⠿ 손잡이를 누른 채 움직인 위치 / 출력: 놓은 자리로 stops 배열 순서를 바꾸고 다시 계산
+//       날짜 탭 위에 놓으면 그 날의 맨 끝으로 옮김
+let drag = null;
+
+function startDrag(e, index, li) {
+  e.preventDefault();
+  li.classList.add('dragging');
+  drag = { from: index, li: li, to: index, day: null };
+  document.addEventListener('pointermove', moveDrag);
+  document.addEventListener('pointerup', endDrag, { once: true });
+}
+
+function moveDrag(e) {
+  if (!drag) return;
+  document.querySelectorAll('.drop-before, .drop-after, .chip.drop-target').forEach(function (el) {
+    el.classList.remove('drop-before', 'drop-after', 'drop-target');
+  });
+  // 1) 날짜 탭 위인지
+  const under = document.elementFromPoint(e.clientX, e.clientY);
+  const tab = under && under.closest('.day-tabs .chip');
+  if (tab) {
+    drag.day = Number(tab.dataset.day);
+    if (drag.day !== curDay) tab.classList.add('drop-target');
+    return;
+  }
+  drag.day = null;
+  // 2) 타임라인 항목 사이 어디인지: 각 항목 가운데 높이보다 위면 그 앞
+  const items = Array.from(document.querySelectorAll('#timeline .tl-item'));
+  let to = items.length;
+  for (let k = 0; k < items.length; k++) {
+    const r = items[k].getBoundingClientRect();
+    if (e.clientY < r.top + r.height / 2) { to = k; break; }
+  }
+  drag.to = to;
+  if (to < items.length) items[to].classList.add('drop-before');
+  else if (items.length) items[items.length - 1].classList.add('drop-after');
+}
+
+function endDrag() {
+  document.removeEventListener('pointermove', moveDrag);
+  if (!drag) return;
+  const d = drag;
+  drag = null;
+  d.li.classList.remove('dragging');
+  document.querySelectorAll('.drop-before, .drop-after, .chip.drop-target').forEach(function (el) {
+    el.classList.remove('drop-before', 'drop-after', 'drop-target');
+  });
+  const stops = plan.days[curDay].stops;
+  if (d.day !== null && d.day !== curDay) {               // 다른 날로
+    plan.days[d.day].stops.push(stops.splice(d.from, 1)[0]);
+    refresh(true);
+    return;
+  }
+  let to = d.to;
+  if (to > d.from) to--;                                   // 빼낸 뒤에는 뒤쪽 번호가 한 칸 당겨짐
+  if (d.day !== null || to === d.from) return;
+  stops.splice(to, 0, stops.splice(d.from, 1)[0]);
+  refresh(true);
 }
 
 // 하루 시작 시각
@@ -256,9 +353,9 @@ document.getElementById('add-input').addEventListener('input', function (e) {
   }).sort(function (a, b) { return (b._s || 0) - (a._s || 0); }).slice(0, 10).forEach(function (p) {
     const li = document.createElement('li');
     li.innerHTML = '<span></span><button type="button" class="small-btn">' + (curDay + 1) + '일차에 추가</button>';
-    li.querySelector('span').textContent = p.name + ' (' + p.type + (p.cost ? ' · ' + won(p.cost) : '') + ')';
+    li.querySelector('span').textContent = p.name + ' (' + (p.type === '식당' ? cuisineOf(p) : p.type) + (p.cost ? ' · ' + won(p.cost) : '') + ')';
     li.querySelector('button').addEventListener('click', function () {
-      const stop = p.type === '식당' ? { p: p, stay: 60, meal: '식사' } : { p: p, stay: p.stayMin > 0 ? p.stayMin : 60 };
+      const stop = p.type === '식당' ? { p: p, stay: 60, meal: mealLabel(p, '식사') } : { p: p, stay: p.stayMin > 0 ? p.stayMin : 60 };
       plan.days[curDay].stops.push(stop);
       e.target.value = '';
       out.innerHTML = '';
