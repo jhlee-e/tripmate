@@ -9,7 +9,8 @@ places.json 생성 스크립트 (한국관광공사 TourAPI 4.0, KorService2)
 실행: tripmate 폴더에서  python tools/build_places.py
      (파이썬 기본 라이브러리만 사용, 설치할 것 없음)
 
-※ 태그 점수·비용·체류 시간은 TourAPI에 없는 값이라, 아래 표의 '분류별 기본값'으로 채웁니다.
+※ 태그 점수·비용·체류 시간은 TourAPI에 없는 값이라, 세부 분류(lclsSystm3)별 점수표(tools/lcls_scores.json)로 채웁니다.
+   (표에 없는 코드만 아래 '분류별 기본값' 사용) 직접 고른 장소는 tools/curated_places.json 값이 우선.
    이 기본값은 Claude가 정한 초안(추정치)이므로 이재훈이 검토·수정해야 합니다.
 """
 import json, os, re, sys, time, urllib.parse, urllib.request
@@ -179,9 +180,21 @@ def defaults_for(item):
     return DEFAULTS.get(ct)
 
 
+# 세부 분류(lclsSystm3, 201가지)별 점수표 — tools/make_lcls_scores.py 로 만든 lcls_scores.json
+_LCLS_PATH = os.path.join(HERE, 'lcls_scores.json')
+LCLS = json.load(open(_LCLS_PATH, encoding='utf-8')) if os.path.exists(_LCLS_PATH) else {}
+
+
 def to_place(item, region, sido):
-    d = defaults_for(item)
     ct = int(item['contenttypeid'])
+    code = item.get('lclsSystm3') or ''
+    lc = LCLS.get(code)
+    if lc:                                    # 세부 분류 점수표가 있으면 그것을 사용
+        tags, cost, stay, cat_name, rec = lc['tags'], lc['cost'], lc['stayMin'], lc['name'], lc['recommend']
+    else:                                     # 없으면 예전 분류(cat2)·콘텐츠 종류별 기본값
+        d = defaults_for(item)
+        tags, cost, stay = dict(zip(TAG_NAMES, d['tags'])), d['cost'], d['stayMin']
+        cat_name, rec = item.get('cat2') or str(ct), True
     lat, lng = to_float(item['mapy']), to_float(item['mapx'])
     name = item.get('title', '').strip()
     return {
@@ -190,11 +203,13 @@ def to_place(item, region, sido):
         'sido': sido,
         'name': name,
         'type': PLACE_TYPE[ct],
-        'category': item.get('cat2') or item.get('cat1') or str(ct),
-        'tags': dict(zip(TAG_NAMES, d['tags'])),
+        'category': code,
+        'categoryName': cat_name,
+        'recommend': rec,                     # False면 추천 후보에서 제외 (사후면세점·대형마트·교통시설 등)
+        'tags': tags,
         'lat': round(lat, 6), 'lng': round(lng, 6),
-        'cost': d['cost'],
-        'stayMin': d['stayMin'],
+        'cost': cost,
+        'stayMin': stay,
         'address': item.get('addr1', ''),
         'photo': item.get('firstimage', ''),
         'photoLicense': item.get('cpyrhtDivCd', ''),
@@ -292,7 +307,7 @@ def main():
                 p.update(tags=c['tags'], cost=c['cost'], stayMin=c['stayMin'], featured=True,
                          costCheck=c['costCheck'], basis=c['basis'], scoredBy=c['scoredBy'])
             else:
-                p.update(featured=False, costCheck='추정', basis='분류별 기본값', scoredBy='분류별 기본값(추정)')
+                p.update(featured=False, costCheck='추정', basis=p['categoryName'], scoredBy='세부분류 기본값(Claude 판단)')
             places.append(p)
         places.sort(key=lambda p: (not p['featured'], p['photo'] == '', p['name']))   # 직접 고른 곳·사진 있는 곳 먼저
         json.dump(places, open(os.path.join(out_dir, label + '.json'), 'w', encoding='utf-8'),
@@ -300,7 +315,7 @@ def main():
         total += len(places)
 
         # 지역 요약 — 추천 알고리즘이 지역 파일을 전부 열지 않고도 지역 점수를 계산할 수 있게 미리 계산
-        sights = [p for p in places if p['type'] == '명소']
+        sights = [p for p in places if p['type'] == '명소' and p['recommend']]
         tag_avg = {t: round(sum(p['tags'][t] for p in sights) / len(sights), 2) if sights else 0 for t in TAG_NAMES}
         regions.append({
             'region': label, 'sido': sido, 'file': 'data/places/' + label + '.json',
