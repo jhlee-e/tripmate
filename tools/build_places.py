@@ -201,6 +201,7 @@ def to_place(item, region, sido):
     ov = OVERRIDES.get(str(item['contentid']))
     if ov:
         rec = ov['recommend']
+    audience = ov.get('audience', '') if ov else ''
     lat, lng = to_float(item['mapy']), to_float(item['mapx'])
     name = item.get('title', '').strip()
     return {
@@ -211,7 +212,8 @@ def to_place(item, region, sido):
         'type': PLACE_TYPE[ct],
         'category': code,
         'categoryName': cat_name,
-        'recommend': rec,                     # False면 추천 후보에서 제외 (사후면세점·대형마트·교통시설 등)
+        'recommend': rec,
+        'audience': audience,                 # '10대'면 청소년 전용·청소년 대상 공간                     # False면 추천 후보에서 제외 (사후면세점·대형마트·교통시설 등)
         'tags': tags,
         'lat': round(lat, 6), 'lng': round(lng, 6),
         'cost': cost,

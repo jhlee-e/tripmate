@@ -71,12 +71,6 @@
   "reason": "해녀 체험",
   "source": ""
  },
- "1927855": {
-  "recommend": true,
-  "how": "Claude 판단",
-  "reason": "자연 체험",
-  "source": ""
- },
  "1141637": {
   "recommend": true,
   "how": "Claude 판단",
@@ -91,9 +85,9 @@
  },
  "127516": {
   "recommend": true,
-  "how": "Claude 판단",
-  "reason": "곤충 생태 체험",
-  "source": ""
+  "how": "검색",
+  "reason": "곤충 생태 체험, 횡성군 관광 소개",
+  "source": "https://www.hsg.go.kr/tour/00000321/00001742.web"
  },
  "1908552": {
   "recommend": true,
@@ -127,27 +121,27 @@
  },
  "2505393": {
   "recommend": true,
-  "how": "Claude 판단",
+  "how": "검색",
   "reason": "실내 스포츠 테마파크(스몹)",
-  "source": ""
+  "source": "https://namu.wiki/w/%EC%8A%A4%EB%AA%B9"
  },
  "3116121": {
   "recommend": true,
-  "how": "Claude 판단",
+  "how": "검색",
   "reason": "실내 스포츠 테마파크(스몹)",
-  "source": ""
+  "source": "https://www.ktriptips.com/kor/leisure/3116121"
  },
  "3116124": {
   "recommend": true,
-  "how": "Claude 판단",
-  "reason": "실내 스포츠 테마파크(스몹)",
-  "source": ""
+  "how": "검색",
+  "reason": "실내 스포츠 테마파크(스몹), 스타필드 수원",
+  "source": "https://www.newspim.com/news/view/20231222000609"
  },
  "2432831": {
   "recommend": true,
-  "how": "Claude 판단",
+  "how": "검색",
   "reason": "실내 스포츠 테마파크(스몹)",
-  "source": ""
+  "source": "https://smob-evtour.co.kr/hanam/general.php"
  },
  "131909": {
   "recommend": true,
@@ -511,9 +505,9 @@
  },
  "3444370": {
   "recommend": true,
-  "how": "Claude 판단",
-  "reason": "어린이 놀이 체험 시설",
-  "source": ""
+  "how": "검색",
+  "reason": "프리미엄 어린이 놀이터, 언론 소개",
+  "source": "https://www.idaegu.com/news/articleView.html?idxno=432350"
  },
  "2605193": {
   "recommend": true,
@@ -523,9 +517,9 @@
  },
  "975798": {
   "recommend": true,
-  "how": "Claude 판단",
-  "reason": "등록문화유산 간이역",
-  "source": ""
+  "how": "검색",
+  "reason": "국가등록문화유산 간이역, 나주 문화관광 소개",
+  "source": "https://www.naju.go.kr/tour/sights/cultural_assets/heritage_material?mode=view&idx=556"
  },
  "2704121": {
   "recommend": true,
@@ -535,14 +529,252 @@
  },
  "2642181": {
   "recommend": true,
-  "how": "Claude 판단",
-  "reason": "옛 간이역",
-  "source": ""
+  "how": "검색",
+  "reason": "폐선 옛 역, 관광열차·바람길숲",
+  "source": "https://gangwon.to/gwtour/only/attraction?articleSeq=225"
  },
  "131676": {
   "recommend": true,
   "how": "Claude 판단",
   "reason": "대형 리조트 카지노(성인만)",
   "source": ""
+ },
+ "3301905": {
+  "recommend": true,
+  "audience": "10대",
+  "how": "검색",
+  "reason": "10대 전용 작업실·도서관",
+  "source": "https://www.readersnews.com/news/articleView.html?idxno=107169"
+ },
+ "3386145": {
+  "recommend": true,
+  "audience": "10대",
+  "how": "검색",
+  "reason": "국립 어린이·청소년 도서관",
+  "source": "https://nlcy.go.kr/NLCY/contents/C50201000000.do"
+ },
+ "131408": {
+  "recommend": true,
+  "audience": "10대",
+  "how": "검색",
+  "reason": "시립 청소년센터",
+  "source": "https://www.boramyc.or.kr/"
+ },
+ "131455": {
+  "recommend": true,
+  "audience": "10대",
+  "how": "검색",
+  "reason": "시립 청소년센터",
+  "source": "https://www.youtra.or.kr/"
+ },
+ "131885": {
+  "recommend": true,
+  "audience": "10대",
+  "how": "Claude 판단(같은 종류 시설의 검색 근거 참고)",
+  "reason": "청소년센터·수련관(청소년 이용 시설)",
+  "source": "https://mediahub.seoul.go.kr/archives/2007881"
+ },
+ "131450": {
+  "recommend": true,
+  "audience": "10대",
+  "how": "Claude 판단(같은 종류 시설의 검색 근거 참고)",
+  "reason": "청소년센터·수련관(청소년 이용 시설)",
+  "source": "https://mediahub.seoul.go.kr/archives/2007881"
+ },
+ "1610250": {
+  "recommend": true,
+  "audience": "10대",
+  "how": "Claude 판단(같은 종류 시설의 검색 근거 참고)",
+  "reason": "청소년센터·수련관(청소년 이용 시설)",
+  "source": "https://mediahub.seoul.go.kr/archives/2007881"
+ },
+ "1613631": {
+  "recommend": true,
+  "audience": "10대",
+  "how": "Claude 판단(같은 종류 시설의 검색 근거 참고)",
+  "reason": "청소년센터·수련관(청소년 이용 시설)",
+  "source": "https://mediahub.seoul.go.kr/archives/2007881"
+ },
+ "131338": {
+  "recommend": true,
+  "audience": "10대",
+  "how": "Claude 판단(같은 종류 시설의 검색 근거 참고)",
+  "reason": "청소년센터·수련관(청소년 이용 시설)",
+  "source": "https://mediahub.seoul.go.kr/archives/2007881"
+ },
+ "131686": {
+  "recommend": true,
+  "audience": "10대",
+  "how": "Claude 판단(같은 종류 시설의 검색 근거 참고)",
+  "reason": "청소년센터·수련관(청소년 이용 시설)",
+  "source": "https://mediahub.seoul.go.kr/archives/2007881"
+ },
+ "131143": {
+  "recommend": true,
+  "audience": "10대",
+  "how": "Claude 판단(같은 종류 시설의 검색 근거 참고)",
+  "reason": "청소년센터·수련관(청소년 이용 시설)",
+  "source": "https://mediahub.seoul.go.kr/archives/2007881"
+ },
+ "131452": {
+  "recommend": true,
+  "audience": "10대",
+  "how": "Claude 판단(같은 종류 시설의 검색 근거 참고)",
+  "reason": "청소년센터·수련관(청소년 이용 시설)",
+  "source": "https://mediahub.seoul.go.kr/archives/2007881"
+ },
+ "131644": {
+  "recommend": true,
+  "audience": "10대",
+  "how": "Claude 판단(같은 종류 시설의 검색 근거 참고)",
+  "reason": "청소년센터·수련관(청소년 이용 시설)",
+  "source": "https://mediahub.seoul.go.kr/archives/2007881"
+ },
+ "131139": {
+  "recommend": true,
+  "audience": "10대",
+  "how": "Claude 판단(같은 종류 시설의 검색 근거 참고)",
+  "reason": "청소년센터·수련관(청소년 이용 시설)",
+  "source": "https://mediahub.seoul.go.kr/archives/2007881"
+ },
+ "131140": {
+  "recommend": true,
+  "audience": "10대",
+  "how": "Claude 판단(같은 종류 시설의 검색 근거 참고)",
+  "reason": "청소년센터·수련관(청소년 이용 시설)",
+  "source": "https://mediahub.seoul.go.kr/archives/2007881"
+ },
+ "131453": {
+  "recommend": true,
+  "audience": "10대",
+  "how": "Claude 판단(같은 종류 시설의 검색 근거 참고)",
+  "reason": "청소년센터·수련관(청소년 이용 시설)",
+  "source": "https://mediahub.seoul.go.kr/archives/2007881"
+ },
+ "3060929": {
+  "recommend": true,
+  "audience": "10대",
+  "how": "Claude 판단(같은 종류 시설의 검색 근거 참고)",
+  "reason": "청소년센터·수련관(청소년 이용 시설)",
+  "source": "https://mediahub.seoul.go.kr/archives/2007881"
+ },
+ "131534": {
+  "recommend": true,
+  "audience": "10대",
+  "how": "Claude 판단(같은 종류 시설의 검색 근거 참고)",
+  "reason": "청소년센터·수련관(청소년 이용 시설)",
+  "source": "https://mediahub.seoul.go.kr/archives/2007881"
+ },
+ "2762808": {
+  "recommend": true,
+  "audience": "10대",
+  "how": "Claude 판단(같은 종류 시설의 검색 근거 참고)",
+  "reason": "청소년센터·수련관(청소년 이용 시설)",
+  "source": "https://mediahub.seoul.go.kr/archives/2007881"
+ },
+ "131136": {
+  "recommend": true,
+  "audience": "10대",
+  "how": "Claude 판단(같은 종류 시설의 검색 근거 참고)",
+  "reason": "청소년센터·수련관(청소년 이용 시설)",
+  "source": "https://mediahub.seoul.go.kr/archives/2007881"
+ },
+ "131138": {
+  "recommend": true,
+  "audience": "10대",
+  "how": "Claude 판단(같은 종류 시설의 검색 근거 참고)",
+  "reason": "청소년센터·수련관(청소년 이용 시설)",
+  "source": "https://mediahub.seoul.go.kr/archives/2007881"
+ },
+ "131137": {
+  "recommend": true,
+  "audience": "10대",
+  "how": "Claude 판단(같은 종류 시설의 검색 근거 참고)",
+  "reason": "청소년센터·수련관(청소년 이용 시설)",
+  "source": "https://mediahub.seoul.go.kr/archives/2007881"
+ },
+ "3046095": {
+  "recommend": true,
+  "audience": "10대",
+  "how": "Claude 판단(같은 종류 시설의 검색 근거 참고)",
+  "reason": "청소년센터·수련관(청소년 이용 시설)",
+  "source": "https://mediahub.seoul.go.kr/archives/2007881"
+ },
+ "131447": {
+  "recommend": true,
+  "audience": "10대",
+  "how": "Claude 판단(같은 종류 시설의 검색 근거 참고)",
+  "reason": "청소년센터·수련관(청소년 이용 시설)",
+  "source": "https://mediahub.seoul.go.kr/archives/2007881"
+ },
+ "3057777": {
+  "recommend": true,
+  "audience": "10대",
+  "how": "Claude 판단(같은 종류 시설의 검색 근거 참고)",
+  "reason": "청소년센터·수련관(청소년 이용 시설)",
+  "source": "https://mediahub.seoul.go.kr/archives/2007881"
+ },
+ "131393": {
+  "recommend": true,
+  "audience": "10대",
+  "how": "Claude 판단(같은 종류 시설의 검색 근거 참고)",
+  "reason": "청소년센터·수련관(청소년 이용 시설)",
+  "source": "https://mediahub.seoul.go.kr/archives/2007881"
+ },
+ "1971317": {
+  "recommend": true,
+  "audience": "10대",
+  "how": "Claude 판단(같은 종류 시설의 검색 근거 참고)",
+  "reason": "청소년센터·수련관(청소년 이용 시설)",
+  "source": "https://mediahub.seoul.go.kr/archives/2007881"
+ },
+ "131474": {
+  "recommend": true,
+  "audience": "10대",
+  "how": "Claude 판단(같은 종류 시설의 검색 근거 참고)",
+  "reason": "청소년센터·수련관(청소년 이용 시설)",
+  "source": "https://mediahub.seoul.go.kr/archives/2007881"
+ },
+ "131150": {
+  "recommend": true,
+  "audience": "10대",
+  "how": "Claude 판단(같은 종류 시설의 검색 근거 참고)",
+  "reason": "청소년센터·수련관(청소년 이용 시설)",
+  "source": "https://mediahub.seoul.go.kr/archives/2007881"
+ },
+ "2465032": {
+  "recommend": true,
+  "audience": "10대",
+  "how": "Claude 판단(같은 종류 시설의 검색 근거 참고)",
+  "reason": "청소년센터·수련관(청소년 이용 시설)",
+  "source": "https://mediahub.seoul.go.kr/archives/2007881"
+ },
+ "131188": {
+  "recommend": true,
+  "audience": "10대",
+  "how": "Claude 판단(같은 종류 시설의 검색 근거 참고)",
+  "reason": "청소년센터·수련관(청소년 이용 시설)",
+  "source": "https://mediahub.seoul.go.kr/archives/2007881"
+ },
+ "131167": {
+  "recommend": true,
+  "audience": "10대",
+  "how": "Claude 판단(같은 종류 시설의 검색 근거 참고)",
+  "reason": "청소년센터·수련관(청소년 이용 시설)",
+  "source": "https://mediahub.seoul.go.kr/archives/2007881"
+ },
+ "1973361": {
+  "recommend": true,
+  "audience": "10대",
+  "how": "Claude 판단(같은 종류 시설의 검색 근거 참고)",
+  "reason": "청소년센터·수련관(청소년 이용 시설)",
+  "source": "https://mediahub.seoul.go.kr/archives/2007881"
+ },
+ "131824": {
+  "recommend": true,
+  "audience": "10대",
+  "how": "Claude 판단(같은 종류 시설의 검색 근거 참고)",
+  "reason": "청소년센터·수련관(청소년 이용 시설)",
+  "source": "https://mediahub.seoul.go.kr/archives/2007881"
  }
 }

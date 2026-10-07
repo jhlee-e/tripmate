@@ -358,9 +358,19 @@ select:focus {
   border-bottom: 1px solid var(--border);
 }
 .check-item label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+/* 공통 input 스타일(width:100%)이 체크박스에도 걸려 글자가 세로로 꺾이던 문제 해결 */
+.check-item input[type="checkbox"] { width: auto; padding: 0; flex-shrink: 0; }
+.check-item label { margin-bottom: 0; font-weight: 400; }
 .check-item.done span { color: var(--text-muted); text-decoration: line-through; }
 
 /* 여행 칸 전체가 버튼처럼 눌림 */
 .trip-item { cursor: pointer; transition: border-color 0.15s, background 0.15s; }
 .trip-item:hover { border-color: var(--accent); }
 .trip-actions { justify-content: center; }
+
+/* 준비물 불러오기 */
+.checklist-tools { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.import-msg:empty { display: none; }
+.import-msg { color: var(--accent); margin: 0 0 6px; }
+.trip-list.picking .trip-item { opacity: 0.55; }
+.trip-list.picking .trip-item.pickable { opacity: 1; border-style: dashed; border-color: var(--accent); }
