@@ -25,6 +25,15 @@ function won(n) {
   return Number(n).toLocaleString('ko-KR') + '원';
 }
 
+// 인원 표시: '3명 (성인 2·청소년 1)'. 나이대 칸이 생기기 전에 저장한 여행(모두 0)은 '3명'만
+function peopleText(trip) {
+  const parts = [];
+  if (trip.adults) parts.push('성인 ' + trip.adults);
+  if (trip.teens) parts.push('청소년 ' + trip.teens);
+  if (trip.infants) parts.push('유아 ' + trip.infants);
+  return trip.people + '명' + (parts.length ? ' (' + parts.join('·') + ')' : '');
+}
+
 // ---------- 1. 여행 목록 ----------
 
 async function loadTrips() {
@@ -43,7 +52,7 @@ async function loadTrips() {
     li.innerHTML =
       '<div class="trip-info">' +
         '<strong>' + shortDate(trip.start_date) + ' ~ ' + shortDate(trip.end_date) + ' (' + trip.days + '일)</strong>' +
-        '<span>' + trip.people + '명 · ' + trip.transport + ' · ' + trip.tempo + ' · 예산 ' +
+        '<span>' + peopleText(trip) + ' · ' + trip.transport + ' · ' + trip.tempo + ' · 예산 ' +
           won(trip.budget_min) + ' ~ ' + won(trip.budget_max) + '</span>' +
         '<span class="trip-tags">' + trip.tags.map(function (t) { return '#' + t; }).join(' ') + '</span>' +
         '<span class="trip-from"></span>' +
