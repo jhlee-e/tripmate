@@ -37,6 +37,10 @@ const CHAIN_BRANDS = ['스타벅스', '투썸플레이스', '이디야', '메가
   '피자헛', '교촌', 'BHC', 'bhc', 'BBQ', '본죽', '김밥천국', '홍콩반점', '새마을식당', '한신포차',
   '아웃백', '빕스', '애슐리'];
 
+// 배·비행기를 타야만 갈 수 있는 지역: 육지 이동 시간·비용 계산이 맞지 않아 추천에서 제외 (이재훈 결정, 데이터는 그대로 둠)
+//   신안·완도·진도·거제·남해 등은 다리로 이어져 있어 포함
+const SEA_REGIONS = ['제주', '서귀포', '울릉'];
+
 // ---------- 1. 작은 계산 도구 ----------
 
 // 두 지점 사이 직선거리(km) — 지구를 구로 보는 하버사인 공식
@@ -172,6 +176,7 @@ function rankRegions(trip, regions, round) {
   const out = [];
 
   regions.forEach(function (r) {
+    if (SEA_REGIONS.indexOf(r.region) !== -1) return;     // 배·비행기로 가야 하는 섬 제외
     const lodgings = r.counts['숙소'] || 0;
     if (trip.days > 1 && lodgings === 0) return;          // 숙소 없는 지역은 당일치기만 (이재훈 결정)
     if ((r.counts['명소'] || 0) < tempo.count) return;
@@ -679,5 +684,5 @@ async function loadSavedPlan(trip, places) {
 // node로 시험할 때 쓰도록 내보내기 (브라우저에서는 무시됨)
 if (typeof module !== 'undefined') {
   module.exports = { TEMPO, rankRegions, buildPlans, buildPlan, preparePool, computeTimeline, distanceKm,
-    travelMin, budgetCaps, hhmm, PLAN_INFO, isChain, LODGING_ARRIVE, foodKind, cuisineOf, pickRestaurant, ensureScores, estimateMinCost, fitBudget, syncBreakfast, breakfastPlace, lodgingBreakfast };
+    travelMin, budgetCaps, hhmm, PLAN_INFO, isChain, LODGING_ARRIVE, SEA_REGIONS, foodKind, cuisineOf, pickRestaurant, ensureScores, estimateMinCost, fitBudget, syncBreakfast, breakfastPlace, lodgingBreakfast };
 }
