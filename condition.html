@@ -61,6 +61,11 @@
         </div>
 
         <div class="field-group">
+          <label for="rooms">숙소 방 수 <small class="label-note">숙소 비용 = 방 1개 1박 가격 × 방 수 × 박 수 · 당일치기면 쓰이지 않아요</small></label>
+          <input type="number" id="rooms" min="1" step="1" value="1">
+        </div>
+
+        <div class="field-group">
           <label for="departure-address">출발 위치</label>
           <div class="address-row">
             <input type="text" id="departure-address" placeholder="주소 검색 또는 지도를 눌러 선택" readonly>

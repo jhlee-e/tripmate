@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TripMate - 일정 상세</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="page wide">
+    <nav class="top-nav">
+      <span id="nav-user"></span>
+      <a href="#" id="back-link">← 일정안 비교</a>
+      <a href="record.html">내 여행</a>
+      <button type="button" class="link-btn" onclick="logout()">로그아웃</button>
+    </nav>
+    <header>
+      <h1 id="title">일정 상세</h1>
+      <p class="subtitle" id="trip-summary"></p>
+    </header>
+    <main>
+      <p class="notice" id="status">일정을 불러오고 있어요…</p>
+
+      <!-- 예산 사용 그래프와 저장 -->
+      <section class="card" id="summary-card" hidden>
+        <div class="summary-row">
+          <div>
+            <p class="plan-total" id="total-cost"></p>
+            <p class="helper-text muted" id="total-meta"></p>
+          </div>
+          <div class="save-box">
+            <button type="button" class="submit-btn" id="save-btn">이 일정 저장</button>
+            <p class="helper-text" id="save-msg"></p>
+          </div>
+        </div>
+        <div class="budget-bar" id="budget-bar"></div>
+        <ul class="budget-legend" id="budget-legend"></ul>
+      </section>
+
+      <div class="detail-layout" id="detail-layout" hidden>
+        <!-- 왼쪽: 날짜별 타임라인 + 수정 -->
+        <section class="card timeline-card">
+          <div class="day-tabs" id="day-tabs"></div>
+          <div class="day-tools">
+            <label for="day-start">시작 시각</label>
+            <input type="time" id="day-start" step="600">
+            <span class="helper-text muted" id="day-active"></span>
+          </div>
+          <p class="field-warning" id="day-warning"></p>
+          <ol class="timeline" id="timeline"></ol>
+
+          <div class="add-box">
+            <label for="add-input">장소 추가 <small class="label-note">이 지역 명소·식당 이름으로 검색해 이 날 끝에 넣어요</small></label>
+            <input type="text" id="add-input" placeholder="예: 해변, 시장, 국밥">
+            <ul class="search-results" id="add-results"></ul>
+          </div>
+          <div class="lodging-box" id="lodging-box">
+            <label for="lodging-select">숙소 <small class="label-note">바꾸면 모든 날 시간표가 다시 계산돼요</small></label>
+            <select id="lodging-select"></select>
+          </div>
+        </section>
+
+        <!-- 오른쪽: 지도 + 장소 카드 -->
+        <section class="card map-card">
+          <div id="detail-map" class="detail-map"></div>
+          <div class="place-card" id="place-card">
+            <p class="helper-text muted">지도 번호나 일정 항목을 누르면 장소 정보가 나와요.</p>
+          </div>
+        </section>
+      </div>
+      <p class="error-text" id="error-text" role="alert"></p>
+    </main>
+  </div>
+  <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=b16ac532d356919ddc87b6d14d8dbd01&autoload=false"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/recommend.js"></script>
+  <script src="js/detail.js"></script>
+</body>
+</html>

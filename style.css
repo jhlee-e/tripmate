@@ -381,3 +381,110 @@ select:focus {
 .people-field small { display: block; margin: 2px 0 6px; font-weight: 400; font-size: 0.75rem; color: var(--text-muted); }
 .people-field input { text-align: center; padding: 11px 6px; }
 .link-btn.danger-link { color: #c0392b; margin-left: auto; }
+
+/* ---------- 5차시: 방 수 · 추천 · 비교 · 상세 ---------- */
+.label-note { display: block; margin-top: 2px; font-weight: 400; font-size: 0.78rem; color: var(--text-muted); }
+
+/* 여행지 추천 카드 */
+.region-cards { display: flex; flex-direction: column; gap: 18px; }
+.region-card { display: block; padding: 0; overflow: hidden; color: inherit; text-decoration: none; border: 2px solid transparent; transition: border-color 0.15s, transform 0.15s; }
+.region-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+.photo-wrap { position: relative; }
+.region-photo { display: block; width: 100%; height: 180px; object-fit: cover; background: var(--accent-light); }
+.region-photo.empty { height: 80px; }
+.photo-credit { display: block; font-size: 0.7rem; color: var(--text-muted); }
+.photo-wrap .photo-credit { position: absolute; right: 8px; bottom: 6px; color: #fff; text-shadow: 0 0 3px rgba(0,0,0,0.7); }
+.region-body { padding: 16px 20px 18px; }
+.region-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.region-head strong { font-size: 1.25rem; }
+.region-head small { color: var(--text-muted); }
+.region-score { margin-left: auto; color: var(--accent); font-weight: 700; }
+.rank-badge { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 0.8rem; font-weight: 700; }
+.reason-list { margin: 0 0 10px; padding-left: 18px; font-size: 0.88rem; line-height: 1.6; }
+.reason-list .warn, .over-text, .plan-total.over { color: #c0392b; }
+.region-cost { margin: 0; font-weight: 700; }
+.region-cost small, .plan-total small { font-weight: 400; color: var(--text-muted); font-size: 0.82rem; }
+
+/* 일정안 비교 */
+.table-wrap { overflow-x: auto; }
+.compare-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+.compare-table th, .compare-table td { padding: 8px 6px; border-bottom: 1px solid var(--border); text-align: right; white-space: nowrap; }
+.compare-table th:first-child { text-align: left; }
+.compare-table tr:first-child th { text-align: center; }
+.compare-table th small { display: block; font-weight: 400; color: var(--text-muted); }
+.compare-table td.best { color: var(--accent); font-weight: 700; }
+.plan-cards { margin-top: 18px; display: flex; flex-direction: column; gap: 18px; }
+.plan-cards .card + .card { margin-top: 0; }
+.plan-total { margin: 0 0 6px; font-size: 1.3rem; font-weight: 700; }
+.plan-days { margin: 10px 0 16px; padding-left: 0; list-style: none; font-size: 0.85rem; line-height: 1.6; }
+.plan-days li { margin-bottom: 6px; }
+a.submit-btn { display: block; text-align: center; text-decoration: none; }
+
+/* 일정 상세 */
+.page.wide { max-width: 1100px; }
+.summary-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+.save-box { min-width: 200px; }
+.save-box .submit-btn { margin-top: 0; }
+.budget-bar { position: relative; display: flex; height: 18px; margin: 14px 0 8px; border-radius: 9px; background: #f0f0f0; overflow: visible; }
+.budget-bar .seg:first-child { border-radius: 9px 0 0 9px; }
+.seg.lodging, .dot.lodging { background: #2f8f7e; }
+.seg.food, .dot.food { background: #e07a2f; }
+.seg.transport, .dot.transport { background: #3b6fd8; }
+.seg.admission, .dot.admission { background: #b8437a; }
+.budget-line { position: absolute; top: -4px; bottom: -4px; width: 2px; background: #222; }
+.budget-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 0; padding: 0; list-style: none; font-size: 0.8rem; color: var(--text-muted); }
+.dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; }
+.dot.line { width: 2px; border-radius: 0; background: #222; }
+
+.detail-layout { display: grid; grid-template-columns: 2fr 3fr; gap: 18px; margin-top: 18px; align-items: start; }
+.detail-layout .card + .card { margin-top: 0; }
+.map-card { position: sticky; top: 16px; padding: 14px; }
+.detail-map { width: 100%; height: 460px; border-radius: 12px; }
+.place-card { padding: 12px 4px 0; }
+.place-card h3 { margin: 6px 0 4px; }
+.place-photo { width: 100%; max-height: 200px; object-fit: cover; border-radius: 10px; }
+.place-links { display: flex; gap: 14px; margin: 6px 0 0; font-size: 0.88rem; }
+.place-links a { color: var(--accent); font-weight: 600; }
+
+.day-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.chip.warn { border-color: #e0a39b; }
+.day-tools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.day-tools label { margin: 0; }
+.day-tools input { width: auto; padding: 6px 10px; }
+.timeline { list-style: none; margin: 10px 0 0; padding: 0; }
+.tl-point { padding: 8px 0; font-size: 0.88rem; color: var(--text-muted); }
+.tl-point .tl-time { font-weight: 700; color: var(--text); }
+.tl-move { margin: 0 0 6px 10px; font-size: 0.78rem; color: var(--text-muted); }
+.tl-item { padding: 6px 0 10px; border-bottom: 1px dashed var(--border); }
+.tl-main { display: flex; gap: 10px; align-items: flex-start; }
+.tl-no { flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 0.8rem; font-weight: 700; }
+.tl-item.meal .tl-no { background: #fff3e8; }
+.tl-body { min-width: 0; }
+.tl-time { margin: 0; font-size: 0.8rem; color: var(--text-muted); }
+.tl-name { padding: 0; margin: 2px 0; font-size: 1rem; font-weight: 700; color: var(--text); text-align: left; }
+.tl-meta { margin: 0; font-size: 0.78rem; color: var(--text-muted); }
+.tl-edit { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: 8px 0 0 36px; }
+.stay-field { display: flex; align-items: center; gap: 4px; margin: 0 6px 0 0; font-size: 0.78rem; font-weight: 400; }
+.stay-field input { width: 64px; padding: 4px 6px; font-size: 0.85rem; }
+.icon-btn { width: 30px; height: 30px; border: 1px solid var(--border); border-radius: 8px; background: #fff; cursor: pointer; font-size: 0.85rem; }
+.icon-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.icon-btn:disabled { opacity: 0.35; cursor: default; }
+.icon-btn.danger { color: #c0392b; }
+.swap-box { margin: 8px 0 0 36px; }
+.swap-box select { font-size: 0.85rem; padding: 6px 8px; }
+.add-box, .lodging-box { margin-top: 18px; }
+.search-results { list-style: none; margin: 6px 0 0; padding: 0; font-size: 0.85rem; }
+.search-results li { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px solid #f0f0f0; }
+.search-results li.muted { color: var(--text-muted); }
+.lodging-box select { font-size: 0.85rem; }
+
+.map-pin { display: flex; align-items: center; justify-content: center; min-width: 26px; height: 26px; padding: 0 4px; border: 2px solid #fff; border-radius: 13px; color: #fff; font-size: 0.78rem; font-weight: 700; box-shadow: 0 1px 4px rgba(0,0,0,0.35); cursor: pointer; }
+.map-pin.meal { background: #fff !important; border-color: #e07a2f; }
+
+@media (max-width: 760px) {
+  .detail-layout { grid-template-columns: 1fr; }
+  .map-card { position: static; order: -1; }
+  .detail-map { height: 320px; }
+}
+a.small-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 34px; text-decoration: none; }
+.region-cards .card + .card { margin-top: 0; }

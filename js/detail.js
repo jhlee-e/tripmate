@@ -1,0 +1,400 @@
+// 일정 상세 화면 (타임라인 + 지도 + 수정 + 저장)
+// 입력: 주소의 ?trip=번호&region=지역&plan=A|B|C → 추천 일정을 새로 만듦
+//       주소에 region·plan이 없으면 → 그 여행에 저장해 둔 일정(trip_places)을 불러옴
+//       사용자의 수정(삭제·순서·다른 날로 옮기기·교체·체류 시간·추가·시작 시각·숙소)
+// 출력: 날짜별 시간표·지도 경로·예산 사용 그래프. 수정할 때마다 computeTimeline으로 다시 계산,
+//       '이 일정 저장'을 누르면 trips(region·plan_type·total_cost·day_starts)와 trip_places에 저장
+
+let trip = null;          // 여행 조건 (trips 한 행)
+let places = [];          // 이 지역 장소 전체
+let plan = null;          // { type, region, lodging, days: [{ start, stops }] }
+let timeline = null;      // computeTimeline 결과
+let curDay = 0;           // 지금 보고 있는 날 (0 = 1일차)
+let dirty = false;        // 저장하지 않은 수정이 있는지
+let map = null, mapObjects = [];
+
+const errorText = document.getElementById('error-text');
+function showError(e) { errorText.textContent = e ? '오류: ' + e.message : ''; if (e) console.error(e); }
+
+// ---------- 1. 시작: 일정 만들기 또는 불러오기 ----------
+
+async function start() {
+  trip = await loadTripFromUrl();
+  const status = document.getElementById('status');
+  if (!trip) { status.textContent = '여행 정보를 찾을 수 없어요.'; return; }
+  document.getElementById('trip-summary').textContent = tripSummary(trip);
+
+  try {
+    const region = param('region') || trip.region;
+    const key = param('plan') || trip.plan_type;
+    if (!region || !key) { status.textContent = '아직 고른 일정이 없어요. 여행지 추천부터 받아 주세요.'; return; }
+    places = await loadPlaces(region);
+    document.getElementById('back-link').href = 'plans.html?trip=' + trip.id + '&region=' + encodeURIComponent(region);
+
+    if (param('plan')) {                       // 추천 일정 새로 만들기
+      const plans = buildPlans(trip, region, places);
+      if (!plans) { status.textContent = '이 예산으로는 일정을 만들 수 없어요.'; return; }
+      plan = plans[key];
+      if (trip.region) document.getElementById('save-msg').textContent = '저장하면 이 여행에 저장된 기존 일정(' + trip.region + ' ' + trip.plan_type + '안)을 덮어써요.';
+    } else {                                   // 저장된 일정 불러오기
+      plan = await loadSavedPlan(region, key);
+      document.getElementById('save-msg').textContent = '저장된 일정이에요.';
+    }
+    document.getElementById('title').textContent = region + ' · ' + key + '안 ' + PLAN_INFO[key].name;
+    status.textContent = '';
+    document.getElementById('summary-card').hidden = false;
+    document.getElementById('detail-layout').hidden = false;
+    kakao.maps.load(function () {
+      map = new kakao.maps.Map(document.getElementById('detail-map'), { center: new kakao.maps.LatLng(36.3, 127.8), level: 9 });
+      map.addControl(new kakao.maps.ZoomControl(), kakao.maps.ControlPosition.RIGHT);
+      refresh(false);
+    });
+  } catch (e) { showError(e); }
+}
+
+// 저장된 trip_places 행 → plan 구조로 되돌리기
+async function loadSavedPlan(region, key) {
+  const { data, error } = await sb.from('trip_places').select('*').eq('trip_id', trip.id)
+    .order('day_no').order('order_no');
+  if (error) throw error;
+  const byId = {};
+  places.forEach(function (p) { byId[String(p.id)] = p; });
+  const days = [];
+  for (let d = 0; d < trip.days; d++) {
+    days.push({ start: (trip.day_starts && trip.day_starts[d]) || 9 * 60, stops: [] });
+  }
+  let lodging = null;
+  data.forEach(function (row) {
+    const p = byId[row.place_id] || { id: row.place_id, name: row.name, type: row.type, lat: row.lat, lng: row.lng,
+                                      cost: 0, stayMin: row.stay_min, tags: {} };
+    if (row.day_no === 0) { lodging = p; return; }
+    const stop = { p: p, stay: row.stay_min };
+    if (row.meal) stop.meal = row.meal;
+    if (row.not_before) stop.notBefore = row.not_before;
+    if (days[row.day_no - 1]) days[row.day_no - 1].stops.push(stop);
+  });
+  return { type: key, region: region, lodging: lodging, days: days, relax: 1 };
+}
+
+// ---------- 2. 다시 계산하고 다시 그리기 ----------
+
+function refresh(changed) {
+  if (changed) {
+    dirty = true;
+    document.getElementById('save-msg').textContent = '수정한 내용이 아직 저장되지 않았어요.';
+  }
+  timeline = computeTimeline(trip, plan);
+  renderSummary();
+  renderTabs();
+  renderDay();
+  renderLodging();
+  renderMap();
+}
+
+function renderSummary() {
+  const c = timeline.cost;
+  const over = c.total > trip.budget_max;
+  document.getElementById('total-cost').innerHTML = '총 ' + won(c.total) +
+    (over ? ' <small class="over-text">최대 예산 ' + won(trip.budget_max) + '을 ' + won(c.total - trip.budget_max) + ' 넘어요</small>'
+          : ' <small>/ 최대 예산 ' + won(trip.budget_max) + '</small>');
+  document.getElementById('total-meta').textContent =
+    '총 이동 ' + timeline.distanceKm.toFixed(0) + 'km · 하루 평균 ' + timeline.visitsPerDay.toFixed(1) + '곳 방문' +
+    (plan.lodging ? ' · 숙소 ' + plan.lodging.name : ' · 당일치기');
+
+  // 예산 사용 그래프: 막대 전체 = max(총비용, 최대 예산)
+  const parts = [['숙박', c.lodging, 'lodging'], ['식비', c.food, 'food'], ['교통', c.transport, 'transport'], ['입장료', c.admission, 'admission']];
+  const scale = Math.max(c.total, trip.budget_max);
+  document.getElementById('budget-bar').innerHTML = parts.map(function (p) {
+    return '<span class="seg ' + p[2] + '" style="width:' + (p[1] / scale * 100) + '%" title="' + p[0] + ' ' + won(p[1]) + '"></span>';
+  }).join('') + '<span class="budget-line" style="left:' + Math.min(100, trip.budget_max / scale * 100) + '%"></span>';
+  document.getElementById('budget-legend').innerHTML = parts.map(function (p) {
+    return '<li><span class="dot ' + p[2] + '"></span>' + p[0] + ' ' + won(p[1]) + '</li>';
+  }).join('') + '<li><span class="dot line"></span>최대 예산</li>';
+}
+
+function renderTabs() {
+  const tabs = document.getElementById('day-tabs');
+  tabs.innerHTML = '';
+  timeline.days.forEach(function (d, i) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'chip' + (i === curDay ? ' selected' : '') + (d.over ? ' warn' : '');
+    b.textContent = (i + 1) + '일차' + (d.over ? ' ⚠' : '');
+    b.addEventListener('click', function () { curDay = i; renderTabs(); renderDay(); renderMap(); });
+    tabs.appendChild(b);
+  });
+}
+
+function renderDay() {
+  const day = timeline.days[curDay];
+  const limit = TEMPO[trip.tempo].hours * 60;
+  document.getElementById('day-start').value = hhmm(plan.days[curDay].start);
+  document.getElementById('day-active').textContent = '활동 ' + durationText(day.activeMin) + ' / ' + durationText(limit) + ' (이동+관람, 식사 제외)';
+  document.getElementById('day-warning').textContent = day.over ? '이 날은 ' + trip.tempo + ' 템포의 하루 활동 시간을 넘었어요.' : '';
+
+  const list = document.getElementById('timeline');
+  list.innerHTML = '';
+  const lastDay = curDay === timeline.days.length - 1;
+  list.appendChild(pointItem(hhmm(day.start), curDay === 0 || !plan.lodging ? '🏠 출발지에서 출발' : '🏨 숙소에서 출발'));
+
+  let visitNo = 0;   // 식사를 빼고 센 방문 번호 (지도 번호와 같음)
+  day.items.forEach(function (it, i) {
+    const p = it.stop.p;
+    if (!it.stop.meal) visitNo++;
+    const li = document.createElement('li');
+    li.className = 'tl-item' + (it.stop.meal ? ' meal' : '');
+    li.innerHTML =
+      '<p class="tl-move">↓ ' + trip.transport + ' ' + durationText(it.moveMin) + ' · ' + it.moveKm.toFixed(1) + 'km' +
+        (it.begin > it.arrive ? ' · ' + durationText(it.begin - it.arrive) + ' 기다림' : '') + '</p>' +
+      '<div class="tl-main">' +
+        '<span class="tl-no">' + (it.stop.meal ? '🍴' : visitNo) + '</span>' +
+        '<div class="tl-body">' +
+          '<p class="tl-time">' + hhmm(it.begin) + ' – ' + hhmm(it.end) + (it.stop.meal ? ' · ' + esc(it.stop.meal) : '') + '</p>' +
+          '<button type="button" class="tl-name link-btn"></button>' +
+          '<p class="tl-meta">' + esc(p.categoryName || p.type) + ' · ' + (it.cost ? won(it.cost) : '무료') + '</p>' +
+        '</div>' +
+      '</div>' +
+      '<div class="tl-edit">' +
+        '<label class="stay-field">체류 <input type="number" class="stay-input" min="10" step="10" value="' + it.stop.stay + '">분</label>' +
+        '<button type="button" class="icon-btn" data-act="up" title="위로">↑</button>' +
+        '<button type="button" class="icon-btn" data-act="down" title="아래로">↓</button>' +
+        '<button type="button" class="icon-btn" data-act="prev" title="전날 끝으로" ' + (curDay === 0 ? 'disabled' : '') + '>◀</button>' +
+        '<button type="button" class="icon-btn" data-act="next" title="다음 날 처음으로" ' + (lastDay ? 'disabled' : '') + '>▶</button>' +
+        '<button type="button" class="icon-btn" data-act="swap" title="다른 장소로 교체">⇄</button>' +
+        '<button type="button" class="icon-btn danger" data-act="del" title="삭제">✕</button>' +
+      '</div>' +
+      '<div class="swap-box" hidden></div>';
+    li.querySelector('.tl-name').textContent = p.name;
+    li.querySelector('.tl-name').addEventListener('click', function () { showPlace(p); panTo(p); });
+    li.querySelector('.stay-input').addEventListener('change', function (e) {
+      const v = Math.round(Number(e.target.value));
+      if (v >= 10) { plan.days[curDay].stops[i].stay = v; refresh(true); } else e.target.value = it.stop.stay;
+    });
+    li.querySelectorAll('[data-act]').forEach(function (btn) {
+      btn.addEventListener('click', function () { editStop(btn.dataset.act, i, li); });
+    });
+    list.appendChild(li);
+  });
+
+  const endText = lastDay || !plan.lodging ? '🏠 출발지로 돌아옴' : '🏨 숙소 도착';
+  const end = pointItem(hhmm(day.endMin), endText);
+  end.insertAdjacentHTML('afterbegin', '<p class="tl-move">↓ ' + trip.transport + ' ' + durationText(day.backMin) + ' · ' + day.backKm.toFixed(1) + 'km</p>');
+  list.appendChild(end);
+}
+
+function pointItem(time, text) {
+  const li = document.createElement('li');
+  li.className = 'tl-point';
+  li.innerHTML = '<span class="tl-time">' + time + '</span> ' + text;
+  return li;
+}
+
+// ---------- 3. 수정 ----------
+
+function editStop(act, i, li) {
+  const stops = plan.days[curDay].stops;
+  if (act === 'up' && i > 0) { stops.splice(i - 1, 0, stops.splice(i, 1)[0]); }
+  else if (act === 'down' && i < stops.length - 1) { stops.splice(i + 1, 0, stops.splice(i, 1)[0]); }
+  else if (act === 'prev' && curDay > 0) { plan.days[curDay - 1].stops.push(stops.splice(i, 1)[0]); }
+  else if (act === 'next' && curDay < plan.days.length - 1) { plan.days[curDay + 1].stops.unshift(stops.splice(i, 1)[0]); }
+  else if (act === 'del') { stops.splice(i, 1); }
+  else if (act === 'swap') { openSwap(i, li); return; }
+  else return;
+  refresh(true);
+}
+
+// 일정에 이미 들어 있는 장소 id
+function usedIds() {
+  const s = new Set();
+  plan.days.forEach(function (d) { d.stops.forEach(function (st) { s.add(st.p.id); }); });
+  return s;
+}
+
+// 교체: 같은 종류(명소/식당) 중 가까운 후보 15곳을 고르는 목록
+function openSwap(i, li) {
+  const box = li.querySelector('.swap-box');
+  if (!box.hidden) { box.hidden = true; return; }
+  const stop = plan.days[curDay].stops[i];
+  const used = usedIds();
+  const candidates = places.filter(function (p) {
+    return p.type === stop.p.type && p.recommend && !used.has(p.id) && !isChain(p.name) && (p.type !== '명소' || p.stayMin > 0);
+  }).map(function (p) { return { p: p, km: distanceKm(stop.p, p) }; })
+    .sort(function (a, b) { return a.km - b.km; }).slice(0, 15);
+  const select = document.createElement('select');
+  select.innerHTML = '<option value="">가까운 ' + stop.p.type + ' 중에서 고르기</option>' + candidates.map(function (c, k) {
+    return '<option value="' + k + '">' + esc(c.p.name) + ' · ' + c.km.toFixed(1) + 'km · ' + (c.p.cost ? won(c.p.cost) : '무료') + '</option>';
+  }).join('');
+  select.addEventListener('change', function () {
+    if (select.value === '') return;
+    const p = candidates[Number(select.value)].p;
+    stop.p = p;
+    if (!stop.meal) stop.stay = p.stayMin;
+    refresh(true);
+  });
+  box.innerHTML = '';
+  box.appendChild(select);
+  box.hidden = false;
+}
+
+// 하루 시작 시각
+document.getElementById('day-start').addEventListener('change', function (e) {
+  const [h, m] = e.target.value.split(':').map(Number);
+  if (Number.isNaN(h)) return;
+  plan.days[curDay].start = h * 60 + m;
+  refresh(true);
+});
+
+// 장소 추가: 이름 검색
+document.getElementById('add-input').addEventListener('input', function (e) {
+  const q = e.target.value.trim();
+  const out = document.getElementById('add-results');
+  out.innerHTML = '';
+  if (q.length < 1) return;
+  const used = usedIds();
+  places.filter(function (p) {
+    return (p.type === '명소' || p.type === '식당') && !used.has(p.id) && p.name.indexOf(q) !== -1;
+  }).sort(function (a, b) { return (b._s || 0) - (a._s || 0); }).slice(0, 10).forEach(function (p) {
+    const li = document.createElement('li');
+    li.innerHTML = '<span></span><button type="button" class="small-btn">' + (curDay + 1) + '일차에 추가</button>';
+    li.querySelector('span').textContent = p.name + ' (' + p.type + (p.cost ? ' · ' + won(p.cost) : '') + ')';
+    li.querySelector('button').addEventListener('click', function () {
+      const stop = p.type === '식당' ? { p: p, stay: 60, meal: '식사' } : { p: p, stay: p.stayMin > 0 ? p.stayMin : 60 };
+      plan.days[curDay].stops.push(stop);
+      e.target.value = '';
+      out.innerHTML = '';
+      refresh(true);
+    });
+    out.appendChild(li);
+  });
+  if (!out.children.length) out.innerHTML = '<li class="muted">검색 결과가 없어요.</li>';
+});
+
+// 숙소 변경: 일정 장소들의 가운데에서 가까운 숙소 30곳
+function renderLodging() {
+  const box = document.getElementById('lodging-box');
+  box.hidden = !plan.lodging && trip.days === 1;
+  if (box.hidden) return;
+  const all = [];
+  plan.days.forEach(function (d) { d.stops.forEach(function (s) { all.push(s.p); }); });
+  const center = all.length ? { lat: all.reduce(function (s, p) { return s + p.lat; }, 0) / all.length,
+                                lng: all.reduce(function (s, p) { return s + p.lng; }, 0) / all.length } : plan.lodging;
+  const list = places.filter(function (p) { return p.type === '숙소' && p.cost > 0 && p.recommend; })
+    .map(function (p) { return { p: p, km: distanceKm(center, p) }; })
+    .sort(function (a, b) { return a.km - b.km; }).slice(0, 30);
+  if (plan.lodging && !list.some(function (x) { return x.p.id === plan.lodging.id; })) {
+    list.unshift({ p: plan.lodging, km: distanceKm(center, plan.lodging) });
+  }
+  const select = document.getElementById('lodging-select');
+  select.innerHTML = list.map(function (x, k) {
+    return '<option value="' + k + '"' + (plan.lodging && x.p.id === plan.lodging.id ? ' selected' : '') + '>' +
+      esc(x.p.name) + ' · 1박 ' + won(x.p.cost) + ' · 일정 중심에서 ' + x.km.toFixed(1) + 'km</option>';
+  }).join('');
+  select.onchange = function () { plan.lodging = list[Number(select.value)].p; refresh(true); };
+}
+
+// ---------- 4. 지도 ----------
+
+const DAY_COLORS = ['#2f8f7e', '#e07a2f', '#3b6fd8', '#b8437a', '#7a5cc4', '#c49a1a', '#4a8a2a'];
+
+function renderMap() {
+  if (!map) return;
+  mapObjects.forEach(function (o) { o.setMap(null); });
+  mapObjects = [];
+  const color = DAY_COLORS[curDay % DAY_COLORS.length];
+  const day = timeline.days[curDay];
+  const path = [];
+  const bounds = new kakao.maps.LatLngBounds();
+
+  function addPoint(p, label, cls) {
+    const pos = new kakao.maps.LatLng(p.lat, p.lng);
+    path.push(pos);
+    bounds.extend(pos);
+    const el = document.createElement('button');
+    el.type = 'button';
+    el.className = 'map-pin ' + cls;
+    el.style.background = cls === 'lodging' ? '#333' : color;
+    el.textContent = label;
+    el.addEventListener('click', function () { showPlace(p); });
+    const ov = new kakao.maps.CustomOverlay({ position: pos, content: el, yAnchor: 0.5, zIndex: cls === 'lodging' ? 1 : 2 });
+    ov.setMap(map);
+    mapObjects.push(ov);
+  }
+
+  // 출발지(집)는 멀리 있어 지도에서 빼고, 숙소·장소만 표시
+  if (!day.startPoint.isHome) addPoint(day.startPoint, '숙', 'lodging');
+  let n = 0;
+  day.items.forEach(function (it) { addPoint(it.stop.p, it.stop.meal ? '🍴' : String(++n), it.stop.meal ? 'meal' : 'visit'); });
+  if (!day.endPoint.isHome) {
+    const pos = new kakao.maps.LatLng(day.endPoint.lat, day.endPoint.lng);
+    path.push(pos);
+    if (day.startPoint.isHome) addPoint(day.endPoint, '숙', 'lodging');
+  }
+  const line = new kakao.maps.Polyline({ path: path, strokeWeight: 4, strokeColor: color, strokeOpacity: 0.8 });
+  line.setMap(map);
+  mapObjects.push(line);
+  if (path.length) map.setBounds(bounds, 40, 40, 40, 40);
+}
+
+function panTo(p) { if (map) map.panTo(new kakao.maps.LatLng(p.lat, p.lng)); }
+
+function showPlace(p) {
+  const card = document.getElementById('place-card');
+  const route = 'https://map.kakao.com/link/to/' + encodeURIComponent(p.name) + ',' + p.lat + ',' + p.lng;
+  card.innerHTML =
+    (p.photo ? '<img class="place-photo" src="' + esc(p.photo) + '" alt=""><small class="photo-credit">사진: 한국관광공사</small>' : '') +
+    '<h3>' + esc(p.name) + '</h3>' +
+    '<p class="helper-text muted">' + esc(p.categoryName || p.type) + (p.address ? ' · ' + esc(p.address) : '') + '</p>' +
+    '<p class="helper-text">' + (p.type === '숙소' ? '1박 ' : '1인 ') + (p.cost ? won(p.cost) : '무료') +
+      (p.costCheck === '추정' ? ' (추정)' : '') + (p.stayMin && p.type !== '숙소' ? ' · 기본 체류 ' + p.stayMin + '분' : '') + '</p>' +
+    (p.basis && p.scoredBy && p.scoredBy.indexOf('세부분류') === -1 ? '<p class="helper-text">' + esc(p.basis) + '</p>' : '') +
+    '<p class="place-links">' +
+      (p.link ? '<a href="' + esc(p.link) + '" target="_blank" rel="noopener">카카오맵에서 보기</a>' : '') +
+      '<a href="' + esc(route) + '" target="_blank" rel="noopener">카카오맵 길찾기</a></p>';
+}
+
+// ---------- 5. 저장 ----------
+
+document.getElementById('save-btn').addEventListener('click', async function () {
+  const btn = this, msg = document.getElementById('save-msg');
+  btn.disabled = true;
+  msg.textContent = '저장 중…';
+  try {
+    // 1) 여행에 고른 여행지·일정안·총비용·날짜별 시작 시각 기록
+    const up = await sb.from('trips').update({
+      region: plan.region, plan_type: plan.type, total_cost: Math.round(timeline.cost.total),
+      day_starts: plan.days.map(function (d) { return d.start; })
+    }).eq('id', trip.id);
+    if (up.error) throw up.error;
+    // 2) 예전 장소 목록 지우고 새로 넣기 (숙소는 day_no 0)
+    const del = await sb.from('trip_places').delete().eq('trip_id', trip.id);
+    if (del.error) throw del.error;
+    const rows = [];
+    if (plan.lodging) {
+      rows.push({ trip_id: trip.id, place_id: String(plan.lodging.id), name: plan.lodging.name, type: '숙소',
+        day_no: 0, order_no: 0, cost: timeline.cost.lodging, lat: plan.lodging.lat, lng: plan.lodging.lng });
+    }
+    timeline.days.forEach(function (d, di) {
+      d.items.forEach(function (it, oi) {
+        rows.push({ trip_id: trip.id, place_id: String(it.stop.p.id), name: it.stop.p.name, type: it.stop.p.type,
+          day_no: di + 1, order_no: oi + 1, start_time: hhmm(it.begin), stay_min: it.stop.stay, cost: it.cost,
+          lat: it.stop.p.lat, lng: it.stop.p.lng, meal: it.stop.meal || null, not_before: it.stop.notBefore || null });
+      });
+    });
+    const ins = await sb.from('trip_places').insert(rows);
+    if (ins.error) throw ins.error;
+    dirty = false;
+    trip.region = plan.region; trip.plan_type = plan.type;
+    history.replaceState(null, '', 'detail.html?trip=' + trip.id);   // 새로고침하면 저장된 일정을 불러오도록
+    msg.innerHTML = '저장했어요! <a href="record.html?saved=' + trip.id + '">준비물 챙기러 가기 →</a>';
+  } catch (e) {
+    msg.textContent = '';
+    showError(e);
+  }
+  btn.disabled = false;
+});
+
+window.addEventListener('beforeunload', function (e) {
+  if (dirty) { e.preventDefault(); e.returnValue = ''; }
+});
+
+start();

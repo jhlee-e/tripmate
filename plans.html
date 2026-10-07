@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TripMate - 일정안 비교</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="page">
+    <nav class="top-nav">
+      <span id="nav-user"></span>
+      <a href="#" id="back-link">← 다른 여행지</a>
+      <a href="record.html">내 여행</a>
+      <button type="button" class="link-btn" onclick="logout()">로그아웃</button>
+    </nav>
+    <header>
+      <h1 id="title">일정안 비교</h1>
+      <p class="subtitle" id="trip-summary"></p>
+    </header>
+    <main>
+      <p class="notice" id="status">일정안을 만들고 있어요…</p>
+      <section class="card" id="compare-card" hidden>
+        <h2 class="section-title">한눈에 비교 <small>더 좋은 값은 초록색</small></h2>
+        <div class="table-wrap"><table class="compare-table" id="compare-table"></table></div>
+      </section>
+      <div class="plan-cards" id="plan-cards"></div>
+      <p class="error-text" id="error-text" role="alert"></p>
+    </main>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/recommend.js"></script>
+  <script src="js/plans.js"></script>
+</body>
+</html>

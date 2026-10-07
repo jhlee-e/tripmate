@@ -1,7 +1,6 @@
 // 조건 입력 화면 스크립트
 // 입력: 사용자가 폼에 넣은 날짜·예산·나이대별 인원(유아·어린이·청소년·성인)·출발 위치(departure.js)·이동수단·취향 태그(선택 순서 포함)·템포
-// 출력: 검사를 통과하면 하나의 객체(condition)로 묶어 Supabase trips 테이블에 저장한 뒤 '내 여행'(record.html)으로 이동
-//       (5차시에는 저장 후 추천 결과 화면 result.html로 이동하도록 바꿀 예정)
+// 출력: 검사를 통과하면 하나의 객체(condition)로 묶어 Supabase trips 테이블에 저장한 뒤 여행지 추천 화면(result.html)으로 이동
 
 // ---------- 0. 날짜 제한 ----------
 // 시작일은 오늘부터, 종료일은 시작일부터 고를 수 있게 min 값을 정함
@@ -158,6 +157,7 @@ function collectCondition() {
     budgetMin: Number(document.getElementById('budget-min').value),
     budgetMax: Number(document.getElementById('budget-max').value),
     people: readPeople(),         // { infants, children, teens, adults, total }
+    rooms: Number(document.getElementById('rooms').value),
     departure: departure,         // { address, lat, lng } — departure.js에서 만든 값
     transport: getSelectedValue('transport-group'),
     tags: selectedTags.slice(),   // 복사본 (선택 순서 유지)
@@ -180,6 +180,8 @@ function validateCondition(c) {
   }
   if (p.total < 1) return '인원 수를 1명 이상 입력해 주세요.';
   if (p.teens + p.adults === 0) return '유아·어린이만으로는 여행할 수 없어요. 청소년이나 성인을 1명 이상 넣어 주세요.';
+  if (!Number.isInteger(c.rooms) || c.rooms < 1) return '숙소 방 수는 1 이상의 정수로 입력해 주세요.';
+  if (c.rooms > p.total) return '방 수가 인원 수보다 많아요.';
   if (!c.departure) return '출발 위치를 주소 검색이나 지도로 정해 주세요.';
   if (!c.transport) return '주 이동 수단을 선택해 주세요.';
   if (c.tags.length === 0) return '여행 취향을 한 개 이상 선택해 주세요.';
@@ -219,6 +221,7 @@ async function handleSubmit(event) {
     children: condition.people.children,
     teens: condition.people.teens,
     adults: condition.people.adults,
+    rooms: condition.rooms,
     departure_address: condition.departure.address,
     departure_lat: condition.departure.lat,
     departure_lng: condition.departure.lng,
@@ -234,7 +237,7 @@ async function handleSubmit(event) {
     return;
   }
   console.log('저장된 여행:', data);
-  location.href = 'record.html?saved=' + data.id;
+  location.href = 'result.html?trip=' + data.id;   // 5차시: 저장 후 여행지 추천 화면으로
 }
 
 // 로그인 확인 후 닉네임을 위쪽 메뉴에 표시

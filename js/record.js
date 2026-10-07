@@ -1,6 +1,6 @@
 // 내 여행(기록·마이페이지) 화면 스크립트
 // 입력: 로그인한 사용자의 trips·checklist 테이블 행, 사용자가 누른 여행 칸·버튼(삭제·체크·추가)
-// 출력: 여행 목록과 준비물 체크리스트를 화면에 그리고, 바뀐 내용을 곧바로 DB에 저장
+// 출력: 여행 목록(고른 여행지·일정안 포함)과 준비물 체크리스트를 화면에 그리고, 바뀐 내용을 곧바로 DB에 저장
 //       (DB에 저장되므로 창이나 컴퓨터를 껐다 켜도 다시 로그인하면 그대로 불러와짐)
 
 const errorText = document.getElementById('error-text');
@@ -54,8 +54,13 @@ async function loadTrips() {
           won(trip.budget_min) + ' ~ ' + won(trip.budget_max) + '</span>' +
         '<span class="trip-tags">' + trip.tags.map(function (t) { return '#' + t; }).join(' ') + '</span>' +
         '<span class="trip-from"></span>' +
+        (trip.region ? '<span class="trip-tags">📍 ' + trip.region + ' · ' + trip.plan_type + '안' +
+          (trip.total_cost ? ' · ' + won(trip.total_cost) : '') + '</span>' : '') +
       '</div>' +
       '<div class="trip-actions">' +
+        // 5차시: 일정을 저장했으면 '일정 보기', 아직이면 '추천받기'
+        (trip.region ? '<a class="small-btn" href="detail.html?trip=' + trip.id + '">일정 보기</a>'
+                     : '<a class="small-btn" href="result.html?trip=' + trip.id + '">추천받기</a>') +
         '<button type="button" class="small-btn danger">삭제</button>' +
       '</div>';
     // 주소는 사용자가 입력한 글자라 innerHTML 대신 textContent로 넣음
@@ -67,7 +72,8 @@ async function loadTrips() {
       if (importMode) importFrom(trip);
       else openChecklist(trip);
     });
-    li.querySelector('button').addEventListener('click', function (e) {
+    li.querySelector('.trip-actions a').addEventListener('click', function (e) { e.stopPropagation(); });
+    li.querySelector('button.danger').addEventListener('click', function (e) {
       e.stopPropagation();   // 삭제 버튼을 누를 때는 칸 클릭(체크리스트 열기)이 같이 일어나지 않게
       deleteTrip(trip.id);
     });
