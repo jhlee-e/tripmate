@@ -3,7 +3,7 @@
 // 출력: 점수 상위 여행지 5곳 카드(사진·추천 이유·예상 비용) → 누르면 일정안 비교(plans.html)로 이동
 
 const RECOMMEND_COUNT = 5;   // 추천할 여행지 수 (계획서 3곳 → 5곳으로 변경, 2026-10-07)
-const MAX_TRY = 20;   // 예산 안에서 일정을 못 만드는 지역을 건너뛰며 최대 몇 곳까지 확인할지
+const MAX_TRY = 12;   // 예산 안에서 일정을 못 만드는 지역을 건너뛰며 최대 몇 곳까지 확인할지
 
 async function start() {
   const trip = await loadTripFromUrl();
@@ -16,18 +16,27 @@ async function start() {
     const round = Number(param('round')) || 0;   // '다시 추천'을 누른 횟수
     const ranked = rankRegions(trip, regions, round);
     const picked = [];
-    for (let i = 0; i < ranked.length && i < MAX_TRY && picked.length < RECOMMEND_COUNT; i++) {
+    // 점수 상위 MAX_TRY곳을 모두 확인한 뒤, 예산 안에 드는 곳을 우선해 RECOMMEND_COUNT곳을 고름
+    for (let i = 0; i < ranked.length && i < MAX_TRY; i++) {
       status.textContent = '여행지를 고르는 중… (' + ranked[i].region + ' 확인)';
       const places = await loadPlaces(ranked[i].region);
       const plans = buildPlans(trip, ranked[i].region, places);
-      if (plans) picked.push({ rank: ranked[i], plans: plans, places: places });
+      if (plans) {
+        const cheapest = Math.min.apply(null, ['A', 'B', 'C'].map(function (k) { return computeTimeline(trip, plans[k]).cost.total; }));
+        picked.push({ rank: ranked[i], plans: plans, places: places, fits: cheapest <= trip.budget_max });
+      }
     }
+    // 예산 안에 드는 곳을 먼저, 그다음 예산을 넘는 곳 (각각 점수 순서 유지)
+    picked.sort(function (a, b) { return (b.fits - a.fits) || (b.rank.score - a.rank.score); });
     if (picked.length === 0) {
       status.textContent = '이 예산으로는 일정을 만들 수 있는 여행지를 찾지 못했어요. 최대 예산을 늘리거나 여행 일수·인원을 조정해 보세요.';
       return;
     }
     status.textContent = '';
-    picked.forEach(function (item, i) { renderCard(trip, item, i + 1, round); });
+    const shown = picked.slice(0, RECOMMEND_COUNT);
+    const over = shown.filter(function (x) { return !x.fits; }).length;
+    if (over) status.textContent = '최대 예산 안에 드는 곳이 ' + (shown.length - over) + '곳뿐이라, 예산을 넘는 ' + over + '곳도 함께 보여 드려요.';
+    shown.forEach(function (item, i) { renderCard(trip, item, i + 1, round); });
     const again = document.getElementById('reroll-btn');
     again.hidden = false;
     again.onclick = function () { location.href = 'result.html?trip=' + trip.id + '&round=' + (round + 1); };
@@ -66,7 +75,8 @@ function renderCard(trip, item, order, round) {
         '<li>인기 명소 10곳 평균 인기도 ' + info.popTop10.toFixed(1) + ' / 5' + (cover ? ' · 대표: ' + esc(cover.name) : '') + '</li>' +
         '<li>출발지에서 편도 약 ' + durationText(r.oneWayMin) + ' (' + trip.transport + ', 추정)</li>' + relax +
       '</ul>' +
-      '<p class="region-cost">예상 비용 ' + (low === high ? won(low) : won(low) + ' ~ ' + won(high)) +
+      '<p class="region-cost' + (item.fits ? '' : ' over') + '">예상 비용 ' + (low === high ? won(low) : won(low) + ' ~ ' + won(high)) +
+        (item.fits ? '' : ' · 예산 초과') +
         ' <small>/ 최대 예산 ' + won(trip.budget_max) + '</small></p>' +
     '</div>';
   document.getElementById('region-cards').appendChild(card);

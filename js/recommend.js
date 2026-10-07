@@ -192,7 +192,8 @@ function usable(p, trip) {
   return true;
 }
 
-// 예산 상한 이하 후보만 고름. 부족하면 상한을 10%씩 올려 다시 (최대 50%까지 — Claude 제안)
+// 예산 상한 이하 후보만 고름. 부족하면 상한을 10%씩 올려 다시 (최대 3배까지 — 2026-10-07 변경, 예산이 빠듯해도 여행지 5곳을 보여 주기 위함)
+// relax가 1보다 크면 화면에 '예산 상한을 올려서 찾음'을 표시하고, 총비용이 최대 예산을 넘으면 빨간색으로 경고
 // 출력: { attractions, restaurants, lodgings, relax } 또는 null(예산 조정 필요)
 function preparePool(trip, places) {
   const caps = budgetCaps(trip);
@@ -201,7 +202,7 @@ function preparePool(trip, places) {
   const base = places.filter(function (p) { return usable(p, trip); });
   base.forEach(function (p) { p._s = withPopularity(tagScore(p.tags, trip.tags), p.popularity); });
 
-  for (let step = 0; step <= 5; step++) {
+  for (let step = 0; step <= 20; step++) {
     const relax = 1 + step * 0.1;
     const pool = { attractions: [], restaurants: [], lodgings: [], relax: relax };
     base.forEach(function (p) {
