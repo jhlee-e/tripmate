@@ -135,6 +135,7 @@ async function loadChecklist() {
     list.appendChild(li);
   });
 
+  document.getElementById('clear-btn').hidden = data.length === 0;   // 준비물이 있을 때만 '전체 삭제' 보이기
   const done = data.filter(function (r) { return r.checked; }).length;
   document.getElementById('check-progress').textContent =
     data.length ? '챙긴 준비물 ' + done + ' / ' + data.length : '아직 준비물이 없어요.';
@@ -155,6 +156,17 @@ document.getElementById('item-form').addEventListener('submit', function (e) {
   if (!item) return;
   input.value = '';
   addItems([item]);
+});
+
+// 준비물 전체 삭제
+// 입력: '전체 삭제' 버튼 / 출력: 지금 여행(A)의 checklist 행을 모두 DB에서 지움 (다른 여행의 준비물은 그대로)
+document.getElementById('clear-btn').addEventListener('click', async function () {
+  const count = document.querySelectorAll('#check-list .check-item').length;
+  if (!confirm('이 여행의 준비물 ' + count + '개를 모두 삭제할까요? 되돌릴 수 없어요.')) return;
+  const { error } = await sb.from('checklist').delete().eq('trip_id', currentTripId);
+  if (error) return showError(error);
+  document.getElementById('import-msg').textContent = '준비물 ' + count + '개를 모두 삭제했어요.';
+  loadChecklist();
 });
 
 // ---------- 3. 다른 여행에서 준비물 불러오기 ----------

@@ -380,3 +380,4 @@ select:focus {
 .people-field { flex: 1; min-width: 0; margin-bottom: 0; text-align: center; }
 .people-field small { display: block; margin: 2px 0 6px; font-weight: 400; font-size: 0.75rem; color: var(--text-muted); }
 .people-field input { text-align: center; padding: 11px 6px; }
+.link-btn.danger-link { color: #c0392b; margin-left: auto; }
