@@ -38,3 +38,25 @@ function tripSummary(trip) {
     ' (' + trip.days + '일) · ' + trip.people + '명 · ' + trip.transport + ' · ' + trip.tempo + ' · ' +
     trip.tags.map(function (t) { return '#' + t; }).join(' ');
 }
+
+// 여행 이름: '태안 · 10.20 ~ 10.22' (여행지를 아직 안 골랐으면 날짜만)
+function tripTitle(t) {
+  const d = t.start_date.slice(5).replace('-', '.') + ' ~ ' + t.end_date.slice(5).replace('-', '.');
+  return (t.region ? t.region + ' · ' : '') + d;
+}
+
+// 인원 표시: '4명 (성인 2·어린이 1·유아 1)'
+function peopleText(trip) {
+  const parts = [];
+  if (trip.adults) parts.push('성인 ' + trip.adults);
+  if (trip.teens) parts.push('청소년 ' + trip.teens);
+  if (trip.children) parts.push('어린이 ' + trip.children);
+  if (trip.infants) parts.push('유아 ' + trip.infants);
+  return trip.people + '명' + (parts.length ? ' (' + parts.join('·') + ')' : '');
+}
+
+function showError(error) {
+  const el = document.getElementById('error-text');
+  if (el) el.textContent = error ? '오류: ' + error.message : '';
+  if (error) console.error(error);
+}

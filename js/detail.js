@@ -39,7 +39,8 @@ async function start() {
       plan = plans[key];
       if (trip.region) document.getElementById('save-msg').textContent = '저장하면 이 여행에 저장된 기존 일정(' + trip.region + ' ' + trip.plan_type + '안)을 덮어써요.';
     } else {                                   // 저장된 일정 불러오기
-      plan = await loadSavedPlan(region, key);
+      plan = await loadSavedPlan(trip, places);
+      if (!plan) { status.textContent = '저장된 일정이 없어요. 여행지 추천부터 받아 주세요.'; return; }
       document.getElementById('save-msg').textContent = '저장된 일정이에요.';
     }
     document.getElementById('title').textContent = region + ' · ' + key + '안 ' + PLAN_INFO[key].name;
@@ -54,34 +55,6 @@ async function start() {
   } catch (e) { showError(e); }
 }
 
-// 저장된 trip_places 행 → plan 구조로 되돌리기
-async function loadSavedPlan(region, key) {
-  const { data, error } = await sb.from('trip_places').select('*').eq('trip_id', trip.id)
-    .order('day_no').order('order_no');
-  if (error) throw error;
-  const byId = {};
-  places.forEach(function (p) { byId[String(p.id)] = p; });
-  const days = [];
-  for (let d = 0; d < trip.days; d++) {
-    days.push({ start: (trip.day_starts && trip.day_starts[d]) || 9 * 60, stops: [] });
-  }
-  let lodging = null;
-  data.forEach(function (row) {
-    // 숙소 조식(id 'bf-숙소id')은 장소 파일에 없으므로 숙소 정보로 다시 만듦
-    if (lodging && String(row.place_id).indexOf('bf-') === 0) {
-      days[row.day_no - 1].stops.push({ p: breakfastPlace(lodging), stay: row.stay_min, meal: row.meal || '아침', notBefore: row.not_before || undefined });
-      return;
-    }
-    const p = byId[row.place_id] || { id: row.place_id, name: row.name, type: row.type, lat: row.lat, lng: row.lng,
-                                      cost: 0, stayMin: row.stay_min, tags: {} };
-    if (row.day_no === 0) { lodging = p; return; }
-    const stop = { p: p, stay: row.stay_min };
-    if (row.meal) stop.meal = row.meal;
-    if (row.not_before) stop.notBefore = row.not_before;
-    if (days[row.day_no - 1]) days[row.day_no - 1].stops.push(stop);
-  });
-  return { type: key, region: region, lodging: lodging, days: days, relax: 1 };
-}
 
 // ---------- 2. 다시 계산하고 다시 그리기 ----------
 
@@ -187,7 +160,18 @@ function renderDay() {
     list.appendChild(li);
   });
 
-  const endText = lastDay || !plan.lodging ? '🏠 출발지로 돌아옴' : '🏨 숙소 도착';
+  // 집으로 가는 날: 자유 시간 → 출발 시각(바꿀 수 있음) → 집 도착
+  if (day.endPoint.isHome) {
+    const go = pointItem(hhmm(day.departMin), '🚩 집으로 출발 <label class="return-field">출발 시각 ' +
+      '<input type="time" step="600" class="return-input" value="' + hhmm(plan.returnAt || RETURN_AFTER) + '"></label>');
+    if (day.freeMin > 0) go.insertAdjacentHTML('afterbegin', '<p class="tl-move">☕ 자유 시간 ' + durationText(day.freeMin) + '</p>');
+    go.querySelector('.return-input').addEventListener('change', function (e) {
+      const [h, m] = e.target.value.split(':').map(Number);
+      if (!Number.isNaN(h)) { plan.returnAt = h * 60 + m; refresh(true); }
+    });
+    list.appendChild(go);
+  }
+  const endText = day.endPoint.isHome ? '🏠 집 도착' : '🏨 숙소 도착';
   const end = pointItem(hhmm(day.endMin), endText);
   end.insertAdjacentHTML('afterbegin', '<p class="tl-move">↓ ' + trip.transport + ' ' + durationText(day.backMin) + ' · ' + day.backKm.toFixed(1) + 'km</p>');
   list.appendChild(end);
@@ -473,7 +457,8 @@ document.getElementById('save-btn').addEventListener('click', async function () 
     // 1) 여행에 고른 여행지·일정안·총비용·날짜별 시작 시각 기록
     const up = await sb.from('trips').update({
       region: plan.region, plan_type: plan.type, total_cost: Math.round(timeline.cost.total),
-      day_starts: plan.days.map(function (d) { return d.start; })
+      // 날짜별 시작 시각 + 맨 끝에 집으로 출발하는 시각 (예: 3일 여행이면 [1일차, 2일차, 3일차, 귀가 출발])
+      day_starts: plan.days.map(function (d) { return d.start; }).concat([plan.returnAt || RETURN_AFTER])
     }).eq('id', trip.id);
     if (up.error) throw up.error;
     // 2) 예전 장소 목록 지우고 새로 넣기 (숙소는 day_no 0)
@@ -496,7 +481,7 @@ document.getElementById('save-btn').addEventListener('click', async function () 
     dirty = false;
     trip.region = plan.region; trip.plan_type = plan.type;
     history.replaceState(null, '', 'detail.html?trip=' + trip.id);   // 새로고침하면 저장된 일정을 불러오도록
-    msg.innerHTML = '저장했어요! <a href="record.html?saved=' + trip.id + '">준비물 챙기러 가기 →</a>';
+    msg.innerHTML = '저장했어요! <a href="trip.html?trip=' + trip.id + '">여행 정보·준비물 보러 가기 →</a>';
   } catch (e) {
     msg.textContent = '';
     showError(e);

@@ -15,33 +15,15 @@
     </nav>
     <header>
       <h1>내 여행</h1>
-      <p class="subtitle">저장한 여행과 준비물을 관리해요</p>
+      <p class="subtitle">여행을 누르면 일정·비용·준비물을 한곳에서 볼 수 있어요</p>
     </header>
 
     <main>
-      <p class="notice" id="notice"></p>
-
       <!-- 내 여행 목록: record.js가 trips 테이블에서 불러와 채움 -->
       <section class="card">
-        <h2 class="section-title">저장한 여행 <small>여행을 누르면 준비물이 열려요</small></h2>
+        <h2 class="section-title">저장한 여행</h2>
         <ul class="trip-list" id="trip-list"></ul>
         <p class="helper-text muted" id="trip-empty">아직 저장한 여행이 없어요. <a href="condition.html">새 여행 만들기</a></p>
-      </section>
-
-      <!-- 준비물 체크리스트: 위 목록에서 누른 여행의 것 -->
-      <section class="card checklist-card" id="checklist-card" hidden>
-        <h2 class="section-title">준비물 체크리스트 <small id="checklist-trip"></small></h2>
-        <form class="address-row" id="item-form">
-          <input type="text" id="item-input" maxlength="40" placeholder="준비물 입력 (예: 보조배터리)">
-          <button type="submit" class="small-btn">추가</button>
-        </form>
-        <div class="checklist-tools">
-          <button type="button" class="link-btn" id="import-btn">다른 여행에서 불러오기</button>
-          <button type="button" class="link-btn danger-link" id="clear-btn" hidden>전체 삭제</button>
-        </div>
-        <p class="helper-text import-msg" id="import-msg"></p>
-        <ul class="check-list" id="check-list"></ul>
-        <p class="helper-text muted" id="check-progress"></p>
       </section>
       <p class="error-text" id="error-text" role="alert"></p>
     </main>
@@ -49,6 +31,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase.js"></script>
+  <script src="js/ui.js"></script>
   <script src="js/record.js"></script>
 </body>
 </html>

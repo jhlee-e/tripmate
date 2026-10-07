@@ -28,6 +28,7 @@ const LOCAL_FARE = 1500;          // 여행지 안 버스 1회 요금, 1인 기�
 const DAY_START = 9 * 60;         // 09:00 시작
 const LUNCH = { from: 11 * 60 + 30, until: 14 * 60 };   // 점심을 넣는 시간대
 const DINNER_FROM = 17 * 60 + 30;
+const RETURN_AFTER = 20 * 60;   // 마지막 날 여행지에서 집으로 출발하는 시각: 20:00 이후 (이재훈 결정, 상세 화면에서 바꿀 수 있음)
 const MEAL_STAY = 60;
 // 흔한 체인점(프랜차이즈) 이름 — 이름에 들어 있으면 추천에서 제외 (이재훈 결정: 브랜드 이름 목록 방식)
 const CHAIN_BRANDS = ['스타벅스', '투썸플레이스', '이디야', '메가커피', '메가MGC', '컴포즈커피', '빽다방', '할리스',
@@ -357,9 +358,11 @@ function buildPlan(type, trip, pool) {
     for (let i = 0; i < ordered.length; i++) {
       const p = ordered[i];
       // 점심·저녁 시간이 되면 지금 위치 근처 식당을 먼저 넣음
-      if (!lunch && clock >= LUNCH.from && visited > 0) {
+      // 점심: 11:00이 지났고, 다음 장소까지 보면 13:00을 넘길 것 같으면 지금 먹음 (도착 시각이 14:00 이후인 첫날만 생략)
+      if (!lunch && visited > 0 && clock >= 11 * 60 &&
+          clock + travelMin(distanceKm(pos, p), trip.transport, !!pos.isHome) + p.stayMin > 13 * 60) {
         lunch = true;
-        if (clock <= LUNCH.until) clock = addMeal(stops, 'lunch', pos, clock);
+        clock = addMeal(stops, 'lunch', pos, clock);
       }
       if (!dinner && clock >= DINNER_FROM && visited > 0) {
         dinner = true;
@@ -367,9 +370,8 @@ function buildPlan(type, trip, pool) {
       }
       const intercity = !!pos.isHome;
       const move = travelMin(distanceKm(pos, p), trip.transport, intercity);
-      // 그날 끝에 숙소(마지막 날은 집)로 돌아갈 시간도 활동 시간 안에 남겨 둠
-      const back = lastDay || !lodging ? travelMin(distanceKm(p, dep), trip.transport, true)
-                                       : travelMin(distanceKm(p, lodging), trip.transport, false);
+      // 그날 끝에 숙소로 돌아갈 시간도 활동 시간 안에 남겨 둠 (마지막 날은 20:00 이후 집으로 출발하므로 제외)
+      const back = lastDay || !lodging ? 0 : travelMin(distanceKm(p, lodging), trip.transport, false);
       // 활동 시간을 넘으면 그날 마감, 남은 곳은 다음 날로 이월 (단, 하루 최소 1곳)
       if (visited > 0 && active + mealMove + move + p.stayMin + back > limit) {
         carry = ordered.slice(i);
@@ -382,8 +384,8 @@ function buildPlan(type, trip, pool) {
       visited++;
       pos = p;
     }
-    if (!lunch && clock <= LUNCH.until) clock = addMeal(stops, 'lunch', pos, clock);
-    if (!dinner && (!lastDay || clock >= DINNER_FROM)) clock = addMeal(stops, 'dinner', pos, clock);
+    if (!lunch && (visited > 0 || clock <= LUNCH.until)) clock = addMeal(stops, 'lunch', pos, clock);
+    if (!dinner) clock = addMeal(stops, 'dinner', pos, clock);   // 마지막 날도 저녁 먹고 20:00 이후 출발
     days.push({ start: DAY_START, stops: stops });
   }
   return { type: type, region: pool.region, lodging: lodging, days: days, relax: pool.relax };
@@ -606,11 +608,14 @@ function computeTimeline(trip, plan) {
       clock = end;
       pos = stop.p;
     });
+    // 집으로 가는 날은 출발 시각(기본 20:00) 전까지 자유 시간, 귀가 이동은 활동 시간에서 뺌
+    let departMin = clock;
+    if (endPoint.isHome) departMin = Math.max(clock, plan.returnAt || RETURN_AFTER);
     const back = leg(endPoint);
-    active += back.min;
-    const endMin = clock + back.min;
-    return { start: day.start, startPoint: startPoint, endPoint: endPoint, items: items,
-             backMin: back.min, backKm: back.km, endMin: endMin, activeMin: active, over: active > limit };
+    if (!endPoint.isHome) active += back.min;
+    const endMin = departMin + back.min;
+    return { start: day.start, startPoint: startPoint, endPoint: endPoint, items: items, departMin: departMin,
+             freeMin: departMin - clock, backMin: back.min, backKm: back.km, endMin: endMin, activeMin: active, over: active > limit };
   });
 
   cost.total = cost.lodging + cost.food + cost.admission + cost.transport;
@@ -638,8 +643,40 @@ async function loadJSON(path) {
 function loadRegions() { return loadJSON('data/regions.json'); }
 function loadPlaces(region) { return loadJSON('data/places/' + encodeURIComponent(region) + '.json'); }
 
+// 저장된 trip_places 행 → plan 구조로 되돌리기
+// 입력: trip(region·plan_type·day_starts), 그 지역 장소 배열 / 출력: plan (저장된 일정이 없으면 null)
+async function loadSavedPlan(trip, places) {
+  const { data, error } = await sb.from('trip_places').select('*').eq('trip_id', trip.id)
+    .order('day_no').order('order_no');
+  if (error) throw error;
+  if (!data.length) return null;
+  const byId = {};
+  places.forEach(function (p) { byId[String(p.id)] = p; });
+  const days = [];
+  for (let d = 0; d < trip.days; d++) {
+    days.push({ start: (trip.day_starts && trip.day_starts[d]) || DAY_START, stops: [] });
+  }
+  let lodging = null;
+  data.forEach(function (row) {
+    // 숙소 조식(id 'bf-숙소id')은 장소 파일에 없으므로 숙소 정보로 다시 만듦
+    if (lodging && String(row.place_id).indexOf('bf-') === 0) {
+      days[row.day_no - 1].stops.push({ p: breakfastPlace(lodging), stay: row.stay_min, meal: row.meal || '아침', notBefore: row.not_before || undefined });
+      return;
+    }
+    const p = byId[row.place_id] || { id: row.place_id, name: row.name, type: row.type, lat: row.lat, lng: row.lng,
+                                      cost: 0, stayMin: row.stay_min, tags: {} };
+    if (row.day_no === 0) { lodging = p; return; }
+    const stop = { p: p, stay: row.stay_min };
+    if (row.meal) stop.meal = row.meal;
+    if (row.not_before) stop.notBefore = row.not_before;
+    if (days[row.day_no - 1]) days[row.day_no - 1].stops.push(stop);
+  });
+  const returnAt = trip.day_starts && trip.day_starts.length > trip.days ? trip.day_starts[trip.days] : RETURN_AFTER;
+  return { type: trip.plan_type, region: trip.region, lodging: lodging, days: days, relax: 1, returnAt: returnAt };
+}
+
 // node로 시험할 때 쓰도록 내보내기 (브라우저에서는 무시됨)
 if (typeof module !== 'undefined') {
   module.exports = { TEMPO, rankRegions, buildPlans, buildPlan, preparePool, computeTimeline, distanceKm,
-    travelMin, budgetCaps, hhmm, PLAN_INFO, isChain, foodKind, cuisineOf, pickRestaurant, ensureScores, estimateMinCost, fitBudget, syncBreakfast, breakfastPlace, lodgingBreakfast };
+    travelMin, budgetCaps, hhmm, PLAN_INFO, isChain, RETURN_AFTER, foodKind, cuisineOf, pickRestaurant, ensureScores, estimateMinCost, fitBudget, syncBreakfast, breakfastPlace, lodgingBreakfast };
 }

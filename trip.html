@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TripMate - 여행 정보</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="page wide">
+    <nav class="top-nav">
+      <span id="nav-user"></span>
+      <a href="record.html">← 내 여행</a>
+      <a href="condition.html">새 여행 만들기</a>
+      <button type="button" class="link-btn" onclick="logout()">로그아웃</button>
+    </nav>
+    <header>
+      <h1 id="title">여행 정보</h1>
+      <p class="subtitle" id="subtitle"></p>
+    </header>
+    <main>
+      <p class="notice" id="status">여행 정보를 불러오고 있어요…</p>
+
+      <div class="detail-layout trip-layout" id="trip-layout" hidden>
+        <!-- 왼쪽: 여행 조건 · 비용 · 날짜별 일정 -->
+        <div class="trip-main">
+          <section class="card">
+            <h2 class="section-title">여행 조건</h2>
+            <dl class="info-list" id="info-list"></dl>
+            <div class="trip-buttons" id="trip-buttons"></div>
+          </section>
+
+          <section class="card" id="cost-card" hidden>
+            <h2 class="section-title">비용</h2>
+            <p class="plan-total" id="total-cost"></p>
+            <p class="helper-text muted" id="total-meta"></p>
+            <div class="budget-bar" id="budget-bar"></div>
+            <ul class="budget-legend" id="budget-legend"></ul>
+          </section>
+
+          <section class="card" id="schedule-card" hidden>
+            <h2 class="section-title">일정 <small>장소를 누르면 지도에 표시돼요</small></h2>
+            <div id="schedule"></div>
+          </section>
+          <section class="card" id="no-plan-card" hidden>
+            <h2 class="section-title">일정</h2>
+            <p class="helper-text">아직 여행지와 일정을 고르지 않았어요.</p>
+            <a class="submit-btn" id="recommend-link" href="#">여행지 추천받기</a>
+          </section>
+        </div>
+
+        <!-- 오른쪽: 지도 · 준비물 -->
+        <div class="trip-side">
+          <section class="card map-card" id="map-card" hidden>
+            <div id="detail-map" class="detail-map"></div>
+            <div class="place-card" id="place-card"></div>
+          </section>
+
+          <section class="card checklist-card">
+            <h2 class="section-title">준비물 체크리스트</h2>
+            <form class="address-row" id="item-form">
+              <input type="text" id="item-input" maxlength="40" placeholder="준비물 입력 (예: 보조배터리)">
+              <button type="submit" class="small-btn">추가</button>
+            </form>
+            <div class="checklist-tools">
+              <select id="import-select" class="import-select"></select>
+              <button type="button" class="link-btn danger-link" id="clear-btn" hidden>전체 삭제</button>
+            </div>
+            <p class="helper-text import-msg" id="import-msg"></p>
+            <ul class="check-list" id="check-list"></ul>
+            <p class="helper-text muted" id="check-progress"></p>
+          </section>
+        </div>
+      </div>
+      <p class="error-text" id="error-text" role="alert"></p>
+    </main>
+  </div>
+  <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=b16ac532d356919ddc87b6d14d8dbd01&autoload=false"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/recommend.js"></script>
+  <script src="js/checklist.js"></script>
+  <script src="js/trip.js"></script>
+</body>
+</html>
