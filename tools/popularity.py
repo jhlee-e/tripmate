@@ -81,8 +81,10 @@ def name_candidates(title):
 
 def raw_for(item):
     area, sgg = item.get('lDongRegnCd') or '', item.get('lDongSignguCd') or ''
+    area = area[:2]                                   # 세종은 '36110'처럼 들어 있어 앞 2자리만
+    code = sgg if (len(sgg) == 5 and sgg.startswith(area)) else area + sgg
     for nm in name_candidates(item.get('title')):
-        v = RAW_BY_SGG.get((area + sgg, nm)) or RAW_BY_SIDO.get((area, nm))
+        v = RAW_BY_SGG.get((code, nm)) or RAW_BY_SIDO.get((area, nm))
         if v:
             return v
     return 0.0

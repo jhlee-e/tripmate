@@ -34,6 +34,7 @@ def months_back(n):
 
 
 def fetch(key, area, sgg, ym, page):
+    area = area[:2]                          # 세종은 시·도 코드가 '36110'처럼 5자리로 들어 있어 앞 2자리만 사용
     params = {'serviceKey': key, 'MobileOS': 'ETC', 'MobileApp': 'TripMate', '_type': 'json',
               'numOfRows': 1000, 'pageNo': page, 'baseYm': ym, 'areaCd': area,
               'signguCd': sgg if sgg.startswith(area) and len(sgg) == 5 else area + sgg}   # 세종처럼 코드가 이미 5자리인 경우
