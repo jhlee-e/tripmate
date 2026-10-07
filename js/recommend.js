@@ -143,9 +143,24 @@ function regionJitter(tripId, round, region) {
   return 1 + REGION_JITTER * (2 * seededRandom(tripId + '|' + round + '|' + region) - 1);
 }
 
+// ---------- 1-4. 지역 최소 비용 추정 (지역 파일을 열기 전, regions.json만으로) ----------
+// 입력: trip, 지역 요약(costMin: 가장 싼 숙소 1박, 식사 식당 하위 25% 가격), 출발지와의 직선거리
+// 출력: 원 — 왕복 교통비 + 가장 싼 숙소 × 방 수 × 박 수 + 하루 2끼 × 일수 × 인원 + 여행지 안 이동비 (입장료는 무료 명소가 많아 0으로 봄)
+function estimateMinCost(trip, r, distKm) {
+  const pay = payersOf(trip);
+  const nights = trip.days - 1;
+  const c = r.costMin || {};
+  const transport = 2 * legCost(distKm, trip.transport, true, pay) +
+    (trip.transport === '자동차' ? 30 * trip.days * CAR_WON_PER_KM               // 여행지 안 하루 약 30km (Claude 가정)
+                                 : LOCAL_FARE * pay * (TEMPO[trip.tempo].count + 2) * trip.days);
+  const lodging = nights > 0 ? (c.lodging || 0) * (trip.rooms || 1) * nights : 0;
+  const food = (c.meal || 12000) * pay * 2 * trip.days;
+  return transport + lodging + food;
+}
+
 // ---------- 2. 여행지(지역) 순위 ----------
 // 입력: trip, regions.json 배열 / 출력: 점수 높은 순 [{ region, score, oneWayMin, distKm, info }]
-// 지역 점수 = 취향 점수(지역 명소 태그 평균) × (1 + 인기 상위 10곳 평균/5) × (1 − 왕복 이동 시간 ÷ 전체 활동 시간)
+// 지역 점수 = 취향 점수(지역 명소 태그 평균) × (1 + 인기 상위 10곳 평균/5) × (1 − 왕복 이동 시간 ÷ 전체 활동 시간) × 예산 보정
 //   → 오가는 데 여행 시간의 큰 몫을 쓰는 곳일수록, 여행이 짧을수록 많이 깎임 (감점 방식은 Claude 제안)
 //   마지막에 × 랜덤 배수(0.9~1.1, round = 다시 추천 회차)
 function rankRegions(trip, regions, round) {
@@ -163,9 +178,14 @@ function rankRegions(trip, regions, round) {
     const ratio = 2 * oneWayMin / totalActive;
     const base = withPopularity(tagScore(r.tagAvg, trip.tags), r.popTop10);
     const jitter = regionJitter(trip.id, round || 0, r.region);
-    const score = base * (1 - ratio) * jitter;
+    // 예산: 이 지역에 가면 최소 얼마 드는지 추정해, 최대 예산을 넘으면 (예산 ÷ 최소 비용)² 만큼 깎음 (Claude 설계)
+    //   → 예산이 빠듯하면 가깝고 싼 지역이 위로 올라옴. 예산 안이면 깎지 않음
+    const estCost = estimateMinCost(trip, r, distKm);
+    const budgetFactor = estCost > trip.budget_max ? Math.pow(trip.budget_max / estCost, 2) : 1;
+    const score = base * (1 - ratio) * budgetFactor * jitter;
     if (score <= 0) return;
-    out.push({ region: r.region, score: score, jitter: jitter, oneWayMin: oneWayMin, distKm: distKm, info: r });
+    out.push({ region: r.region, score: score, jitter: jitter, oneWayMin: oneWayMin, distKm: distKm, info: r,
+               estCost: estCost, budgetFactor: budgetFactor });
   });
   return out.sort(function (a, b) { return b.score - a.score; });
 }
@@ -213,7 +233,15 @@ function preparePool(trip, places) {
     const enough = pool.attractions.length >= tempo.count * trip.days &&
                    pool.restaurants.length >= 2 * trip.days &&
                    (nights === 0 || pool.lodgings.length > 0);
-    if (enough) return pool;
+    if (enough) {
+      // 예산 맞추기(fitBudget)에서 쓸, 상한 없이 쓸 수 있는 전체 후보
+      pool.all = {
+        attractions: base.filter(function (p) { return p.type === '명소'; }),
+        restaurants: base.filter(function (p) { return p.type === '식당' && foodKind(p) === 'meal'; }),
+        lodgings: base.filter(function (p) { return p.type === '숙소'; })
+      };
+      return pool;
+    }
   }
   return null;
 }
@@ -379,7 +407,79 @@ function buildPlans(trip, region, places) {
   const pool = preparePool(trip, places);
   if (!pool) return null;
   pool.region = region;
-  return { A: buildPlan('A', trip, pool), B: buildPlan('B', trip, pool), C: buildPlan('C', trip, pool) };
+  const plans = {};
+  ['A', 'B', 'C'].forEach(function (k) { plans[k] = fitBudget(trip, buildPlan(k, trip, pool), pool); });
+  return plans;
+}
+
+// ---------- 4-2. 예산 맞추기: 총비용이 최대 예산을 넘으면 더 싼 곳으로 하나씩 바꿈 ----------
+// 입력: trip, 만든 일정안, 후보(pool.all) / 출력: 같은 일정안 (바꾼 장소 기록 plan.swaps, 예산 안인지 plan.fits)
+// 방법(욕심쟁이 방식, Claude 설계): 총비용이 최대 예산 이하가 될 때까지 반복
+//   ① 바꿀 수 있는 모든 경우를 만듦 — 숙소 → 더 싼 숙소 / 식사 → 근처(5km) 더 싼 식당 / 유료 명소 → 근처(10km) 더 싼 명소
+//   ② 경우마다 '아끼는 돈 ÷ (1 + 잃는 것)'을 계산. 잃는 것 = 취향 점수가 떨어진 비율 + 멀어진 거리(km)/5
+//   ③ 가장 큰 경우 하나를 적용하고 다시 계산 → 많이 아끼면서 덜 아쉬운 것부터 바뀜
+// 출발지↔여행지 교통비처럼 줄일 수 없는 비용만으로 예산을 넘으면 더 바꿀 것이 없어 멈춤 (fits = false)
+function fitBudget(trip, plan, pool) {
+  const max = trip.budget_max;
+  const pay = payersOf(trip);
+  const nights = trip.days - 1;
+  const rooms = trip.rooms || 1;
+  plan.swaps = [];
+
+  function loss(oldP, newP, km, kmScale) {
+    const drop = Math.max(0, (oldP._s || 0) - (newP._s || 0)) / ((oldP._s || 0) + 1);
+    return drop + km / kmScale;
+  }
+
+  for (let round = 0; round < 60; round++) {
+    const total = computeTimeline(trip, plan).cost.total;
+    if (total <= max) break;
+    const used = new Set();
+    plan.days.forEach(function (d) { d.stops.forEach(function (st) { used.add(st.p.id); }); });
+    let best = null;
+
+    function consider(saving, lost, apply, from, to) {
+      if (saving <= 0) return;
+      const value = saving / (1 + lost);
+      if (!best || value > best.value) best = { value: value, apply: apply, from: from, to: to, saving: saving };
+    }
+
+    // 숙소
+    if (plan.lodging && nights > 0) {
+      const cur = plan.lodging;
+      pool.all.lodgings.forEach(function (l) {
+        if (l.cost >= cur.cost) return;
+        const km = distanceKm(cur, l);
+        consider((cur.cost - l.cost) * rooms * nights, loss(cur, l, km, 5),
+                 function () { plan.lodging = l; }, cur, l);
+      });
+    }
+    // 식사·명소
+    plan.days.forEach(function (d) {
+      d.stops.forEach(function (st) {
+        const cur = st.p;
+        if (!(cur.cost > 0)) return;
+        const isFood = cur.type === '식당';
+        const list = isFood ? pool.all.restaurants : pool.all.attractions;
+        const range = isFood ? 5 : 10;
+        list.forEach(function (c) {
+          if (c.cost >= cur.cost || used.has(c.id)) return;
+          const km = distanceKm(cur, c);
+          if (km > range) return;
+          consider((cur.cost - c.cost) * pay, loss(cur, c, km, isFood ? 2 : 5), function () {
+            st.p = c;
+            if (!st.meal) st.stay = c.stayMin;
+          }, cur, c);
+        });
+      });
+    });
+
+    if (!best) break;
+    best.apply();
+    plan.swaps.push({ from: best.from.name, to: best.to.name, saving: best.saving });
+  }
+  plan.fits = computeTimeline(trip, plan).cost.total <= max;
+  return plan;
 }
 
 // ---------- 5. 시간표·비용 계산 (일정 수정 후에도 이 함수로 다시 계산) ----------
@@ -457,5 +557,5 @@ function loadPlaces(region) { return loadJSON('data/places/' + encodeURIComponen
 // node로 시험할 때 쓰도록 내보내기 (브라우저에서는 무시됨)
 if (typeof module !== 'undefined') {
   module.exports = { TEMPO, rankRegions, buildPlans, buildPlan, preparePool, computeTimeline, distanceKm,
-    travelMin, budgetCaps, hhmm, PLAN_INFO, isChain, foodKind, cuisineOf, pickRestaurant, ensureScores };
+    travelMin, budgetCaps, hhmm, PLAN_INFO, isChain, foodKind, cuisineOf, pickRestaurant, ensureScores, estimateMinCost, fitBudget };
 }

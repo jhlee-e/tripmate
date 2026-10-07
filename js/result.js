@@ -41,7 +41,8 @@ async function start() {
     again.hidden = false;
     again.onclick = function () { location.href = 'result.html?trip=' + trip.id + '&round=' + (round + 1); };
     document.getElementById('method-note').textContent =
-      '점수 = 고른 취향의 지역 평균 점수(1순위 1.5배) × 인기도 보정 × (1 − 왕복 이동 시간 ÷ 전체 활동 시간) × 랜덤(0.9~1.1). ' +
+      '점수 = 고른 취향의 지역 평균 점수(1순위 1.5배) × 인기도 보정 × (1 − 왕복 이동 시간 ÷ 전체 활동 시간) × 예산 보정 × 랜덤(0.9~1.1). ' +
+      '예산 보정: 그 지역 최소 비용 추정이 최대 예산을 넘으면 (예산 ÷ 추정)²배. 일정의 총비용이 예산을 넘으면 더 싼 숙소·식당·명소로 자동으로 바꿔요. ' +
       '이동 시간과 비용은 직선거리로 계산한 추정값이에요.';
   } catch (e) {
     console.error(e);

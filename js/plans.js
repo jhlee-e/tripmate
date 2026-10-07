@@ -69,6 +69,8 @@ function renderPlanCard(trip, region, row) {
       ' <small>' + PLAN_INFO[row.key].desc + '</small></h2>' +
     '<p class="plan-total' + (over ? ' over' : '') + '">' + won(t.cost.total) +
       (over ? ' <small>최대 예산 ' + won(trip.budget_max) + ' 초과</small>' : '') + '</p>' +
+    (plan.swaps && plan.swaps.length ? '<p class="helper-text swap-note">💰 예산에 맞추려고 ' + plan.swaps.length + '곳을 더 저렴한 곳으로 바꿨어요: ' +
+      plan.swaps.map(function (w) { return esc(w.from) + ' → ' + esc(w.to) + '(−' + won(w.saving) + ')'; }).join(', ') + '</p>' : '') +
     (plan.lodging ? '<p class="helper-text">숙소: ' + esc(plan.lodging.name) + ' (1박 ' + won(plan.lodging.cost) + ' × 방 ' + trip.rooms + '개)</p>' : '') +
     '<ul class="plan-days">' + daysHtml + '</ul>' +
     '<a class="submit-btn" href="detail.html?trip=' + trip.id + '&region=' + encodeURIComponent(region) + '&plan=' + row.key + '">' +

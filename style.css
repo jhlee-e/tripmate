@@ -500,3 +500,4 @@ a.small-btn { display: inline-flex; align-items: center; justify-content: center
 .region-score small { display: block; font-size: 0.7rem; font-weight: 400; color: var(--text-muted); text-align: right; }
 #reroll-btn { margin-top: 18px; }
 .region-cost.over { color: #c0392b; }
+.swap-note { color: var(--accent); text-align: left; }
