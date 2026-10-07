@@ -180,6 +180,8 @@ def defaults_for(item):
     return DEFAULTS.get(ct)
 
 
+from popularity import popularity_for, REF_MONTH   # 인기도(티맵 연관 관광지 순위 기반) — tools/popularity.py
+
 # 세부 분류(lclsSystm3, 201가지)별 점수표 — tools/make_lcls_scores.py 로 만든 lcls_scores.json
 _LCLS_PATH = os.path.join(HERE, 'lcls_scores.json')
 LCLS = json.load(open(_LCLS_PATH, encoding='utf-8')) if os.path.exists(_LCLS_PATH) else {}
@@ -215,6 +217,8 @@ def to_place(item, region, sido):
         'recommend': rec,
         'audience': audience,                 # '10대'면 청소년 전용·청소년 대상 공간                     # False면 추천 후보에서 제외 (사후면세점·대형마트·교통시설 등)
         'tags': tags,
+        'popularity': popularity_for(item)[0],   # 0~5, 티맵 이동 데이터 기반 (자료에 없으면 0)
+        'popularityRaw': popularity_for(item)[1],
         'lat': round(lat, 6), 'lng': round(lng, 6),
         'cost': cost,
         'stayMin': stay,
@@ -312,12 +316,13 @@ def main():
             p = to_place(it, label, sido)
             c = curated.get(p['id'])
             if c:
+                p['popularity'] = max(p['popularity'], 4.0)
                 p.update(tags=c['tags'], cost=c['cost'], stayMin=c['stayMin'], featured=True,
                          costCheck=c['costCheck'], basis=c['basis'], scoredBy=c['scoredBy'])
             else:
                 p.update(featured=False, costCheck='추정', basis=p['categoryName'], scoredBy='세부분류 기본값(Claude 판단)')
             places.append(p)
-        places.sort(key=lambda p: (not p['featured'], p['photo'] == '', p['name']))   # 직접 고른 곳·사진 있는 곳 먼저
+        places.sort(key=lambda p: (not p['featured'], -p['popularity'], p['photo'] == '', p['name']))   # 직접 고른 곳·사진 있는 곳 먼저
         json.dump(places, open(os.path.join(out_dir, label + '.json'), 'w', encoding='utf-8'),
                   ensure_ascii=False, separators=(',', ':'))
         total += len(places)
@@ -332,6 +337,8 @@ def main():
             'counts': {t: sum(1 for p in places if p['type'] == t) for t in ('명소', '식당', '숙소')},
             'featured': sum(1 for p in places if p['featured']),
             'tagAvg': tag_avg,
+            # 지역 인기도: 추천 후보 명소 중 인기도 상위 10곳의 평균 (0~5)
+            'popTop10': round(sum(sorted((p['popularity'] for p in sights), reverse=True)[:10]) / 10, 2),
         })
 
     json.dump(regions, open(os.path.join(ROOT, 'data', 'regions.json'), 'w', encoding='utf-8'),
