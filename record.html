@@ -11,6 +11,7 @@
     <nav class="top-nav">
       <span id="nav-user"></span>
       <a href="condition.html">새 여행 만들기</a>
+      <a href="courses.html">공개 코스</a>
       <button type="button" class="link-btn" onclick="logout()">로그아웃</button>
     </nav>
     <header>
@@ -19,6 +20,12 @@
     </header>
 
     <main>
+      <!-- 나의 기록 지도: record.js가 내 여행들의 장소(trip_places)와 사진(photos)을 지도에 표시 -->
+      <section class="card" id="map-card" hidden>
+        <h2 class="section-title">나의 기록 지도 <small>점 = 일정 장소, 동그라미 = 사진</small></h2>
+        <div id="record-map" class="record-map"></div>
+        <ul class="map-legend" id="map-legend"></ul>
+      </section>
       <!-- 내 여행 목록: record.js가 trips 테이블에서 불러와 채움 -->
       <section class="card">
         <h2 class="section-title">저장한 여행</h2>
@@ -29,6 +36,7 @@
     </main>
   </div>
 
+  <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=b16ac532d356919ddc87b6d14d8dbd01&autoload=false"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase.js"></script>
   <script src="js/ui.js"></script>

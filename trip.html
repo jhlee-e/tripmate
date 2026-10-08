@@ -30,6 +30,17 @@
             <div class="trip-buttons" id="trip-buttons"></div>
           </section>
 
+          <section class="card" id="share-card" hidden>
+            <h2 class="section-title">공개 설정</h2>
+            <label class="toggle-row"><input type="checkbox" id="share-public"> 이 코스를 다른 사람에게 공개</label>
+            <div class="address-row">
+              <input type="text" id="share-title" maxlength="40" placeholder="코스 제목">
+              <button type="button" class="small-btn" id="share-save">저장</button>
+            </div>
+            <p class="helper-text muted">일정·후기·한줄평이 공개돼요. 출발지 주소와 예산은 보이지 않고, 사진은 '공개'로 고른 것만 보여요.</p>
+            <p class="helper-text" id="share-msg"></p>
+          </section>
+
           <section class="card" id="cost-card" hidden>
             <h2 class="section-title">비용</h2>
             <p class="plan-total" id="total-cost"></p>
@@ -46,6 +57,31 @@
             <h2 class="section-title">일정</h2>
             <p class="helper-text">아직 여행지와 일정을 고르지 않았어요.</p>
             <a class="submit-btn" id="recommend-link" href="#">여행지 추천받기</a>
+          </section>
+
+          <section class="card" id="review-card">
+            <h2 class="section-title">여행 후기</h2>
+            <div id="review-stars"></div>
+            <textarea id="review-text" rows="4" maxlength="1000" placeholder="여행은 어땠나요? 좋았던 점, 다음에 가는 사람에게 알려 주고 싶은 점"></textarea>
+            <div class="save-row">
+              <button type="button" class="small-btn" id="review-save">후기 저장</button>
+              <span class="helper-text" id="review-msg"></span>
+            </div>
+            <div id="place-review-box" hidden>
+              <h3 class="sub-title">장소별 한줄평 <small>별점·글을 바꾸면 바로 저장돼요 (별점은 선택)</small></h3>
+              <ul class="place-reviews" id="place-reviews"></ul>
+            </div>
+          </section>
+
+          <section class="card" id="photo-card">
+            <h2 class="section-title">여행 사진</h2>
+            <label class="small-btn file-btn">📷 사진 고르기<input type="file" id="photo-input" accept="image/jpeg,image/png,image/webp" multiple hidden></label>
+            <p class="helper-text muted">사진에 GPS 위치가 있으면 자동으로 가까운 장소를 골라 둬요. 위치가 없으면 일정의 장소를 골라 주세요.</p>
+            <ul class="pending-list" id="photo-pending"></ul>
+            <button type="button" class="submit-btn" id="photo-upload" hidden>사진 올리기</button>
+            <p class="helper-text" id="photo-msg"></p>
+            <div class="photo-grid" id="photo-grid"></div>
+            <p class="helper-text muted" id="photo-empty">아직 올린 사진이 없어요.</p>
           </section>
         </div>
 
@@ -80,7 +116,9 @@
   <script src="supabase.js"></script>
   <script src="js/ui.js"></script>
   <script src="js/recommend.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/exifr@7.1.3/dist/lite.umd.js"></script>
   <script src="js/checklist.js"></script>
+  <script src="js/memories.js"></script>
   <script src="js/trip.js"></script>
 </body>
 </html>

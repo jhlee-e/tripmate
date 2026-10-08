@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TripMate - 공개 코스</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="page wide">
+    <nav class="top-nav">
+      <span id="nav-user"></span>
+      <a href="record.html">내 여행</a>
+      <a href="condition.html">새 여행 만들기</a>
+      <button type="button" class="link-btn" onclick="logout()">로그아웃</button>
+    </nav>
+    <header>
+      <h1 id="title">공개 코스</h1>
+      <p class="subtitle" id="subtitle">다른 여행자가 다녀와서 공개한 코스예요. 마음에 들면 내 여행에 담아 보세요</p>
+    </header>
+    <main>
+      <p class="notice" id="status">코스를 불러오고 있어요…</p>
+
+      <!-- 목록 (주소에 ?course= 가 없을 때) -->
+      <section class="card" id="list-view" hidden style="max-width:720px;margin:0 auto">
+        <div class="course-tools">
+          <input type="search" id="search" placeholder="지역이나 제목으로 찾기 (예: 강릉)">
+          <select id="sort">
+            <option value="new">최신순</option>
+            <option value="saved">많이 담은 순</option>
+            <option value="rating">별점 높은 순</option>
+          </select>
+        </div>
+        <ul class="course-list" id="course-list"></ul>
+        <p class="helper-text muted" id="course-empty" hidden>조건에 맞는 공개 코스가 없어요.</p>
+      </section>
+
+      <!-- 코스 하나 (?course=번호) -->
+      <div class="detail-layout trip-layout" id="course-view" hidden>
+        <div class="trip-main">
+          <section class="card">
+            <h2 class="section-title">코스 정보</h2>
+            <dl class="info-list" id="info-list"></dl>
+            <div class="review-box" id="review-box"></div>
+            <div class="trip-buttons">
+              <a class="small-btn" href="courses.html">← 목록</a>
+              <a class="submit-btn" id="copy-btn" href="#">내 여행에 담기</a>
+            </div>
+            <p class="helper-text muted" id="copy-note">담으면 내 날짜·인원·출발지를 입력하고, 이 코스의 일정이 그대로 내 여행으로 복사돼요.</p>
+          </section>
+          <section class="card">
+            <h2 class="section-title">일정 <small>장소를 누르면 지도에 표시돼요</small></h2>
+            <div id="schedule"></div>
+          </section>
+        </div>
+        <div class="trip-side">
+          <section class="card map-card">
+            <div id="detail-map" class="detail-map"></div>
+          </section>
+          <section class="card" id="photo-card" hidden>
+            <h2 class="section-title">여행 사진</h2>
+            <div class="photo-grid" id="photo-grid"></div>
+          </section>
+        </div>
+      </div>
+      <p class="error-text" id="error-text" role="alert"></p>
+    </main>
+  </div>
+  <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=b16ac532d356919ddc87b6d14d8dbd01&autoload=false"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/courses.js"></script>
+</body>
+</html>

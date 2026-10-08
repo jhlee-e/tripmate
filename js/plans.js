@@ -10,6 +10,7 @@ async function start() {
   document.getElementById('trip-summary').textContent = tripSummary(trip);
   document.getElementById('title').textContent = region + ' 일정안 비교';
   document.getElementById('back-link').href = 'result.html?trip=' + trip.id + '&round=' + (Number(param('round')) || 0);   // 같은 회차 추천으로 돌아감
+  if (param('direct')) document.getElementById('back-link').textContent = '← 다른 지역도 추천받기';   // 지역을 직접 골라서 온 경우
 
   try {
     const places = await loadPlaces(region);

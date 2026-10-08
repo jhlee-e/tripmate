@@ -1,6 +1,7 @@
 // 여행 정보 화면 — 여행 하나의 모든 정보를 한곳에서
 // 입력: 주소의 ?trip=여행번호 → trips 행, 저장된 일정(trip_places), 준비물(checklist), 내 다른 여행 목록
-// 출력: 여행 조건, 비용(예산 사용 그래프), 날짜별 일정(읽기 전용)과 지도, 준비물 체크리스트(바로 수정·저장)
+// 출력: 여행 조건, 비용(예산 사용 그래프), 날짜별 일정(읽기 전용)과 지도, 준비물 체크리스트(바로 수정·저장),
+//       6차시: 공개 설정·후기·장소별 한줄평·사진 (js/memories.js)
 //       일정을 고치려면 '일정 수정하기' → detail.html
 
 const DAY_COLORS = ['#2f8f7e', '#e07a2f', '#3b6fd8', '#b8437a', '#7a5cc4', '#c49a1a', '#4a8a2a'];
@@ -28,6 +29,7 @@ async function start() {
       ensureScores(places, trip);
       plan = await loadSavedPlan(trip, places);
     }
+    setupMemories(trip, plan);   // 일정이 없어도 후기·사진은 쓸 수 있음 (공개는 일정이 있어야 가능)
     if (!plan) {
       document.getElementById('no-plan-card').hidden = false;
       document.getElementById('recommend-link').href = 'result.html?trip=' + trip.id;

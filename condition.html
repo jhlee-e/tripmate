@@ -11,6 +11,7 @@
     <nav class="top-nav">
       <span id="nav-user"></span>
       <a href="record.html">내 여행</a>
+      <a href="courses.html">공개 코스</a>
       <button type="button" class="link-btn" onclick="logout()">로그아웃</button>
     </nav>
     <header>
@@ -21,6 +22,21 @@
     <main>
       <p class="info-banner">📢 제주·서귀포·울릉처럼 배나 비행기를 타야 갈 수 있는 섬 지역은 아직 추천하지 않아요.</p>
       <form id="trip-form" class="card trip-form" novalidate>
+        <div class="field-group">
+          <span class="group-label">어떻게 여행지를 정할까요?</span>
+          <div class="chip-row mode-row" id="mode-group" data-mode="single">
+            <button type="button" class="chip selected" data-value="recommend">🧭 여행지 추천받기<small>조건에 맞는 곳 5곳 추천</small></button>
+            <button type="button" class="chip" data-value="direct">📍 가고 싶은 지역 있음<small>그 지역 안에서 일정 추천</small></button>
+          </div>
+        </div>
+
+        <div class="field-group" id="region-field" hidden>
+          <label for="region-search">가고 싶은 지역</label>
+          <input type="text" id="region-search" placeholder="시·군 이름 검색 (예: 강릉, 경주, 강원)" autocomplete="off">
+          <ul class="region-results" id="region-results"></ul>
+          <p class="map-hint" id="region-picked">시·도 이름으로 검색하면 그 안의 시·군이 모두 나와요.</p>
+        </div>
+
         <div class="field-group">
           <label for="start-date">여행 시작일</label>
           <input type="date" id="start-date" name="startDate" required>
@@ -105,7 +121,7 @@
         </div>
 
         <p class="error-text" id="error-text" role="alert"></p>
-        <button type="submit" class="submit-btn" id="submit-btn">추천받기</button>
+        <button type="submit" class="submit-btn" id="submit-btn">여행지 추천받기</button>
       </form>
     </main>
   </div>
@@ -117,6 +133,8 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase.js"></script>
   <script src="js/departure.js"></script>
+  <script src="js/region-pick.js"></script>
   <script src="js/condition.js"></script>
+  <script src="js/course-copy.js"></script>
 </body>
 </html>

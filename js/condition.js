@@ -1,6 +1,8 @@
 // 조건 입력 화면 스크립트
 // 입력: 사용자가 폼에 넣은 날짜·예산·나이대별 인원(유아·어린이·청소년·성인)·출발 위치(departure.js)·이동수단·취향 태그(선택 순서 포함)·템포
-// 출력: 검사를 통과하면 하나의 객체(condition)로 묶어 Supabase trips 테이블에 저장한 뒤 여행지 추천 화면(result.html)으로 이동
+//       + 여행지 정하는 방식(추천받기 / 지역 직접 선택, region-pick.js)
+// 출력: 검사를 통과하면 하나의 객체(condition)로 묶어 Supabase trips 테이블에 저장한 뒤
+//       추천받기 → 여행지 추천 화면(result.html), 지역 직접 선택 → 그 지역의 일정안 비교 화면(plans.html)으로 이동
 
 // ---------- 0. 날짜 제한 ----------
 // 시작일은 오늘부터, 종료일은 시작일부터 고를 수 있게 min 값을 정함
@@ -161,7 +163,9 @@ function collectCondition() {
     departure: departure,         // { address, lat, lng } — departure.js에서 만든 값
     transport: getSelectedValue('transport-group'),
     tags: selectedTags.slice(),   // 복사본 (선택 순서 유지)
-    tempo: getSelectedValue('tempo-group')
+    tempo: getSelectedValue('tempo-group'),
+    mode: getSelectedValue('mode-group'),   // 'recommend' | 'direct'
+    region: pickedRegion                    // 직접 고른 지역 이름 (region-pick.js), 추천받기면 쓰지 않음
   };
 }
 
@@ -169,6 +173,7 @@ function collectCondition() {
 // 문제가 있으면 안내 문장을, 없으면 빈 문자열을 돌려줌
 
 function validateCondition(c) {
+  if (c.mode === 'direct' && !c.region) return '가고 싶은 지역을 검색해서 목록에서 골라 주세요.';
   if (!c.startDate || !c.endDate) return '여행 시작일과 종료일을 모두 입력해 주세요.';
   const dateMsg = checkDates();
   if (dateMsg) return dateMsg;
@@ -210,7 +215,8 @@ async function handleSubmit(event) {
   // DB에 저장 (열 이름은 sql/schema.sql 의 trips 테이블과 같음, user_id는 DB가 자동으로 채움)
   const button = document.getElementById('submit-btn');
   button.disabled = true;
-  const { data, error } = await sb.from('trips').insert({
+  // 코스 담기 모드면 여행지·일정안·시작 시각·원래 여행 번호도 함께 저장 (course-copy.js)
+  const { data, error } = await sb.from('trips').insert(Object.assign({
     start_date: condition.startDate,
     end_date: condition.endDate,
     days: condition.days,
@@ -228,7 +234,7 @@ async function handleSubmit(event) {
     transport: condition.transport,
     tags: condition.tags,
     tempo: condition.tempo
-  }).select().single();
+  }, copyTripFields())).select().single();
   button.disabled = false;
 
   if (error) {
@@ -237,7 +243,18 @@ async function handleSubmit(event) {
     return;
   }
   console.log('저장된 여행:', data);
-  location.href = 'result.html?trip=' + data.id;   // 5차시: 저장 후 여행지 추천 화면으로
+  if (copyCourse) {
+    // 공개 코스 담기: 코스 일정을 복사한 뒤 일정 상세로 (course-copy.js)
+    button.disabled = true;
+    await finishCopy(data);
+    button.disabled = false;
+  } else if (condition.mode === 'direct') {
+    // 지역을 직접 골랐으면 여행지 추천을 건너뛰고 그 지역의 일정안 비교로 바로 이동
+    // (trips.region은 일정을 '저장'할 때 채워지므로 여기서는 주소로만 넘김)
+    location.href = 'plans.html?trip=' + data.id + '&region=' + encodeURIComponent(condition.region) + '&direct=1';
+  } else {
+    location.href = 'result.html?trip=' + data.id;   // 5차시: 저장 후 여행지 추천 화면으로
+  }
 }
 
 // 로그인 확인 후 닉네임을 위쪽 메뉴에 표시
@@ -253,6 +270,8 @@ async function showUser() {
 showUser();
 setupDateLimits();
 setupSingleSelect('transport-group');
+setupModeSelect();      // region-pick.js
+setupRegionSearch();    // region-pick.js
 setupSingleSelect('tempo-group');
 setupTagSelect();
 setupPeopleInputs();

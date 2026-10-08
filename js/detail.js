@@ -41,7 +41,10 @@ async function start() {
     } else {                                   // 저장된 일정 불러오기
       plan = await loadSavedPlan(trip, places);
       if (!plan) { status.textContent = '저장된 일정이 없어요. 여행지 추천부터 받아 주세요.'; return; }
-      document.getElementById('save-msg').textContent = '저장된 일정이에요.';
+      document.getElementById('save-msg').textContent = param('copied')
+        ? '공개 코스에서 담은 일정이에요. 내 출발지·인원으로 시간과 비용을 다시 계산했어요. 확인한 뒤 \'이 일정 저장\'을 눌러 주세요.'
+        : '저장된 일정이에요.';
+      if (param('copied')) dirty = true;   // 총비용이 아직 저장되지 않았으므로 저장을 유도
     }
     document.getElementById('title').textContent = region + ' · ' + key + '안 ' + PLAN_INFO[key].name;
     status.textContent = '';
