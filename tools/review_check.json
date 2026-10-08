@@ -13717,5 +13717,203 @@
   "q": "B",
   "kids": true,
   "group": true
+ },
+ "3582325": {
+  "verdict": "none",
+  "reason": "후기 8건뿐(목장 체험 카페)",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)"
+ },
+ "2752660": {
+  "verdict": "keep",
+  "reason": "내장탕, 새벽 6시 영업",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "solo": true,
+  "open": "06:00",
+  "close": "22:00"
+ },
+ "2832003": {
+  "verdict": "keep",
+  "reason": "쌈채소 무한, 식사 시간 대기·재료 소진, 일요일 휴무 언급",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "group": true,
+  "waitMin": 20,
+  "open": "11:00",
+  "close": "20:00"
+ },
+ "3446183": {
+  "verdict": "keep",
+  "reason": "화요일 휴무, 숲속 한옥 카페, 반려견 동반",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "pet": true,
+  "parking": true,
+  "closed": [
+   "화"
+  ],
+  "open": "11:00",
+  "close": "19:00"
+ },
+ "143060": {
+  "verdict": "drop",
+  "reason": "평점 3.3(355건), 시설 노후",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "D"
+ },
+ "2738656": {
+  "verdict": "keep",
+  "reason": "한상차림, 가족 모임 예약",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "group": true,
+  "open": "11:00",
+  "close": "21:00"
+ },
+ "2951541": {
+  "verdict": "keep",
+  "reason": "후기 78건, 논 뷰 카페, 에그타르트",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "parking": true,
+  "open": "11:00",
+  "close": "21:00"
+ },
+ "2895071": {
+  "verdict": "keep",
+  "reason": "평점 3.8, 관악산 하산길 파전·묵",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C",
+  "group": true,
+  "open": "11:00",
+  "close": "20:00"
+ },
+ "3536517": {
+  "verdict": "none",
+  "reason": "후기 11건뿐",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)"
+ },
+ "2766514": {
+  "verdict": "keep",
+  "reason": "평점 3.7, 칡냉면, 전골 2인 이상",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "D",
+  "open": "10:30",
+  "close": "20:30"
+ },
+ "2906065": {
+  "verdict": "keep",
+  "reason": "평점 3.6, 계곡 닭구이, 직원 언행 불만 후기 2건",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C",
+  "group": true,
+  "kids": true,
+  "open": "10:00",
+  "close": "20:00"
+ },
+ "2902003": {
+  "verdict": "keep",
+  "reason": "평점 3.9, 냉면, 주차 넓음, 소음",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C",
+  "solo": true,
+  "parking": true,
+  "open": "11:00",
+  "close": "22:00"
+ },
+ "2834114": {
+  "verdict": "keep",
+  "reason": "경양식 돈가스 세트, 공영주차장 이용, 가끔 대기",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "solo": true,
+  "open": "11:00",
+  "close": "20:00"
+ },
+ "2844088": {
+  "verdict": "none",
+  "reason": "후기 12건뿐",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)"
+ },
+ "2831721": {
+  "verdict": "keep",
+  "reason": "평점 3.9, 일요일 휴무, 17시 마감, 탕수육",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C",
+  "closed": [
+   "일"
+  ],
+  "open": "11:00",
+  "close": "17:00"
+ },
+ "2830179": {
+  "verdict": "keep",
+  "reason": "반월호수 근처, 2층 혼잡·소음, 유아의자",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "kids": true,
+  "open": "10:00",
+  "close": "22:00"
+ },
+ "2830636": {
+  "verdict": "keep",
+  "reason": "갈비, 외국인 응대 불만 후기 1건",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "group": true,
+  "open": "11:00",
+  "close": "22:00"
+ },
+ "2840236": {
+  "verdict": "keep",
+  "reason": "후기 48건, 언덕 위 카페, 잔디밭, 주말 주차 혼잡",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "kids": true,
+  "parking": true,
+  "open": "11:00",
+  "close": "21:00"
+ },
+ "2913675": {
+  "verdict": "keep",
+  "reason": "반려견 전용 리조트",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "pet": true,
+  "kids": true
+ },
+ "2903560": {
+  "verdict": "keep",
+  "reason": "월요일 휴무, 1983년 개업 분식, 대기 30분 사례",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "solo": true,
+  "kids": true,
+  "waitMin": 20,
+  "closed": [
+   "월"
+  ],
+  "open": "11:00",
+  "close": "19:30"
  }
 }
