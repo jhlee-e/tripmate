@@ -1,0 +1,422 @@
+{
+ "2753134": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "1950195": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "3532862": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "623223": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "2774300": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "2662628": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "133808": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "2874112": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "2837796": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "133817": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "2603352": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "4091446": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "1048785": {
+  "verdict": "none",
+  "reason": "구글 지도 평점 없음",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "3537713": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "584282": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "2531222": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "142816": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "2902806": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "2479573": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "2871315": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "2922605": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "2870175": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "133933": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "133497": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "3535116": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "2499936": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "2775552": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "2651624": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "3533806": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "3534416": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "3544610": {
+  "verdict": "none",
+  "reason": "식당 분류이지만 항구 이름 — 확인 보류",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "2872467": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "2873989": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "3533002": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "2808098": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "3535195": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "2775515": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "3535734": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "3533678": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "3468980": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "2870140": {
+  "verdict": "none",
+  "reason": "검색 결과에서 찾지 못함",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "3535112": {
+  "verdict": "none",
+  "reason": "검색 결과에서 찾지 못함",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "2775583": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "2872387": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "3533884": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "3536259": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "2868839": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "3443739": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "3355175": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "3547680": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "2871151": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "2781674": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "3416220": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "2804293": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "3540781": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "2892102": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "3535807": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "2871178": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "2868991": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "2869020": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "232286": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "2945609": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "2823571": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "2578495": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "137706": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "2662796": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "142733": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "3073495": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "2668701": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ },
+ "3036568": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 확인 (Claude)"
+ }
+}

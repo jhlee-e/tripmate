@@ -188,6 +188,9 @@ LCLS = json.load(open(_LCLS_PATH, encoding='utf-8')) if os.path.exists(_LCLS_PAT
 # 제외 분류에 있어도 장소별로 추천 후보에 다시 넣는 목록 — tools/make_recommend_overrides.py
 _OV_PATH = os.path.join(HERE, 'recommend_overrides.json')
 OVERRIDES = json.load(open(_OV_PATH, encoding='utf-8')) if os.path.exists(_OV_PATH) else {}
+# 후기 확인에서 '추천 제외'로 판정한 장소 — tools/review_record.py가 기록 (평점 숫자는 저장하지 않음)
+_RV_PATH = os.path.join(HERE, 'review_check.json')
+REVIEWS = json.load(open(_RV_PATH, encoding='utf-8')) if os.path.exists(_RV_PATH) else {}
 
 
 def to_place(item, region, sido):
@@ -203,6 +206,9 @@ def to_place(item, region, sido):
     ov = OVERRIDES.get(str(item['contentid']))
     if ov:
         rec = ov['recommend']
+    rv = REVIEWS.get(str(item['contentid']))
+    if rv and rv['verdict'] == 'drop':
+        rec = False
     audience = ov.get('audience', '') if ov else ''
     lat, lng = to_float(item['mapy']), to_float(item['mapx'])
     name = item.get('title', '').strip()
