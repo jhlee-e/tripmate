@@ -138,7 +138,10 @@ function renderDay() {
         '<span class="drag-handle" title="끌어서 순서 바꾸기 (날짜 탭에 놓으면 그날로 옮김)">⠿</span>' +
         '<span class="tl-no">' + (it.stop.meal ? '🍴' : visitNo) + '</span>' +
         '<div class="tl-body">' +
-          '<p class="tl-time">' + hhmm(it.begin) + ' – ' + hhmm(it.end) + (it.stop.meal ? ' · ' + esc(it.stop.meal) : '') + '</p>' +
+          '<p class="tl-time">' + hhmm(it.begin) + ' – ' + hhmm(it.end) + (it.stop.meal ? ' · ' + esc(it.stop.meal) : '') +
+            (it.queue ? ' <small>(줄 서기 약 ' + it.queue + '분 포함)</small>' : '') + '</p>' +
+          (it.hoursIssue ? '<p class="field-warning">⚠ ' + esc(it.hoursIssue) + ' — 시간을 바꾸거나 ⇄로 교체해 주세요</p>' : '') +
+          infoBadges(p) +
           '<button type="button" class="tl-name link-btn"></button>' +
           '<p class="tl-meta">' + esc(isFood ? cuisineOf(p) : (p.categoryName || p.type)) + ' · ' + (it.cost ? won(it.cost) : '무료') + '</p>' +
         '</div>' +
@@ -209,6 +212,22 @@ function bindModeButtons(el, ref) {
       refresh(true);
     });
   });
+}
+
+// 후기 조사 정보 배지: 품질 등급·혼밥·최소 인원·주차·아이 동반·주의할 점
+function infoBadges(p) {
+  const i = p.info;
+  if (!i) return '';
+  const b = [];
+  if (i.q) b.push({ A: '👍 평이 아주 좋음', B: '평이 좋음', C: '평이 보통', D: '평이 엇갈림' }[i.q]);
+  if (i.solo === true && p.type === '식당') b.push('혼밥 가능');
+  if (i.minPeople) b.push(i.minPeople + '인부터');
+  if (i.parking === true) b.push('주차 가능');
+  if (i.parking === false) b.push('주차 어려움');
+  if (i.kids) b.push('아이와 가기 좋음');
+  if (i.pet) b.push('반려동물 가능');
+  (i.issues || []).forEach(function (x) { b.push('⚠ ' + x); });
+  return b.length ? '<p class="info-badges">' + b.map(function (x) { return '<span>' + esc(x) + '</span>'; }).join('') + '</p>' : '';
 }
 
 function pointItem(time, text) {

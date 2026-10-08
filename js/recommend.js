@@ -229,9 +229,56 @@ function budgetCaps(trip) {
   };
 }
 
+// ---------- 후기·영업시간 조사 정보 (p.info — tools/review_record.py, 2026-10-09 이재훈 요청 1~8번) ----------
+// p.info: { q: 품질 등급 A~D, solo, minPeople, group, waitMin, issues, parking, kids, pet, closed: ['월'..], open, close, break }
+const DOW = ['일', '월', '화', '수', '목', '금', '토'];
+function hm(t) { const a = String(t).split(':'); return Number(a[0]) * 60 + Number(a[1] || 0); }
+// 여행 d일차(1부터)의 요일 이름
+function dowOf(trip, d) { const x = new Date(trip.start_date + 'T00:00:00'); x.setDate(x.getDate() + d - 1); return DOW[x.getDay()]; }
+// 그 요일·시각(분)에 문을 여는지: 휴무 요일·영업시간·브레이크타임을 봄. 정보가 없으면 연다고 봄
+function openAt(p, dow, minute) {
+  const i = p.info;
+  if (!i) return true;
+  if (i.closed && i.closed.indexOf(dow) !== -1) return false;
+  if (minute == null) return true;
+  if (i.open && i.close) {
+    const o = hm(i.open), c = hm(i.close) <= o ? hm(i.close) + 24 * 60 : hm(i.close);
+    if (minute < o || minute >= c) return false;
+  }
+  if (i.break) {
+    const b = i.break.split('-');
+    if (minute >= hm(b[0]) && minute < hm(b[1])) return false;
+  }
+  return true;
+}
+// 영업시간 문제를 글로: 일정 시각(begin~end)에 문을 닫았으면 이유, 괜찮으면 ''
+function hoursIssue(p, dow, begin, end) {
+  const i = p.info;
+  if (!i) return '';
+  if (i.closed && i.closed.indexOf(dow) !== -1) return dow + '요일 휴무';
+  if (!openAt(p, dow, begin)) return '영업시간 아님 (' + (i.open || '?') + '~' + (i.close || '?') + (i.break ? ', 쉬는 시간 ' + i.break : '') + ')';
+  if (end != null && i.close && end > hm(i.close) && hm(i.close) > hm(i.open || '00:00')) return i.close + ' 영업 종료 전에 나와야 해요';
+  return '';
+}
+// 품질 등급·주차·아이 동반을 점수 배수로 (이재훈 요청: 인기 말고 다른 요소도 판단에 넣기 — 배수 값은 Claude 판단)
+const QUALITY_MULT = { A: 1.15, B: 1.05, C: 0.95, D: 0.85 };
+function infoMultiplier(p, trip) {
+  const i = p.info;
+  if (!i) return 1;
+  let m = QUALITY_MULT[i.q] || 1;
+  if (trip.transport === '자동차' && i.parking === true) m *= 1.05;
+  if (trip.transport === '자동차' && i.parking === false) m *= 0.9;
+  if ((trip.infants || trip.children) && i.kids === true) m *= 1.05;
+  if (trip.tempo === '알차게' && i.waitMin >= 40) m *= 0.9;   // 줄이 긴 곳은 바쁜 일정에서 덜 추천
+  if (i.issues && i.issues.length) m *= 0.95;
+  return m;
+}
+
 // 여행에 넣을 수 있는 장소인지 (예산과 상관없는 조건)
 function usable(p, trip) {
   if (!p.recommend || isChain(p.name)) return false;
+  if (p.info && p.info.minPeople && trip.people < p.info.minPeople) return false;   // 2인분부터인 곳은 1명 여행에서 제외
+  if (p.info && p.info.solo === false && trip.people === 1) return false;
   if (p.audience === '10대' && !trip.teens) return false;    // 청소년 전용 공간은 청소년이 있을 때만
   if (p.type === '명소' && !(p.stayMin > 0)) return false;   // 체류 시간 0 = 야영장 등 숙박 시설
   if (p.type === '숙소' && !(p.cost > 0)) return false;      // 가격 모르는 숙소 제외
@@ -246,7 +293,7 @@ function preparePool(trip, places) {
   const tempo = TEMPO[trip.tempo];
   const nights = trip.days - 1;
   const base = places.filter(function (p) { return usable(p, trip); });
-  base.forEach(function (p) { p._s = withPopularity(tagScore(p.tags, trip.tags), p.popularity); });
+  base.forEach(function (p) { p._s = withPopularity(tagScore(p.tags, trip.tags), p.popularity) * infoMultiplier(p, trip); });
 
   for (let step = 0; step <= 20; step++) {
     const relax = 1 + step * 0.1;
@@ -358,7 +405,8 @@ function buildPlan(type, trip, pool) {
   const anchor = lodging || topCenter;
   const ranked = pool.attractions.slice().sort(byDesc(attractionKey(type, anchor)));
   const used = new Set();
-  let next = 0, carry = [];
+  let next = 0, carry = [], deferred = [];
+  let today = null;   // 지금 만드는 날의 요일 (식당 영업시간 확인용)
   const days = [];
   let mealMove = 0;
   const eaten = {};        // 메뉴 종류별 먹은 횟수 (여행 전체)
@@ -367,11 +415,17 @@ function buildPlan(type, trip, pool) {
   for (let d = 1; d <= trip.days; d++) {
     const lastDay = d === trip.days;
     // 오늘 갈 후보: 어제 못 간 곳(이월) + 순위표에서 다음 곳들
-    const picks = carry.slice();
+    const dow = dowOf(trip, d);
+    const picks = [];
+    const later = [];   // 오늘 휴무라 다른 날로 미룬 곳
+    carry.concat(deferred).forEach(function (p) { if (openAt(p, dow)) picks.push(p); else later.push(p); });
+    deferred = later;
     while (picks.length < tempo.count && next < ranked.length) {
       const p = ranked[next++];
-      if (!used.has(p.id)) picks.push(p);
+      if (used.has(p.id)) continue;
+      if (openAt(p, dow)) picks.push(p); else deferred.push(p);
     }
+    today = dow;
     let pos = d === 1 ? dep : lodging;
     const ordered = nearestNeighbor(d === 1 ? anchor : pos, picks);
     const stops = [];
@@ -417,7 +471,10 @@ function buildPlan(type, trip, pool) {
 
   // 식당을 일정에 넣고, 식사가 끝나는 시각을 돌려줌
   function addMeal(stops, kind, pos, clock) {
-    const r = pickRestaurant(type, pool.restaurants, pos.isHome ? anchor : pos, used, eaten, lastGroup);
+    // 그 끼니 시각(점심 12:00·저녁 18:00 무렵)에 문을 여는 식당만 (휴무일·브레이크타임 제외)
+    const mealAt = Math.max(clock, kind === 'lunch' ? LUNCH.from + 30 : DINNER_FROM + 30);
+    const openList = pool.restaurants.filter(function (r) { return openAt(r, today, mealAt); });
+    const r = pickRestaurant(type, openList.length ? openList : pool.restaurants, pos.isHome ? anchor : pos, used, eaten, lastGroup);
     if (!r) return clock;
     used.add(r.id);
     lastGroup = cuisineOf(r);
@@ -631,15 +688,17 @@ function computeTimeline(trip, plan) {
     day.stops.forEach(function (stop, i) {
       const mv = leg(stop.p, stop);
       const arrive = clock + mv.min;
-      const begin = Math.max(arrive, stop.notBefore || 0);
+      const queue = (stop.p.info && stop.p.info.waitMin && stop.p.type !== '숙소') ? stop.p.info.waitMin : 0;   // 후기에 나온 줄 서는 시간
+      const begin = Math.max(arrive, stop.notBefore || 0) + queue;
       const end = begin + stop.stay;
+      const issue = hoursIssue(stop.p, dowOf(trip, d), begin - queue, end);
       let c = stop.p.type === '숙소' ? 0 : (stop.p.cost || 0) * pay;
       if (stop.p.breakfastOf != null) {   // 숙소 조식: 어린이는 성인의 50%, 유아 0원
         c = (stop.p.cost || 0) * (pay - (trip.children || 0) * (1 - BREAKFAST.childRate));
       }
       if (stop.p.type === '식당') { cost.food += c; dc.food += c; } else { cost.admission += c; dc.admission += c; }
       if (!stop.meal) { active += mv.min + stop.stay; visits++; } else active += mv.min;
-      items.push({ stop: stop, index: i, moveMin: mv.min, moveKm: mv.km, moveMode: mv.mode, moveReal: mv.real, arrive: arrive, begin: begin, end: end, cost: c });
+      items.push({ queue: queue, hoursIssue: issue, stop: stop, index: i, moveMin: mv.min, moveKm: mv.km, moveMode: mv.mode, moveReal: mv.real, arrive: arrive, begin: begin, end: end, cost: c });
       clock = end;
       pos = stop.p;
     });
@@ -661,7 +720,7 @@ function computeTimeline(trip, plan) {
 // 장소 점수가 아직 없으면 계산해 붙임 (저장된 일정을 불러온 경우 등)
 function ensureScores(places, trip) {
   places.forEach(function (p) {
-    if (p._s == null) p._s = withPopularity(tagScore(p.tags || {}, trip.tags), p.popularity);
+    if (p._s == null) p._s = withPopularity(tagScore(p.tags || {}, trip.tags), p.popularity) * infoMultiplier(p, trip);
   });
 }
 
@@ -716,6 +775,6 @@ async function loadSavedPlan(trip, places) {
 
 // node로 시험할 때 쓰도록 내보내기 (브라우저에서는 무시됨)
 if (typeof module !== 'undefined') {
-  module.exports = { transitLegs, legKey, localMode, WALK_KM, TEMPO, rankRegions, buildPlans, buildPlan, preparePool, computeTimeline, distanceKm,
+  module.exports = { openAt, hoursIssue, dowOf, infoMultiplier, transitLegs, legKey, localMode, WALK_KM, TEMPO, rankRegions, buildPlans, buildPlan, preparePool, computeTimeline, distanceKm,
     travelMin, budgetCaps, hhmm, PLAN_INFO, isChain, LODGING_ARRIVE, SEA_REGIONS, foodKind, cuisineOf, pickRestaurant, ensureScores, estimateMinCost, fitBudget, syncBreakfast, breakfastPlace, lodgingBreakfast };
 }

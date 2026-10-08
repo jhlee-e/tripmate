@@ -132,7 +132,9 @@ function renderSchedule(trip, plan, t) {
       const p = it.stop.p;
       const label = it.stop.meal ? '🍴 ' + it.stop.meal : (++n) + '';
       html += '<li class="mini-item" data-day="' + di + '" data-i="' + i + '"><span class="mini-time">' + hhmm(it.begin) + '</span>' +
-        '<span class="mini-no">' + label + '</span><span class="mini-name">' + esc(p.name) + '</span>' +
+        '<span class="mini-no">' + label + '</span><span class="mini-name">' + esc(p.name) +
+          (it.hoursIssue ? ' <span class="over-text" title="' + esc(it.hoursIssue) + '">⚠ ' + esc(it.hoursIssue) + '</span>' : '') +
+          (it.queue ? ' <small class="muted">줄 약 ' + it.queue + '분</small>' : '') + '</span>' +
         '<span class="mini-cost">' + (it.cost ? won(it.cost) : '') + '</span></li>';
     });
     if (day.endPoint.isHome) {

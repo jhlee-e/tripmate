@@ -363,3 +363,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+# 6번 실내/실외: 장소 파일을 다시 만든 뒤에는 python tools/indoor.py 를 실행해 indoor 값을 다시 붙일 것
