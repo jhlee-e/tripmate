@@ -9936,5 +9936,420 @@
   "group": true,
   "open": "08:00",
   "close": "21:00"
+ },
+ "137499": {
+  "verdict": "keep",
+  "reason": "단체 수련회용, 침구 아쉬움",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C",
+  "group": true,
+  "kids": true
+ },
+ "2855356": {
+  "verdict": "keep",
+  "reason": "버섯전골, 단체 예약 가능",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "group": true,
+  "open": "09:30",
+  "close": "21:00"
+ },
+ "2910529": {
+  "verdict": "keep",
+  "reason": "대형 카페, 3·4층 노키즈, 반려견 동반",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "pet": true,
+  "parking": true,
+  "open": "11:00",
+  "close": "19:00"
+ },
+ "2564295": {
+  "verdict": "keep",
+  "reason": "셀프 서비스형 호텔",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B"
+ },
+ "2605394": {
+  "verdict": "keep",
+  "reason": "평점 3.7, 월요일 휴무, 조기 마감 사례",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "D",
+  "closed": [
+   "월"
+  ],
+  "open": "11:30",
+  "close": "19:00",
+  "waitMin": 20
+ },
+ "2833020": {
+  "verdict": "keep",
+  "reason": "정원·야외석",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "kids": true,
+  "solo": true,
+  "open": "10:00",
+  "close": "22:00"
+ },
+ "2832917": {
+  "verdict": "keep",
+  "reason": "한옥 카페, 월요일 휴무, 진입로 좁음",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "closed": [
+   "월"
+  ],
+  "open": "12:00",
+  "close": "19:30"
+ },
+ "2778473": {
+  "verdict": "keep",
+  "reason": "주차 공간 부족",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "open": "10:30",
+  "close": "23:00"
+ },
+ "631972": {
+  "verdict": "keep",
+  "reason": "전용 주차장",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "parking": true,
+  "open": "09:00",
+  "close": "21:00"
+ },
+ "2841379": {
+  "verdict": "keep",
+  "reason": "식사 시간 대기, 회전 빠름",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "solo": true,
+  "waitMin": 10,
+  "open": "10:00",
+  "close": "22:00"
+ },
+ "4046458": {
+  "verdict": "keep",
+  "reason": "산 전망 루프탑, 가격 다소 높음",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "kids": true,
+  "open": "10:00",
+  "close": "21:00"
+ },
+ "2854436": {
+  "verdict": "keep",
+  "reason": "한옥 숙소(침구 바닥형), 전통놀이 체험",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "kids": true,
+  "group": true,
+  "parking": true
+ },
+ "2679990": {
+  "verdict": "none",
+  "reason": "후기 6건뿐, 매칭 불확실",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)"
+ },
+ "2873132": {
+  "verdict": "keep",
+  "reason": "대형 카페, 넓은 잔디",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "kids": true,
+  "parking": true,
+  "open": "10:00",
+  "close": "19:00"
+ },
+ "2837287": {
+  "verdict": "keep",
+  "reason": "한우 정육식당, 가격 높음",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "group": true,
+  "open": "09:30",
+  "close": "21:30"
+ },
+ "2864709": {
+  "verdict": "keep",
+  "reason": "정육식당(상차림비 별도), 화요일 휴무",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "group": true,
+  "kids": true,
+  "parking": true,
+  "closed": [
+   "화"
+  ],
+  "open": "11:00",
+  "close": "21:00"
+ },
+ "2758162": {
+  "verdict": "keep",
+  "reason": "간이 짠 편, 손님 많아 대기",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C",
+  "group": true,
+  "parking": true,
+  "waitMin": 15,
+  "open": "11:00",
+  "close": "21:00"
+ },
+ "2903002": {
+  "verdict": "keep",
+  "reason": "백숙 40분 조리, 예약 권장",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "group": true,
+  "waitMin": 40,
+  "open": "10:00",
+  "close": "20:00"
+ },
+ "3339599": {
+  "verdict": "keep",
+  "reason": "조식 대기 15~20분",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A"
+ },
+ "2603467": {
+  "verdict": "keep",
+  "reason": "정원 관리 아쉬움 의견",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "kids": true,
+  "open": "11:00",
+  "close": "20:30"
+ },
+ "2723326": {
+  "verdict": "keep",
+  "reason": "바다 전망, 지하 매장 엘리베이터 없음",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "kids": true,
+  "open": "11:00",
+  "close": "21:00"
+ },
+ "2838974": {
+  "verdict": "keep",
+  "reason": "윗층 노키즈존",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C",
+  "kids": true,
+  "open": "10:00",
+  "close": "22:00"
+ },
+ "2766483": {
+  "verdict": "keep",
+  "reason": "오리목 숯불구이",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C",
+  "group": true,
+  "open": "10:00",
+  "close": "22:00"
+ },
+ "133224": {
+  "verdict": "keep",
+  "reason": "이른 아침 영업",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "solo": true,
+  "open": "07:30",
+  "close": "18:00"
+ },
+ "3076309": {
+  "verdict": "keep",
+  "reason": "침대 딱딱하다는 의견",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B"
+ },
+ "2905983": {
+  "verdict": "keep",
+  "reason": "칼국수 2인 이상 주문, 월요일 휴무, 혼잡 시 서비스 느림",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "minPeople": 2,
+  "solo": false,
+  "closed": [
+   "월"
+  ],
+  "open": "10:00",
+  "close": "22:00"
+ },
+ "2871838": {
+  "verdict": "keep",
+  "reason": "월요일 휴무, 17시 마감, 아이 동반 비추천 의견",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C",
+  "closed": [
+   "월"
+  ],
+  "open": "09:30",
+  "close": "17:00"
+ },
+ "2861588": {
+  "verdict": "keep",
+  "reason": "평점 3.7, 꼬막정식",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "D",
+  "group": true,
+  "open": "09:30",
+  "close": "20:30"
+ },
+ "4081915": {
+  "verdict": "keep",
+  "reason": "후기 16건, 감자빵 카페",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "kids": true
+ },
+ "2906086": {
+  "verdict": "keep",
+  "reason": "섬진강 전망, 반려견 동반, 역에서 도보",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "pet": true,
+  "open": "11:00",
+  "close": "20:00"
+ },
+ "4054861": {
+  "verdict": "keep",
+  "reason": "후기 18건, 화덕 생선구이, 넓은 주차장",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C",
+  "group": true,
+  "kids": true,
+  "parking": true
+ },
+ "2749130": {
+  "verdict": "keep",
+  "reason": "자차 접근 필요, 반찬 셀프바",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "group": true,
+  "kids": true,
+  "open": "11:00",
+  "close": "21:30"
+ },
+ "2866546": {
+  "verdict": "keep",
+  "reason": "정원 카페, 음료값에 입장 포함",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "open": "11:00",
+  "close": "22:00"
+ },
+ "2877525": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "group": true,
+  "solo": true,
+  "open": "10:30",
+  "close": "22:00"
+ },
+ "2841247": {
+  "verdict": "keep",
+  "reason": "정육점 구매 후 옆 식당 상차림비, 저녁 소진 가능",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "group": true,
+  "open": "08:30",
+  "close": "20:30"
+ },
+ "2899851": {
+  "verdict": "keep",
+  "reason": "저수지 전망, 명절 좌석 부족",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "open": "11:00",
+  "close": "21:00"
+ },
+ "2763803": {
+  "verdict": "keep",
+  "reason": "브레이크타임 15~16:30, 붐빔",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "group": true,
+  "parking": true,
+  "waitMin": 20,
+  "open": "11:00",
+  "close": "21:00",
+  "break": [
+   "15:00",
+   "16:30"
+  ]
+ },
+ "133443": {
+  "verdict": "keep",
+  "reason": "백년가게, 참게장 한정식",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "group": true,
+  "parking": true,
+  "open": "10:00",
+  "close": "21:00"
+ },
+ "2837603": {
+  "verdict": "keep",
+  "reason": "늘 붐비나 대기 짧음, 가족 모임",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "group": true,
+  "kids": true,
+  "waitMin": 15,
+  "open": "11:00",
+  "close": "22:00"
+ },
+ "2876015": {
+  "verdict": "keep",
+  "reason": "셀프 한우 숯불, 가격 높음",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "group": true,
+  "open": "08:50",
+  "close": "21:00"
  }
 }
