@@ -11708,5 +11708,227 @@
   "parking": true,
   "open": "10:30",
   "close": "21:00"
+ },
+ "2841053": {
+  "verdict": "keep",
+  "reason": "점심 세트, 브레이크 15~16시, 피크 혼잡",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "solo": true,
+  "parking": true,
+  "waitMin": 10,
+  "open": "09:00",
+  "close": "21:00",
+  "break": [
+   "15:00",
+   "16:00"
+  ]
+ },
+ "2893549": {
+  "verdict": "keep",
+  "reason": "월요일 휴무, 막국수·수육",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "solo": true,
+  "closed": [
+   "월"
+  ],
+  "open": "11:00",
+  "close": "20:00"
+ },
+ "2839198": {
+  "verdict": "keep",
+  "reason": "일요일 휴무, 한옥·나룻배, 길가 주차 위험",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "closed": [
+   "일"
+  ],
+  "open": "11:00",
+  "close": "20:00"
+ },
+ "2843785": {
+  "verdict": "keep",
+  "reason": "스페셜티 카페, 점심 직후 혼잡",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "solo": true,
+  "open": "08:00",
+  "close": "22:30"
+ },
+ "2872727": {
+  "verdict": "keep",
+  "reason": "닭칼국수, 월·일 휴무, 브레이크 15~17시, 대기",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "group": true,
+  "parking": true,
+  "waitMin": 15,
+  "closed": [
+   "월",
+   "일"
+  ],
+  "open": "11:30",
+  "close": "21:00",
+  "break": [
+   "15:00",
+   "17:00"
+  ]
+ },
+ "2832936": {
+  "verdict": "keep",
+  "reason": "좌식, 혼밥 가능, 약수터 앞",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "solo": true,
+  "open": "10:00",
+  "close": "20:00"
+ },
+ "2836301": {
+  "verdict": "keep",
+  "reason": "매운 쭈꾸미, 주차장 넓음, 대기",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "parking": true,
+  "waitMin": 20,
+  "open": "11:00",
+  "close": "20:20"
+ },
+ "2829419": {
+  "verdict": "keep",
+  "reason": "월요일 휴무, 대형 매장, 대기",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "kids": true,
+  "group": true,
+  "waitMin": 20,
+  "closed": [
+   "월"
+  ],
+  "open": "11:30",
+  "close": "21:00"
+ },
+ "2579221": {
+  "verdict": "keep",
+  "reason": "월·화 휴무, 바다 전망 이탈리안, 가격 높음",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "closed": [
+   "월",
+   "화"
+  ],
+  "open": "11:30",
+  "close": "20:30",
+  "waitMin": 15
+ },
+ "2838998": {
+  "verdict": "keep",
+  "reason": "창고 개조 대형 카페, 직원 응대 불만 일부",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "kids": true,
+  "open": "11:00",
+  "close": "21:00"
+ },
+ "2856852": {
+  "verdict": "keep",
+  "reason": "리모델링, 음식 빨리 나옴",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "solo": true
+ },
+ "2402903": {
+  "verdict": "keep",
+  "reason": "점심 늦으면 만석, 인근 무료주차",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "solo": true,
+  "waitMin": 15,
+  "open": "10:00",
+  "close": "20:00"
+ },
+ "3324605": {
+  "verdict": "keep",
+  "reason": "평점 3.8, 강변 전망 3층 카페, 주차장 혼잡",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C",
+  "open": "10:00",
+  "close": "21:00"
+ },
+ "2841956": {
+  "verdict": "keep",
+  "reason": "후기 29건, 위생·품절 불만 일부",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "group": true
+ },
+ "2891370": {
+  "verdict": "keep",
+  "reason": "후기 27건, 해변 앞 낙지 요리, 시가",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "group": true
+ },
+ "135896": {
+  "verdict": "drop",
+  "reason": "평점 3.4(422건), 불친절 불만",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "D"
+ },
+ "143118": {
+  "verdict": "keep",
+  "reason": "평점 3.5, 시설 노후, 위생 불만 일부",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "D",
+  "group": true
+ },
+ "2748759": {
+  "verdict": "keep",
+  "reason": "평점 3.6, 섬진강 전망, 키오스크·셀프",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "D",
+  "solo": true,
+  "open": "10:30",
+  "close": "20:00"
+ },
+ "2855119": {
+  "verdict": "keep",
+  "reason": "남한산성 입구, 30분 대기 사례",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "solo": true,
+  "group": true,
+  "waitMin": 30,
+  "open": "11:00",
+  "close": "20:00"
+ },
+ "2875263": {
+  "verdict": "keep",
+  "reason": "왕송호수 전망",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "solo": true,
+  "open": "10:00",
+  "close": "22:00"
  }
 }
