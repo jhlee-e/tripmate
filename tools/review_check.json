@@ -14130,5 +14130,192 @@
   "waitMin": 20,
   "open": "06:00",
   "close": "22:00"
+ },
+ "2866501": {
+  "verdict": "keep",
+  "reason": "게장 정식, 리필, 짐 보관, 11시 이전 방문 권장",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "group": true,
+  "waitMin": 15,
+  "open": "07:00",
+  "close": "21:00"
+ },
+ "2753331": {
+  "verdict": "keep",
+  "reason": "냉면·갈비탕, 점심 혼잡",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "solo": true,
+  "group": true,
+  "open": "11:00",
+  "close": "21:30"
+ },
+ "2847893": {
+  "verdict": "keep",
+  "reason": "바다 전망 베이글 카페, 2층 소음, 화장실 1칸",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "parking": true,
+  "open": "09:00",
+  "close": "20:00"
+ },
+ "2925262": {
+  "verdict": "keep",
+  "reason": "곰치국, 새벽 6시~15시, 재료 확인 전화 권장",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "solo": true,
+  "open": "06:00",
+  "close": "15:00"
+ },
+ "2783723": {
+  "verdict": "keep",
+  "reason": "럭셔리 호텔, 서비스 호평",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "kids": true
+ },
+ "2808044": {
+  "verdict": "keep",
+  "reason": "노을 전망 3층 카페, 주말 만석, 가격 높음",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "open": "10:30",
+  "close": "19:00"
+ },
+ "2850862": {
+  "verdict": "keep",
+  "reason": "평점 3.9, 정원 베이커리, 가격 높음",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C",
+  "parking": true,
+  "open": "09:00",
+  "close": "19:00"
+ },
+ "2742073": {
+  "verdict": "keep",
+  "reason": "평점 3.9, 민어 전문, 대기 줄",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C",
+  "group": true,
+  "waitMin": 20,
+  "open": "10:00",
+  "close": "22:00"
+ },
+ "2814170": {
+  "verdict": "keep",
+  "reason": "해수욕장 앞, 중앙난방(추위 요청 필요)",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B"
+ },
+ "2902867": {
+  "verdict": "keep",
+  "reason": "바다 전망, 외벽 공사·소음·창문 오염 후기",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "kids": true,
+  "group": true
+ },
+ "2570801": {
+  "verdict": "keep",
+  "reason": "버스터미널 인근, 객실 노후 의견",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B"
+ },
+ "2912989": {
+  "verdict": "keep",
+  "reason": "물회·회, 주차 쉬움",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "group": true,
+  "parking": true,
+  "open": "10:00",
+  "close": "21:00"
+ },
+ "2032439": {
+  "verdict": "keep",
+  "reason": "평점 3.7, 위생 불만 후기 1건",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "D",
+  "solo": true,
+  "open": "08:00",
+  "close": "20:00"
+ },
+ "2902931": {
+  "verdict": "keep",
+  "reason": "추어탕+미니돈가스, 번호표 대기",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "kids": true,
+  "waitMin": 20
+ },
+ "2570352": {
+  "verdict": "keep",
+  "reason": "평점 3.8, 바다 전망, 시설 관리 부실·엘리베이터 없음 후기 다수",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C",
+  "kids": true
+ },
+ "800879": {
+  "verdict": "keep",
+  "reason": "평점 3.7(1,020건), 100년 순대국밥, 회전 빠름",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "D",
+  "solo": true,
+  "waitMin": 10,
+  "open": "08:30",
+  "close": "19:30"
+ },
+ "1315136": {
+  "verdict": "keep",
+  "reason": "평점 3.8, 엑스코 앞, 일부 리모델링 중",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C"
+ },
+ "2871105": {
+  "verdict": "keep",
+  "reason": "물회·해물국밥, 혼밥 가능, 어린이 메뉴",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "solo": true,
+  "kids": true,
+  "open": "09:30",
+  "close": "21:00"
+ },
+ "138764": {
+  "verdict": "keep",
+  "reason": "평점 3.8, 외관 노후·객실 리모델링, 루지 근처",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C",
+  "kids": true,
+  "parking": true
+ },
+ "2794955": {
+  "verdict": "keep",
+  "reason": "후기 55건, 솔비치 근처 낙지 요리",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "group": true
  }
 }
