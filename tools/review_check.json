@@ -1385,5 +1385,1706 @@
   "solo": true,
   "open": "10:00",
   "close": "22:00"
+ },
+ "2835922": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "solo": true,
+  "open": "10:00",
+  "close": "20:00"
+ },
+ "228935": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "kids": true
+ },
+ "2852451": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "closed": [
+   "화"
+  ],
+  "open": "10:30",
+  "close": "21:00"
+ },
+ "2839149": {
+  "verdict": "keep",
+  "reason": "기대보다 평범하다는 후기 있음",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "waitMin": 40,
+  "closed": [
+   "월"
+  ],
+  "open": "10:00",
+  "close": "20:00",
+  "issues": [
+   "과대평가 후기"
+  ]
+ },
+ "126715": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "kids": true
+ },
+ "2743343": {
+  "verdict": "keep",
+  "reason": "평점 정보 없음",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "open": "10:30",
+  "close": "21:00"
+ },
+ "2837211": {
+  "verdict": "keep",
+  "reason": "닭 한 마리 메뉴(3~4인 분량)",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C",
+  "group": true,
+  "minPeople": 2,
+  "waitMin": 30,
+  "open": "10:00",
+  "close": "21:00"
+ },
+ "2911245": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "solo": true,
+  "parking": true
+ },
+ "4070902": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "solo": true,
+  "closed": [
+   "월"
+  ],
+  "open": "10:00",
+  "close": "20:00"
+ },
+ "1916549": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "solo": true,
+  "open": "08:00",
+  "close": "18:00"
+ },
+ "1825974": {
+  "verdict": "keep",
+  "reason": "사장의 응대 불만 후기 있음",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "D",
+  "parking": true,
+  "issues": [
+   "응대 불만"
+  ],
+  "open": "10:00",
+  "close": "20:30"
+ },
+ "1086973": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "kids": true
+ },
+ "1807900": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C",
+  "issues": [
+   "비싼 가격"
+  ],
+  "open": "10:00",
+  "close": "20:30"
+ },
+ "1362194": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "kids": true
+ },
+ "2734899": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C",
+  "open": "10:30",
+  "close": "21:00"
+ },
+ "2808016": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "solo": true,
+  "issues": [
+   "비싼 가격"
+  ],
+  "open": "10:00",
+  "close": "22:00"
+ },
+ "1857885": {
+  "verdict": "keep",
+  "reason": "평점 경계(3.5)",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "D",
+  "solo": true,
+  "parking": false,
+  "closed": [
+   "월"
+  ],
+  "open": "09:30",
+  "close": "18:00"
+ },
+ "2753491": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "open": "11:00",
+  "close": "21:30"
+ },
+ "686189": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C",
+  "closed": [
+   "월"
+  ],
+  "open": "11:00",
+  "close": "19:30"
+ },
+ "2815636": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "solo": true,
+  "parking": false,
+  "open": "10:00",
+  "close": "18:30"
+ },
+ "2843633": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "waitMin": 20,
+  "open": "10:00",
+  "close": "23:00"
+ },
+ "3547773": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "solo": true,
+  "open": "10:00",
+  "close": "20:00"
+ },
+ "134654": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "solo": true,
+  "waitMin": 30,
+  "open": "10:00",
+  "close": "20:30"
+ },
+ "2753888": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "solo": true,
+  "open": "10:00",
+  "close": "21:30"
+ },
+ "2789360": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "waitMin": 30,
+  "group": true,
+  "issues": [
+   "비싼 가격"
+  ],
+  "open": "10:00",
+  "close": "21:30"
+ },
+ "2906254": {
+  "verdict": "keep",
+  "reason": "2인 이상 주문",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C",
+  "minPeople": 2,
+  "parking": true,
+  "open": "10:00",
+  "close": "18:00",
+  "break": "15:00-17:00"
+ },
+ "3039115": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B"
+ },
+ "2903715": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "solo": true,
+  "parking": true,
+  "open": "10:00",
+  "close": "21:00"
+ },
+ "2433873": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "issues": [
+   "부대시설 일부 미운영"
+  ]
+ },
+ "2795293": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "solo": true,
+  "waitMin": 40,
+  "open": "08:00",
+  "close": "20:00"
+ },
+ "2723094": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "kids": true,
+  "open": "10:00",
+  "close": "19:00"
+ },
+ "135104": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C",
+  "closed": [
+   "수"
+  ],
+  "open": "11:00",
+  "close": "20:00"
+ },
+ "1922411": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "group": true,
+  "waitMin": 30,
+  "closed": [
+   "화"
+  ],
+  "open": "10:30",
+  "close": "19:30"
+ },
+ "2927000": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "solo": true,
+  "closed": [
+   "월"
+  ],
+  "open": "11:00",
+  "close": "20:00"
+ },
+ "4065834": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "solo": true,
+  "open": "09:00",
+  "close": "19:00"
+ },
+ "649970": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "kids": true
+ },
+ "2749005": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "open": "10:30",
+  "close": "21:00",
+  "break": "15:00-17:00"
+ },
+ "2773363": {
+  "verdict": "keep",
+  "reason": "불친절 후기 여러 개",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C",
+  "issues": [
+   "불친절"
+  ],
+  "open": "10:30",
+  "close": "20:00"
+ },
+ "2870075": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "solo": true,
+  "waitMin": 20,
+  "open": "11:00",
+  "close": "21:00"
+ },
+ "2832337": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "waitMin": 20,
+  "closed": [
+   "월"
+  ],
+  "open": "11:30",
+  "close": "19:30"
+ },
+ "2837158": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "solo": true,
+  "closed": [
+   "일"
+  ],
+  "open": "10:00",
+  "close": "21:00"
+ },
+ "135454": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "group": true,
+  "open": "11:00",
+  "close": "20:00"
+ },
+ "2842198": {
+  "verdict": "keep",
+  "reason": "맛·신선도 불만 후기 여러 개",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C",
+  "issues": [
+   "맛·신선도 불만"
+  ],
+  "closed": [
+   "월"
+  ],
+  "open": "10:40",
+  "close": "19:30"
+ },
+ "2837622": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "solo": true,
+  "open": "10:00",
+  "close": "21:00"
+ },
+ "136548": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "kids": true
+ },
+ "3414808": {
+  "verdict": "keep",
+  "reason": "청결 불만 후기 있음",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "issues": [
+   "청결 불만"
+  ]
+ },
+ "2871774": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "solo": true,
+  "open": "10:00",
+  "close": "20:00"
+ },
+ "2849819": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "solo": true,
+  "open": "11:00",
+  "close": "19:00"
+ },
+ "133007": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "solo": true,
+  "open": "09:30",
+  "close": "19:30"
+ },
+ "2853854": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "solo": true,
+  "open": "10:30",
+  "close": "19:30"
+ },
+ "2753081": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "solo": true,
+  "waitMin": 30,
+  "parking": false,
+  "open": "11:00",
+  "close": "21:00"
+ },
+ "1015082": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "solo": true,
+  "closed": [
+   "월"
+  ],
+  "open": "10:00",
+  "close": "20:30"
+ },
+ "2832790": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "solo": true,
+  "kids": true,
+  "open": "10:00",
+  "close": "22:00"
+ },
+ "2876506": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "solo": true,
+  "open": "10:00",
+  "close": "21:00"
+ },
+ "2734908": {
+  "verdict": "keep",
+  "reason": "인원수만큼 갈비 주문 필요",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "parking": true,
+  "kids": true
+ },
+ "2854137": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "open": "08:00",
+  "close": "21:00"
+ },
+ "2901883": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "kids": true,
+  "open": "11:00",
+  "close": "21:30"
+ },
+ "2755949": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C"
+ },
+ "142840": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B"
+ },
+ "642995": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C",
+  "group": true,
+  "issues": [
+   "비싼 가격"
+  ],
+  "open": "11:00",
+  "close": "21:00"
+ },
+ "133521": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "open": "08:00",
+  "close": "22:00"
+ },
+ "2834096": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "waitMin": 20,
+  "open": "11:00",
+  "close": "21:00"
+ },
+ "1610033": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "solo": true,
+  "open": "09:00",
+  "close": "21:00"
+ },
+ "2831705": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "solo": true,
+  "open": "10:00",
+  "close": "22:00"
+ },
+ "2829084": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "solo": true,
+  "waitMin": 20,
+  "open": "09:00",
+  "close": "22:00"
+ },
+ "2830643": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "solo": true,
+  "kids": true,
+  "open": "11:00",
+  "close": "22:00"
+ },
+ "2901841": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "solo": true,
+  "open": "06:00",
+  "close": "19:30"
+ },
+ "2946244": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C",
+  "waitMin": 40,
+  "group": true,
+  "open": "10:00",
+  "close": "21:00"
+ },
+ "4040922": {
+  "verdict": "keep",
+  "reason": "응대·대기 불만 후기 있음",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C",
+  "issues": [
+   "응대 불만"
+  ]
+ },
+ "2915862": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "solo": true,
+  "open": "10:00",
+  "close": "17:00"
+ },
+ "2831875": {
+  "verdict": "keep",
+  "reason": "일찍 품절되는 날이 많음",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "issues": [
+   "일찍 품절"
+  ],
+  "open": "09:00",
+  "close": "21:00"
+ },
+ "2847311": {
+  "verdict": "keep",
+  "reason": "냉방 불만 후기 있음",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "issues": [
+   "객실 냉방 불만"
+  ]
+ },
+ "811714": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C",
+  "waitMin": 20,
+  "open": "08:30",
+  "close": "21:00"
+ },
+ "1266373": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B"
+ },
+ "2794958": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "solo": true,
+  "open": "11:00",
+  "close": "19:00"
+ },
+ "134173": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C",
+  "solo": true,
+  "closed": [
+   "월"
+  ],
+  "open": "07:00",
+  "close": "20:30"
+ },
+ "1014946": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "waitMin": 30,
+  "closed": [
+   "월"
+  ],
+  "open": "11:00",
+  "close": "20:00"
+ },
+ "2877628": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "solo": true,
+  "parking": true,
+  "open": "10:00",
+  "close": "20:00"
+ },
+ "2913485": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "solo": true,
+  "open": "08:00",
+  "close": "20:00"
+ },
+ "2832511": {
+  "verdict": "keep",
+  "reason": "불친절 후기 있음",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "issues": [
+   "불친절"
+  ],
+  "open": "10:30",
+  "close": "20:40"
+ },
+ "2831800": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "open": "11:30",
+  "close": "22:00"
+ },
+ "2717157": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "solo": true,
+  "open": "11:00",
+  "close": "22:00"
+ },
+ "1934699": {
+  "verdict": "drop",
+  "reason": "구글 지도 평점 3.5 미만, 위생·시설 관리 불만 후기",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "D",
+  "issues": [
+   "위생",
+   "시설 관리"
+  ]
+ },
+ "2852867": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "open": "11:00",
+  "close": "20:50"
+ },
+ "1019843": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "group": true,
+  "open": "11:00",
+  "close": "22:00"
+ },
+ "2779444": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "group": true,
+  "open": "10:30",
+  "close": "21:00"
+ },
+ "2869278": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "solo": true,
+  "open": "11:00",
+  "close": "21:00"
+ },
+ "3337718": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "issues": [
+   "부대시설 추가 요금"
+  ]
+ },
+ "1597873": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "solo": true,
+  "open": "07:00",
+  "close": "20:30"
+ },
+ "2708659": {
+  "verdict": "keep",
+  "reason": "수영장 관리 불만 후기 있음",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "issues": [
+   "부대시설 관리"
+  ]
+ },
+ "2660777": {
+  "verdict": "keep",
+  "reason": "체크인·식당 대기, 부대시설 추가 요금 불만",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "kids": true,
+  "issues": [
+   "대기 김",
+   "부대시설 추가 요금"
+  ]
+ },
+ "2770124": {
+  "verdict": "keep",
+  "reason": "주말 혼잡",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "solo": true,
+  "issues": [
+   "주말 혼잡"
+  ],
+  "open": "10:00",
+  "close": "24:00"
+ },
+ "2785608": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "parking": true,
+  "closed": [
+   "화"
+  ],
+  "open": "10:30",
+  "close": "20:30"
+ },
+ "2788820": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "D",
+  "solo": true,
+  "open": "11:00",
+  "close": "20:30",
+  "break": "15:00-17:00"
+ },
+ "2590794": {
+  "verdict": "keep",
+  "reason": "주차 어렵고 혼잡",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "solo": true,
+  "parking": false,
+  "issues": [
+   "혼잡"
+  ],
+  "open": "11:00",
+  "close": "20:00"
+ },
+ "2778505": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "solo": true,
+  "pet": true,
+  "open": "10:00",
+  "close": "20:00"
+ },
+ "3546367": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "solo": true,
+  "open": "10:00",
+  "close": "22:00"
+ },
+ "1938614": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C",
+  "kids": true
+ },
+ "4005073": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A"
+ },
+ "142903": {
+  "verdict": "keep",
+  "reason": "부대시설 유료·객실 고장 후기 있음",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "issues": [
+   "부대시설 추가 요금"
+  ]
+ },
+ "403868": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "solo": true,
+  "waitMin": 60,
+  "open": "10:00",
+  "close": "20:30"
+ },
+ "2856320": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "solo": true,
+  "waitMin": 20,
+  "open": "11:00",
+  "close": "18:30"
+ },
+ "2809070": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "closed": [
+   "월"
+  ],
+  "open": "11:00",
+  "close": "20:30"
+ },
+ "4070472": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "solo": true,
+  "open": "10:00",
+  "close": "18:00"
+ },
+ "1992090": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B"
+ },
+ "2745688": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C",
+  "solo": true,
+  "parking": true,
+  "open": "09:00",
+  "close": "22:00"
+ },
+ "2840161": {
+  "verdict": "keep",
+  "reason": "맛이 평범하다는 후기 있음",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C",
+  "solo": true,
+  "open": "10:00",
+  "close": "19:00"
+ },
+ "2756584": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "open": "09:00",
+  "close": "21:00"
+ },
+ "2778502": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C",
+  "open": "09:30",
+  "close": "20:30"
+ },
+ "2735333": {
+  "verdict": "keep",
+  "reason": "숯불 직접 굽는 곳, 붐빔",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "solo": true,
+  "issues": [
+   "혼잡"
+  ],
+  "open": "11:00",
+  "close": "21:00"
+ },
+ "2775516": {
+  "verdict": "keep",
+  "reason": "24시간 영업",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "solo": true
+ },
+ "2925236": {
+  "verdict": "keep",
+  "reason": "짜다·비싸다는 후기 있음",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C",
+  "waitMin": 40,
+  "issues": [
+   "가격 대비 불만"
+  ]
+ },
+ "2794967": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "solo": true,
+  "closed": [
+   "월"
+  ],
+  "open": "09:30",
+  "close": "16:30"
+ },
+ "1802913": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "solo": true,
+  "waitMin": 30,
+  "open": "09:00",
+  "close": "18:00"
+ },
+ "232298": {
+  "verdict": "keep",
+  "reason": "가격 대비 서비스 불만 후기 있음",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "issues": [
+   "가격 대비 불만"
+  ]
+ },
+ "801887": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "solo": true,
+  "parking": false,
+  "open": "08:00",
+  "close": "19:30"
+ },
+ "2844045": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "pet": true,
+  "open": "09:30",
+  "close": "21:00"
+ },
+ "602854": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C",
+  "group": true,
+  "parking": true,
+  "issues": [
+   "비싼 가격"
+  ],
+  "open": "11:30",
+  "close": "21:00"
+ },
+ "3574860": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "solo": true,
+  "kids": true,
+  "parking": true,
+  "open": "10:00",
+  "close": "22:00"
+ },
+ "2569127": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "solo": true,
+  "waitMin": 20,
+  "open": "06:00",
+  "close": "21:30"
+ },
+ "2774518": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "waitMin": 20,
+  "group": true,
+  "open": "10:30",
+  "close": "22:00"
+ },
+ "133682": {
+  "verdict": "keep",
+  "reason": "2월 한 달 휴업",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "open": "10:00",
+  "close": "21:00"
+ },
+ "2855566": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "open": "10:30",
+  "close": "20:00"
+ },
+ "2900107": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "kids": true,
+  "group": true
+ },
+ "4070717": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "solo": true
+ },
+ "2914127": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C",
+  "solo": true,
+  "open": "07:30",
+  "close": "19:30"
+ },
+ "2399540": {
+  "verdict": "keep",
+  "reason": "시설 노후 후기 여러 개",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "issues": [
+   "시설 노후"
+  ]
+ },
+ "1936779": {
+  "verdict": "keep",
+  "reason": "주말 대기 매우 김",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "waitMin": 60,
+  "issues": [
+   "주말 혼잡"
+  ],
+  "open": "10:00",
+  "close": "20:50"
+ },
+ "2834381": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "solo": true,
+  "waitMin": 40,
+  "open": "09:00",
+  "close": "21:00"
+ },
+ "2546530": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C",
+  "open": "11:30",
+  "close": "20:30"
+ },
+ "2755443": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "solo": true,
+  "open": "10:00",
+  "close": "22:00"
+ },
+ "2839509": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "open": "08:00",
+  "close": "21:30"
+ },
+ "2751602": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "open": "11:00",
+  "close": "21:00",
+  "break": "15:20-17:00"
+ },
+ "404070": {
+  "verdict": "keep",
+  "reason": "한정식 코스, 비싸다는 후기 있음",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "group": true,
+  "issues": [
+   "비싼 가격"
+  ],
+  "open": "11:30",
+  "close": "20:30"
+ },
+ "2877124": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "open": "11:00",
+  "close": "19:00"
+ },
+ "2774465": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "solo": true,
+  "closed": [
+   "화"
+  ],
+  "open": "11:00",
+  "close": "21:00",
+  "break": "15:00-17:00"
+ },
+ "2868101": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "solo": true,
+  "kids": true,
+  "parking": true,
+  "open": "10:00",
+  "close": "18:00"
+ },
+ "2833523": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "waitMin": 30,
+  "parking": true,
+  "closed": [
+   "월"
+  ],
+  "open": "09:30",
+  "close": "19:00"
+ },
+ "2756816": {
+  "verdict": "keep",
+  "reason": "주말 대기와 주차가 매우 어려움",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "waitMin": 60,
+  "parking": false,
+  "open": "10:50",
+  "close": "21:00",
+  "break": "15:50-17:00"
+ },
+ "136520": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B"
+ },
+ "2758559": {
+  "verdict": "keep",
+  "reason": "24시간 영업",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C",
+  "solo": true
+ },
+ "2805903": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "solo": true,
+  "closed": [
+   "일"
+  ],
+  "open": "08:30",
+  "close": "18:00"
+ },
+ "3469367": {
+  "verdict": "keep",
+  "reason": "부대시설 요금·서비스 불만 후기",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "issues": [
+   "부대시설 추가 요금"
+  ]
+ },
+ "133209": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "solo": true,
+  "open": "08:00",
+  "close": "21:00",
+  "break": "15:00-17:00"
+ },
+ "133834": {
+  "verdict": "keep",
+  "reason": "불친절 후기 있음",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C",
+  "waitMin": 30,
+  "parking": true,
+  "issues": [
+   "불친절"
+  ],
+  "open": "10:30",
+  "close": "20:30"
+ },
+ "2738652": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "open": "11:00",
+  "close": "21:00"
+ },
+ "2847556": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "solo": true,
+  "parking": true,
+  "closed": [
+   "화"
+  ],
+  "open": "11:00",
+  "close": "21:00"
+ },
+ "2854712": {
+  "verdict": "drop",
+  "reason": "카페가 다른 식당(메기매운탕)으로 바뀌었다는 후기 — 업종 변경 가능성",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "issues": [
+   "업종 변경 가능성"
+  ]
+ },
+ "133637": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "parking": true,
+  "open": "10:00",
+  "close": "22:00"
+ },
+ "2747743": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "group": true
+ },
+ "2858584": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "waitMin": 40,
+  "closed": [
+   "수"
+  ],
+  "open": "11:00",
+  "close": "21:00"
+ },
+ "2835076": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "solo": true,
+  "open": "11:00",
+  "close": "21:30"
+ },
+ "2835387": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "solo": true,
+  "waitMin": 30,
+  "open": "08:00",
+  "close": "18:30"
+ },
+ "2630819": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C",
+  "solo": true,
+  "open": "06:30",
+  "close": "19:00"
+ },
+ "2375375": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C",
+  "parking": false,
+  "waitMin": 20,
+  "open": "10:00",
+  "close": "21:00"
+ },
+ "2843546": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C",
+  "solo": true,
+  "open": "10:00",
+  "close": "20:00"
+ },
+ "1994200": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C",
+  "parking": false,
+  "waitMin": 20,
+  "open": "11:00",
+  "close": "21:00"
+ },
+ "2782515": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "solo": true,
+  "parking": true,
+  "closed": [
+   "수"
+  ],
+  "open": "09:00",
+  "close": "20:30"
+ },
+ "2530819": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "solo": true,
+  "open": "09:30",
+  "close": "19:00"
+ },
+ "1209036": {
+  "verdict": "keep",
+  "reason": "",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "waitMin": 20,
+  "closed": [
+   "화"
+  ],
+  "open": "10:30",
+  "close": "20:30"
  }
 }
