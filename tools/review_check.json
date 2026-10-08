@@ -11930,5 +11930,219 @@
   "solo": true,
   "open": "10:00",
   "close": "22:00"
+ },
+ "2904169": {
+  "verdict": "keep",
+  "reason": "일요일 휴무, 브레이크 15:30~16:30, 토요일 대기",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "waitMin": 20,
+  "closed": [
+   "일"
+  ],
+  "open": "11:15",
+  "close": "19:30",
+  "break": [
+   "15:30",
+   "16:30"
+  ]
+ },
+ "2844649": {
+  "verdict": "keep",
+  "reason": "셀프 오리주물럭, 주차 넓음",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "group": true,
+  "parking": true,
+  "open": "10:00",
+  "close": "22:00"
+ },
+ "2745644": {
+  "verdict": "keep",
+  "reason": "동굴 카페(입장료+음료), 진입로 험함",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "kids": true,
+  "open": "10:30",
+  "close": "17:00"
+ },
+ "2724410": {
+  "verdict": "keep",
+  "reason": "화덕피자 카페, 주차 넓음",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "kids": true,
+  "parking": true,
+  "open": "10:00",
+  "close": "21:30"
+ },
+ "2763766": {
+  "verdict": "none",
+  "reason": "구글 결과가 다른 상호(이천쌀밥집)로 확인 불가",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)"
+ },
+ "2847516": {
+  "verdict": "keep",
+  "reason": "월요일 휴무, 전복장 정식, 예약 권장",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "closed": [
+   "월"
+  ],
+  "waitMin": 15
+ },
+ "845051": {
+  "verdict": "keep",
+  "reason": "평점 3.8, 한옥 룸 코스, 예약 필요, 고가",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C",
+  "group": true,
+  "open": "11:30",
+  "close": "21:30"
+ },
+ "607556": {
+  "verdict": "keep",
+  "reason": "막국수·감자전",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "solo": true,
+  "open": "10:00",
+  "close": "19:30"
+ },
+ "3391733": {
+  "verdict": "keep",
+  "reason": "후기 44건, 와인터널 근처 대형 카페",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "kids": true,
+  "group": true,
+  "open": "10:00",
+  "close": "22:00"
+ },
+ "2832683": {
+  "verdict": "keep",
+  "reason": "이병철 생가 앞, 별관·야외석, 주차 넓음",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "kids": true,
+  "parking": true,
+  "open": "11:00",
+  "close": "21:00"
+ },
+ "2849987": {
+  "verdict": "keep",
+  "reason": "용봉산 아래 대형 카페, 주말 주차 혼잡, 청결 불만 일부",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "kids": true,
+  "parking": true,
+  "open": "11:00",
+  "close": "21:00"
+ },
+ "2841479": {
+  "verdict": "keep",
+  "reason": "브레이크 15~17시, 혼잡 시 서비스 미흡",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "group": true,
+  "open": "11:00",
+  "close": "21:00",
+  "break": [
+   "15:00",
+   "17:00"
+  ]
+ },
+ "2980473": {
+  "verdict": "keep",
+  "reason": "아이 동반 온천 숙소, 키즈카페, 층간 소음",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "kids": true
+ },
+ "2846693": {
+  "verdict": "keep",
+  "reason": "두부 요리, 룸 5개, 주차 넓음",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "group": true,
+  "kids": true,
+  "parking": true,
+  "open": "11:00",
+  "close": "21:00"
+ },
+ "2832038": {
+  "verdict": "keep",
+  "reason": "도청 신도시, 단체 예약 권장",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "group": true,
+  "open": "11:30",
+  "close": "22:00"
+ },
+ "2814161": {
+  "verdict": "keep",
+  "reason": "후기 10건, 객실 풀, 욕실 미끄럼·위생 불만 일부",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "kids": true
+ },
+ "2876564": {
+  "verdict": "keep",
+  "reason": "한옥 능이버섯 요리, 예약 필수",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "group": true,
+  "open": "11:00",
+  "close": "20:00"
+ },
+ "2905710": {
+  "verdict": "keep",
+  "reason": "평점 3.9, 호수공원 옆, 서비스 불만 일부",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C",
+  "group": true,
+  "open": "11:00",
+  "close": "20:00"
+ },
+ "2862144": {
+  "verdict": "keep",
+  "reason": "새벽 2시까지 영업",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "solo": true,
+  "open": "11:00",
+  "close": "02:00"
+ },
+ "2836604": {
+  "verdict": "keep",
+  "reason": "목요일 휴무, 서울랜드 전망",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "kids": true,
+  "closed": [
+   "목"
+  ],
+  "open": "11:00",
+  "close": "21:00"
  }
 }
