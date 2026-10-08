@@ -133,8 +133,7 @@ function renderDay() {
     li.dataset.index = i;
     const isFood = p.type === '식당';
     li.innerHTML =
-      '<p class="tl-move">↓ ' + trip.transport + ' ' + durationText(it.moveMin) + ' · ' + it.moveKm.toFixed(1) + 'km' +
-        (it.begin > it.arrive ? ' · ' + durationText(it.begin - it.arrive) + ' 기다림' : '') + '</p>' +
+      moveLine(it.moveMode, it.moveMin, it.moveKm, p, it.begin > it.arrive ? ' · ' + durationText(it.begin - it.arrive) + ' 기다림' : '', it.stop) +
       '<div class="tl-main">' +
         '<span class="drag-handle" title="끌어서 순서 바꾸기 (날짜 탭에 놓으면 그날로 옮김)">⠿</span>' +
         '<span class="tl-no">' + (it.stop.meal ? '🍴' : visitNo) + '</span>' +
@@ -163,6 +162,7 @@ function renderDay() {
       btn.addEventListener('click', function () { editStop(btn.dataset.act, i, li); });
     });
     li.querySelector('.drag-handle').addEventListener('pointerdown', function (e) { startDrag(e, i, li); });
+    bindModeButtons(li, it.stop);
     list.appendChild(li);
   });
 
@@ -178,8 +178,37 @@ function renderDay() {
     const [h, m] = e.target.value.split(':').map(Number);
     if (!Number.isNaN(h)) { plan.lodgingArrive = h * 60 + m; refresh(true); }
   });
-  end.insertAdjacentHTML('afterbegin', '<p class="tl-move">↓ ' + trip.transport + ' ' + durationText(day.backMin) + ' · ' + day.backKm.toFixed(1) + 'km</p>');
+  if (!plan.days[curDay].backStop) plan.days[curDay].backStop = {};
+  end.insertAdjacentHTML('afterbegin', moveLine(day.backMode, day.backMin, day.backKm, day.endPoint, '', plan.days[curDay].backStop));
+  bindModeButtons(end, plan.days[curDay].backStop);
   list.appendChild(end);
+}
+
+// 이동 한 줄: '↓ 🚶 걷기 5분 · 0.3km' + (대중교통 여행이면) [🚶 걷기 | 🚌 대중교통] 버튼과 받아 온 노선 안내
+// 입력: 구간 이동 방법('walk' | 'transit' | null), 시간(분), 거리(km), 도착 장소, 덧붙일 글 / 출력: HTML
+function moveLine(mode, min, km, dest, extra, ref) {
+  const label = mode === 'walk' ? '🚶 걷기' : mode === 'transit' ? '🚌 대중교통' : (trip.transport === '자동차' ? '🚗 자동차' : '🚆 ' + trip.transport);
+  const leg = mode && dest ? legInfo[pointKey(dest)] : null;
+  const ride = leg && leg.mode === 'transit' ? ' · ' + esc(leg.summary) + ' 약 ' + Math.max(1, Math.round(leg.time / 60)) + '분' : '';
+  const none = (leg && leg.noTransit) || (ref && ref.autoWalk && !ref.legMode) ? ' · 대중교통 경로가 없어 걷기' : '';
+  const far = mode === 'walk' && km >= 2 ? ' <span class="over-text">⚠ 걷기엔 먼 거리 (택시 고려)</span>' : '';
+  return '<p class="tl-move">↓ ' + label + ' ' + durationText(min) + ' · ' + km.toFixed(1) + 'km' + ride + none + (extra || '') + far +
+    (mode ? ' <span class="mode-toggle" role="group" aria-label="이동 방법">' +
+      '<button type="button" data-mode="walk" class="' + (mode === 'walk' ? 'on' : '') + '">🚶</button>' +
+      '<button type="button" data-mode="transit" class="' + (mode === 'transit' ? 'on' : '') + '">🚌</button></span>' : '') + '</p>';
+}
+
+// 걷기/대중교통 버튼: 누르면 그 구간을 그 방법으로 고정, 이미 고정한 방법을 다시 누르면 자동(400m 기준)으로 되돌림
+function bindModeButtons(el, ref) {
+  el.querySelectorAll('.mode-toggle button').forEach(function (b) {
+    const auto = !ref.legMode;
+    b.title = (b.dataset.mode === 'walk' ? '걷기' : '대중교통') + (auto ? ' (지금은 자동으로 정해짐)' : ref.legMode === b.dataset.mode ? ' (직접 고름 — 다시 누르면 자동)' : '');
+    if (auto) b.classList.add('auto');
+    b.addEventListener('click', function () {
+      ref.legMode = ref.legMode === b.dataset.mode ? undefined : b.dataset.mode;
+      refresh(true);
+    });
+  });
 }
 
 function pointItem(time, text) {
@@ -402,12 +431,10 @@ function renderMap() {
   mapObjects = [];
   const color = DAY_COLORS[curDay % DAY_COLORS.length];
   const day = timeline.days[curDay];
-  const path = [];
   const bounds = new kakao.maps.LatLngBounds();
 
   function addPoint(p, label, cls) {
     const pos = new kakao.maps.LatLng(p.lat, p.lng);
-    path.push(pos);
     bounds.extend(pos);
     const el = document.createElement('button');
     el.type = 'button';
@@ -419,23 +446,42 @@ function renderMap() {
     ov.setMap(map);
     mapObjects.push(ov);
   }
+  // 경로에 넣을 점과, 각 점으로 오는 구간의 이동 방법(걷기/대중교통)·그 선택을 담는 곳(stop 또는 backStop)
+  const pts = [], modes = [], refs = [];
+  function pushPt(p, mode, ref) {
+    if (pts.length) { modes.push(mode || null); refs.push(ref); }
+    pts.push({ lat: p.lat, lng: p.lng });
+  }
 
   // 출발지(집)는 멀리 있어 지도에서 빼고, 숙소·장소만 표시
-  if (!day.startPoint.isHome) addPoint(day.startPoint, '숙', 'lodging');
+  if (!day.startPoint.isHome) { addPoint(day.startPoint, '숙', 'lodging'); pushPt(day.startPoint); }
   let n = 0;
-  day.items.forEach(function (it) { addPoint(it.stop.p, it.stop.meal ? '🍴' : String(++n), it.stop.meal ? 'meal' : 'visit'); });
+  day.items.forEach(function (it) {
+    addPoint(it.stop.p, it.stop.meal ? '🍴' : String(++n), it.stop.meal ? 'meal' : 'visit');
+    pushPt(it.stop.p, it.moveMode, it.stop);
+  });
   if (!day.endPoint.isHome) {
-    const pos = new kakao.maps.LatLng(day.endPoint.lat, day.endPoint.lng);
-    path.push(pos);
     if (day.startPoint.isHome) addPoint(day.endPoint, '숙', 'lodging');
+    const dayPlan = plan.days[curDay];
+    if (!dayPlan.backStop) dayPlan.backStop = {};
+    pushPt(day.endPoint, day.backMode, dayPlan.backStop);
   }
-  // 경로선: 실제 도로를 따라 (js/road-route.js — 불러오기 전·실패 시에는 점선 직선)
+  // 경로선: 실제 길을 따라 (js/road-route.js — 불러오기 전·실패 시에는 점선 직선)
+  //   대중교통 경로가 없다고 나온 구간은 걷기로 바꿔 시간표를 다시 계산 (사용자가 직접 고른 구간은 그대로)
   const note = document.getElementById('route-note');
-  const route = drawRoute(map, path.map(function (ll) { return { lat: ll.getLat(), lng: ll.getLng() }; }), color, function (ok, info) {
+  const route = drawRoute(map, pts, color, function (ok, info) {
     note.textContent = routeNoteText(trip.transport, ok, info);
-  }, trip.transport);
+    if (!ok || !info || !info.legs) return;
+    let changed = false;
+    info.legs.forEach(function (leg, i) {
+      const ref = refs[i];
+      if (leg.noTransit && ref && !ref.legMode && !ref.autoWalk) { ref.autoWalk = true; changed = true; }
+    });
+    if (changed) refresh(false);
+    else renderDay();   // 구간 안내(🚌 202 → …)를 타임라인에 표시
+  }, trip.transport, modes);
   mapObjects.push({ setMap: function () { route.remove(); } });
-  if (path.length) map.setBounds(bounds, 40, 40, 40, 40);
+  if (pts.length) map.setBounds(bounds, 40, 40, 40, 40);
 }
 
 function panTo(p) { if (map) map.panTo(new kakao.maps.LatLng(p.lat, p.lng)); }
@@ -474,12 +520,21 @@ document.getElementById('save-btn').addEventListener('click', async function () 
         return;
       }
     }
+    // 0-2) 걷기/대중교통을 직접 고른 구간이 있으면, 저장할 열이 DB에 있는지 먼저 확인 (없으면 지우기 전에 멈춤 → 일정이 사라지지 않게)
+    const picked = plan.days.some(function (d) {
+      return (d.backStop && d.backStop.legMode) || d.stops.some(function (st) { return st.legMode; });
+    });
+    if (picked) {
+      const chk = await sb.from('trip_places').select('leg_mode').limit(1);
+      if (chk.error) throw new Error('leg_mode 열이 없어요');
+    }
     // 1) 여행에 고른 여행지·일정안·총비용·날짜별 시작 시각 기록
-    const up = await sb.from('trips').update({
+    const up = await sb.from('trips').update(Object.assign({
       region: plan.region, plan_type: plan.type, total_cost: Math.round(timeline.cost.total),
       // 날짜별 시작 시각 + 맨 끝에 숙소 도착 시각 (예: 3일 여행이면 [1일차, 2일차, 3일차, 숙소 도착])
       day_starts: plan.days.map(function (d) { return d.start; }).concat([plan.lodgingArrive || LODGING_ARRIVE])
-    }).eq('id', trip.id).select().single();
+    }, plan.days.some(function (d) { return d.backStop && d.backStop.legMode; }) || trip.back_modes
+      ? { back_modes: plan.days.map(function (d) { return (d.backStop && d.backStop.legMode) || null; }) } : {})).eq('id', trip.id).select().single();
     if (up.error) throw up.error;
     trip.updated_at = up.data.updated_at;
     // 2) 예전 장소 목록 지우고 새로 넣기 (숙소는 day_no 0)
@@ -495,6 +550,7 @@ document.getElementById('save-btn').addEventListener('click', async function () 
         rows.push({ trip_id: trip.id, place_id: String(it.stop.p.id), name: it.stop.p.name, type: it.stop.p.type,
           day_no: di + 1, order_no: oi + 1, start_time: hhmm(it.begin), stay_min: it.stop.stay, cost: it.cost,
           lat: it.stop.p.lat, lng: it.stop.p.lng, meal: it.stop.meal || null, not_before: it.stop.notBefore || null });
+        if (it.stop.legMode) rows[rows.length - 1].leg_mode = it.stop.legMode;   // 사용자가 고른 걷기/대중교통만 저장 (자동은 저장 안 함)
       });
     });
     const ins = await sb.from('trip_places').insert(rows);
@@ -505,7 +561,8 @@ document.getElementById('save-btn').addEventListener('click', async function () 
     msg.innerHTML = '저장했어요! <a href="trip.html?trip=' + trip.id + '">여행 정보·준비물 보러 가기 →</a>';
   } catch (e) {
     msg.textContent = '';
-    showError(e);
+    showError(/leg_mode|back_modes/.test(e.message || '')
+      ? { message: '걷기/대중교통 선택을 저장하려면 Supabase에서 sql/add_leg_mode.sql을 먼저 실행해 주세요.' } : e);
   }
   btn.disabled = false;
 });

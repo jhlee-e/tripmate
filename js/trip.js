@@ -156,17 +156,20 @@ function renderSchedule(trip, plan, t) {
 
 // 지도: 모든 날을 날짜별 색으로 (집은 멀어서 빼고 숙소·장소만)
 function renderMap(t, trip) {
-  let km = 0, failed = 0;   // 날짜별 도로 거리 합계, 도로 경로를 못 받은 날 수
+  let km = 0, failed = 0, autoWalked = false, pending = t.days.length;   // 도로 거리 합계, 경로를 못 받은 날 수
   map = new kakao.maps.Map(document.getElementById('detail-map'), { center: new kakao.maps.LatLng(36.3, 127.8), level: 9 });
   map.addControl(new kakao.maps.ZoomControl(), kakao.maps.ControlPosition.RIGHT);
   const bounds = new kakao.maps.LatLngBounds();
   t.days.forEach(function (day, di) {
     const color = DAY_COLORS[di % DAY_COLORS.length];
-    const path = [];
+    const pts = [], modes = [], refs = [];   // 경로 점, 각 점으로 오는 구간의 걷기/대중교통, 그 선택을 담는 곳
     let n = 0;
+    function pushPt(p, mode, ref) {
+      if (pts.length) { modes.push(mode || null); refs.push(ref); }
+      pts.push({ lat: p.lat, lng: p.lng });
+    }
     function pin(p, label, dark) {
       const pos = new kakao.maps.LatLng(p.lat, p.lng);
-      path.push(pos);
       bounds.extend(pos);
       const el = document.createElement('button');
       el.type = 'button';
@@ -176,14 +179,28 @@ function renderMap(t, trip) {
       el.addEventListener('click', function () { showPlace(p); });
       new kakao.maps.CustomOverlay({ position: pos, content: el, yAnchor: 0.5 }).setMap(map);
     }
-    if (!day.startPoint.isHome) pin(day.startPoint, '숙', true);
-    day.items.forEach(function (it) { pin(it.stop.p, it.stop.meal ? '🍴' : (di + 1) + '-' + (++n), false); });
-    if (!day.endPoint.isHome) path.push(new kakao.maps.LatLng(day.endPoint.lat, day.endPoint.lng));
-    // 날짜별 경로선: 실제 도로를 따라 (js/road-route.js — 불러오기 전·실패 시에는 점선 직선)
-    drawRoute(map, path.map(function (ll) { return { lat: ll.getLat(), lng: ll.getLng() }; }), color, function (ok, info) {
+    if (!day.startPoint.isHome) { pin(day.startPoint, '숙', true); pushPt(day.startPoint); }
+    day.items.forEach(function (it) { pin(it.stop.p, it.stop.meal ? '🍴' : (di + 1) + '-' + (++n), false); pushPt(it.stop.p, it.moveMode, it.stop); });
+    if (!day.endPoint.isHome) {
+      const dayPlan = current.plan.days[di];
+      if (!dayPlan.backStop) dayPlan.backStop = {};
+      pushPt(day.endPoint, day.backMode, dayPlan.backStop);
+    }
+    // 날짜별 경로선: 실제 길을 따라 (js/road-route.js — 불러오기 전·실패 시에는 점선 직선)
+    drawRoute(map, pts, color, function (ok, info) {
       if (!ok) failed++; else km += info.distance || 0;
+      // 대중교통 경로가 없는 구간은 걷기로 보고 시간표·비용을 다시 계산 (지도는 이미 걷기로 그려짐)
+      if (ok && info.legs) info.legs.forEach(function (leg, i) {
+        const ref = refs[i];
+        if (leg.noTransit && ref && !ref.legMode && !ref.autoWalk) { ref.autoWalk = true; autoWalked = true; }
+      });
       document.getElementById('route-note').textContent = routeNoteText(trip.transport, failed === 0, failed ? null : { distance: km });
-    }, trip.transport);
+      if (--pending === 0 && autoWalked) {
+        current.timeline = computeTimeline(trip, current.plan);
+        renderCost(trip, current.plan, current.timeline);
+        renderSchedule(trip, current.plan, current.timeline);
+      }
+    }, trip.transport, modes);
   });
   map.setBounds(bounds, 40, 40, 40, 40);
 }

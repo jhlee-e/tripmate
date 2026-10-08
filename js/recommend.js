@@ -23,7 +23,7 @@ const BUDGET_SHARE = { lodging: 0.4, food: 0.3, transport: 0.2, etc: 0.1 };
 // 교통비 추정 (Claude 추정값)
 const CAR_WON_PER_KM = 140;       // 휘발유 약 1,700원/L ÷ 연비 약 12km/L, 차 1대 기준
 const TRANSIT_WON_PER_KM = 110;   // 출발지↔여행지 KTX·고속버스 요금 ÷ 도로거리 대략값, 1인 기준
-const LOCAL_FARE = 1500;          // 여행지 안 버스 1회 요금, 1인 기준 (1km 미만은 걸어서 0원)
+const LOCAL_FARE = 1500;          // 여행지 안 버스 1회 요금, 1인 기준 (걷는 구간은 0원)
 // 시간표
 const DAY_START = 9 * 60;         // 09:00 시작
 const LUNCH = { from: 11 * 60 + 30, until: 14 * 60 };   // 점심을 넣는 시간대
@@ -52,7 +52,20 @@ function distanceKm(a, b) {
 }
 
 // 이동 시간(분). intercity=true면 출발지↔여행지 구간 (가까우면 여행지 안 속도가 더 빠를 수 있어 작은 쪽)
-function travelMin(km, transport, intercity) {
+// 대중교통 여행의 여행지 안 구간: 걷기 또는 버스·지하철 (이재훈 결정 2026-10-09)
+//   사용자가 고른 값(stop.legMode)이 있으면 그것, 없으면 400m 미만은 걷기, 그 이상은 대중교통
+//   (대중교통 경로가 없는 구간은 화면에서 길찾기 결과를 받은 뒤 stop.autoWalk = true로 걷기 처리)
+const WALK_KM = 0.4;
+const WALK_KMH = 4;   // 계획서의 도보 평균 속도
+function localMode(km, transport, intercity, stop) {
+  if (transport !== '대중교통' || intercity) return null;
+  if (stop && stop.legMode) return stop.legMode;
+  if (stop && stop.autoWalk) return 'walk';
+  return km < WALK_KM ? 'walk' : 'transit';
+}
+
+function travelMin(km, transport, intercity, mode) {
+  if ((mode || localMode(km, transport, intercity)) === 'walk') return Math.round(km / WALK_KMH * 60);
   const local = km / LOCAL_KMH[transport] * 60;
   if (!intercity) return Math.round(local);
   const c = INTERCITY[transport];
@@ -60,10 +73,10 @@ function travelMin(km, transport, intercity) {
 }
 
 // 한 구간 교통비(원)
-function legCost(km, transport, intercity, payers) {
+function legCost(km, transport, intercity, payers, mode) {
   if (transport === '자동차') return Math.round(km * (intercity ? INTERCITY.자동차.road : 1) * CAR_WON_PER_KM);
   if (intercity) return Math.round(km * 1.25 * TRANSIT_WON_PER_KM) * payers;
-  return km < 1 ? 0 : LOCAL_FARE * payers;
+  return (mode || localMode(km, transport, intercity)) === 'walk' ? 0 : LOCAL_FARE * payers;
 }
 
 // 돈을 내는 인원 (유아 0~6세는 입장료·식비·교통비 0원으로 봄 — Claude 가정)
@@ -592,19 +605,20 @@ function computeTimeline(trip, plan) {
     // 일일 경비: 그날 밤 숙박비(마지막 날 제외) + 그날 식비·입장료·교통비
     const dc = { lodging: plan.lodging && !lastDay ? plan.lodging.cost * (trip.rooms || 1) : 0, food: 0, admission: 0, transport: 0, total: 0 };
 
-    function leg(to) {
+    function leg(to, stop) {
       const intercity = !!(pos.isHome || to.isHome);
       const km = distanceKm(pos, to);
-      const min = travelMin(km, trip.transport, intercity);
-      const fare = legCost(km, trip.transport, intercity, pay);
+      const mode = localMode(km, trip.transport, intercity, stop);   // 'walk' | 'transit' | null(자동차·지역 간 이동)
+      const min = travelMin(km, trip.transport, intercity, mode);
+      const fare = legCost(km, trip.transport, intercity, pay, mode);
       distance += intercity && trip.transport === '자동차' ? km * INTERCITY.자동차.road : km;
       cost.transport += fare;
       dc.transport += fare;
-      return { km: km, min: min };
+      return { km: km, min: min, mode: mode };
     }
 
     day.stops.forEach(function (stop, i) {
-      const mv = leg(stop.p);
+      const mv = leg(stop.p, stop);
       const arrive = clock + mv.min;
       const begin = Math.max(arrive, stop.notBefore || 0);
       const end = begin + stop.stay;
@@ -614,19 +628,19 @@ function computeTimeline(trip, plan) {
       }
       if (stop.p.type === '식당') { cost.food += c; dc.food += c; } else { cost.admission += c; dc.admission += c; }
       if (!stop.meal) { active += mv.min + stop.stay; visits++; } else active += mv.min;
-      items.push({ stop: stop, index: i, moveMin: mv.min, moveKm: mv.km, arrive: arrive, begin: begin, end: end, cost: c });
+      items.push({ stop: stop, index: i, moveMin: mv.min, moveKm: mv.km, moveMode: mv.mode, arrive: arrive, begin: begin, end: end, cost: c });
       clock = end;
       pos = stop.p;
     });
     // 숙소로 가는 날: 숙소 도착이 20:00(바꿀 수 있음) 이후가 되도록 그 전까지 자유 시간 / 집으로 가는 날: 끝나는 대로 출발
-    const back = leg(endPoint);
+    const back = leg(endPoint, day.backStop);   // 숙소로 돌아가는 구간의 걷기/대중교통 선택은 day.backStop.legMode
     active += back.min;
     let departMin = clock;
     if (!endPoint.isHome) departMin = Math.max(clock, (plan.lodgingArrive || LODGING_ARRIVE) - back.min);
     const endMin = departMin + back.min;
     dc.total = dc.lodging + dc.food + dc.admission + dc.transport;
     return { cost: dc, start: day.start, startPoint: startPoint, endPoint: endPoint, items: items, departMin: departMin,
-             freeMin: departMin - clock, backMin: back.min, backKm: back.km, endMin: endMin, activeMin: active, over: active > limit };
+             freeMin: departMin - clock, backMin: back.min, backKm: back.km, backMode: back.mode, endMin: endMin, activeMin: active, over: active > limit };
   });
 
   cost.total = cost.lodging + cost.food + cost.admission + cost.transport;
@@ -665,13 +679,15 @@ async function loadSavedPlan(trip, places) {
   places.forEach(function (p) { byId[String(p.id)] = p; });
   const days = [];
   for (let d = 0; d < trip.days; d++) {
-    days.push({ start: (trip.day_starts && trip.day_starts[d]) || DAY_START, stops: [] });
+    const back = trip.back_modes && trip.back_modes[d];
+    days.push({ start: (trip.day_starts && trip.day_starts[d]) || DAY_START, stops: [], backStop: back ? { legMode: back } : {} });
   }
   let lodging = null;
   data.forEach(function (row) {
     // 숙소 조식(id 'bf-숙소id')은 장소 파일에 없으므로 숙소 정보로 다시 만듦
     if (lodging && String(row.place_id).indexOf('bf-') === 0) {
-      days[row.day_no - 1].stops.push({ p: breakfastPlace(lodging), stay: row.stay_min, meal: row.meal || '아침', notBefore: row.not_before || undefined });
+      days[row.day_no - 1].stops.push({ p: breakfastPlace(lodging), stay: row.stay_min, meal: row.meal || '아침', notBefore: row.not_before || undefined,
+                                        legMode: row.leg_mode || undefined });
       return;
     }
     const p = byId[row.place_id] || { id: row.place_id, name: row.name, type: row.type, lat: row.lat, lng: row.lng,
@@ -680,6 +696,7 @@ async function loadSavedPlan(trip, places) {
     const stop = { p: p, stay: row.stay_min };
     if (row.meal) stop.meal = row.meal;
     if (row.not_before) stop.notBefore = row.not_before;
+    if (row.leg_mode) stop.legMode = row.leg_mode;
     if (days[row.day_no - 1]) days[row.day_no - 1].stops.push(stop);
   });
   const lodgingArrive = trip.day_starts && trip.day_starts.length > trip.days ? trip.day_starts[trip.days] : LODGING_ARRIVE;
@@ -688,6 +705,6 @@ async function loadSavedPlan(trip, places) {
 
 // node로 시험할 때 쓰도록 내보내기 (브라우저에서는 무시됨)
 if (typeof module !== 'undefined') {
-  module.exports = { TEMPO, rankRegions, buildPlans, buildPlan, preparePool, computeTimeline, distanceKm,
+  module.exports = { localMode, WALK_KM, TEMPO, rankRegions, buildPlans, buildPlan, preparePool, computeTimeline, distanceKm,
     travelMin, budgetCaps, hhmm, PLAN_INFO, isChain, LODGING_ARRIVE, SEA_REGIONS, foodKind, cuisineOf, pickRestaurant, ensureScores, estimateMinCost, fitBudget, syncBreakfast, breakfastPlace, lodgingBreakfast };
 }
