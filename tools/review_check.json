@@ -12544,5 +12544,215 @@
   "group": true,
   "open": "10:40",
   "close": "21:40"
+ },
+ "2782903": {
+  "verdict": "keep",
+  "reason": "월요일 휴무, 조림 2인 이상 주문, 점심 혼잡",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "minPeople": 2,
+  "solo": false,
+  "closed": [
+   "월"
+  ],
+  "open": "09:30",
+  "close": "19:00"
+ },
+ "2774690": {
+  "verdict": "keep",
+  "reason": "평점 3.9, 막국수·수육",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C",
+  "group": true,
+  "open": "10:30",
+  "close": "19:00"
+ },
+ "3546420": {
+  "verdict": "keep",
+  "reason": "웨딩홀 개조 대형 카페, 2층 노키즈, 주말 혼잡",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "kids": true,
+  "parking": true
+ },
+ "2762558": {
+  "verdict": "keep",
+  "reason": "평점 3.8, 좌식, 주차장 없음",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C",
+  "parking": false,
+  "open": "10:00",
+  "close": "20:00"
+ },
+ "1364103": {
+  "verdict": "keep",
+  "reason": "후기 71건, 한우 직판장, 서비스 느림",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "group": true,
+  "open": "10:00",
+  "close": "20:30"
+ },
+ "2681527": {
+  "verdict": "drop",
+  "reason": "평점 3.0(497건), 가격 대비 불만",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "D"
+ },
+ "2832111": {
+  "verdict": "keep",
+  "reason": "평점 3.9, 바다 전망 카페",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C",
+  "open": "11:00",
+  "close": "21:00"
+ },
+ "2834599": {
+  "verdict": "keep",
+  "reason": "수요일 휴무, 브레이크 15~16:30, 주차 넓음",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "group": true,
+  "parking": true,
+  "closed": [
+   "수"
+  ],
+  "open": "10:00",
+  "close": "22:00",
+  "break": [
+   "15:00",
+   "16:30"
+  ]
+ },
+ "2721572": {
+  "verdict": "keep",
+  "reason": "동대구역 도보권, 위생 불만 후기 일부",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A"
+ },
+ "2362535": {
+  "verdict": "keep",
+  "reason": "모항해변 바로 앞",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "kids": true,
+  "group": true
+ },
+ "2930099": {
+  "verdict": "keep",
+  "reason": "화요일 휴무, 바다 앞 카페, 반려견 동반",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "pet": true,
+  "closed": [
+   "화"
+  ],
+  "open": "09:50",
+  "close": "18:30"
+ },
+ "2904818": {
+  "verdict": "keep",
+  "reason": "아침 8시 영업, 백반 반찬 다양, 주차 넓음",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "solo": true,
+  "kids": true,
+  "parking": true,
+  "open": "08:00",
+  "close": "20:00"
+ },
+ "2841878": {
+  "verdict": "keep",
+  "reason": "평점 3.5(838건), 반려견 동반, 관광지 가격",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "D",
+  "pet": true,
+  "open": "10:30",
+  "close": "21:30"
+ },
+ "2899257": {
+  "verdict": "keep",
+  "reason": "한옥 카페, 산책로, 창가석 혼잡",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "kids": true
+ },
+ "2929559": {
+  "verdict": "keep",
+  "reason": "화요일 휴무, 생선구이 정식",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "group": true,
+  "closed": [
+   "화"
+  ],
+  "open": "10:00",
+  "close": "21:00"
+ },
+ "2856959": {
+  "verdict": "keep",
+  "reason": "한우 샤브샤브, 평일 예약 필요·주말 예약 불가",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "group": true,
+  "parking": true
+ },
+ "2831856": {
+  "verdict": "keep",
+  "reason": "점심 혼잡, 일요일 18시 마감",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "solo": true,
+  "open": "09:00",
+  "close": "21:00"
+ },
+ "1051882": {
+  "verdict": "keep",
+  "reason": "평점 3.5, 멸치쌈밥 원조, 대기 30분 사례",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "D",
+  "waitMin": 30,
+  "open": "09:00",
+  "close": "20:00"
+ },
+ "2766733": {
+  "verdict": "keep",
+  "reason": "화요일 휴무, 바다 전망 개인 카페",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "closed": [
+   "화"
+  ],
+  "open": "10:00",
+  "close": "20:00"
+ },
+ "2907053": {
+  "verdict": "keep",
+  "reason": "아귀찜, 오리탕 4인 이상 분량",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "group": true,
+  "open": "11:00",
+  "close": "22:00"
  }
 }
