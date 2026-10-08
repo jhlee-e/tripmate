@@ -15272,5 +15272,195 @@
   "q": "B",
   "open": "10:00",
   "close": "21:30"
+ },
+ "2847961": {
+  "verdict": "keep",
+  "reason": "건축상 카페, 하천 전망, 혼잡",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "open": "11:00",
+  "close": "21:00"
+ },
+ "3542958": {
+  "verdict": "none",
+  "reason": "후기 4건뿐",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)"
+ },
+ "2773709": {
+  "verdict": "keep",
+  "reason": "중식, 공영주차장 인근",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "group": true,
+  "open": "11:00",
+  "close": "21:30"
+ },
+ "3451068": {
+  "verdict": "keep",
+  "reason": "백년가게, 육회 막국수·우거지탕, 주차 넓음",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "solo": true,
+  "parking": true,
+  "open": "11:30",
+  "close": "20:00"
+ },
+ "2876594": {
+  "verdict": "keep",
+  "reason": "올갱이국, 황간역 근처",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "solo": true,
+  "open": "10:00",
+  "close": "20:00"
+ },
+ "2873225": {
+  "verdict": "keep",
+  "reason": "평점 3.8, 한우·육회, 룸",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C",
+  "group": true,
+  "open": "11:00",
+  "close": "21:00"
+ },
+ "2766808": {
+  "verdict": "keep",
+  "reason": "평점 3.6, 9천원 백반, 방송과 다르다는 불만",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C",
+  "parking": true,
+  "open": "09:30",
+  "close": "21:00"
+ },
+ "1763602": {
+  "verdict": "keep",
+  "reason": "묵밥·태평초, 새벽 5시 영업, 주차 불편",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "solo": true,
+  "open": "05:00",
+  "close": "21:00"
+ },
+ "3075690": {
+  "verdict": "keep",
+  "reason": "부곡온천, 객실 노천탕, 야외 풀(주말)",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "kids": true
+ },
+ "2844791": {
+  "verdict": "keep",
+  "reason": "브런치 카페, 가격 높음",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "open": "09:00",
+  "close": "21:00"
+ },
+ "2831962": {
+  "verdict": "none",
+  "reason": "후기 6건뿐",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)"
+ },
+ "2000403": {
+  "verdict": "keep",
+  "reason": "미나리 삼겹살, 봄철 혼잡, 주차장 만차 사례",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "group": true,
+  "waitMin": 15,
+  "open": "10:00",
+  "close": "20:00"
+ },
+ "3110744": {
+  "verdict": "keep",
+  "reason": "후기 18건, 대추빵 베이커리",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C"
+ },
+ "2767403": {
+  "verdict": "keep",
+  "reason": "고복저수지 매운탕, 평일에도 붐빔",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "group": true,
+  "open": "10:30",
+  "close": "20:30"
+ },
+ "2893506": {
+  "verdict": "keep",
+  "reason": "코다리조림, 셀프바",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "group": true,
+  "open": "11:00",
+  "close": "22:00"
+ },
+ "2748895": {
+  "verdict": "keep",
+  "reason": "평점 3.8, 셀프형 숯불갈비, 주차 넓음",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C",
+  "group": true,
+  "parking": true,
+  "open": "11:30",
+  "close": "22:00"
+ },
+ "2834411": {
+  "verdict": "keep",
+  "reason": "평점 3.6, 아침 7시 영업, 위생 불만 1건",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "D",
+  "group": true,
+  "parking": true,
+  "open": "07:00",
+  "close": "21:00"
+ },
+ "2903870": {
+  "verdict": "keep",
+  "reason": "30년 한정식, 반찬 리필",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "group": true,
+  "kids": true,
+  "open": "09:30",
+  "close": "21:30"
+ },
+ "642975": {
+  "verdict": "keep",
+  "reason": "평점 3.9, 광양불고기",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C",
+  "group": true,
+  "open": "10:30",
+  "close": "21:30"
+ },
+ "2901637": {
+  "verdict": "keep",
+  "reason": "녹색면 중식, 점심 혼잡, 월요일 휴무 언급",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "group": true,
+  "open": "11:00",
+  "close": "20:00"
  }
 }
