@@ -14741,5 +14741,231 @@
   "group": true,
   "open": "10:00",
   "close": "22:00"
+ },
+ "2841743": {
+  "verdict": "keep",
+  "reason": "후기 47건, 일요일 휴무, 순두부·수육, 브레이크 15~17시",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "solo": true,
+  "closed": [
+   "일"
+  ],
+  "open": "10:30",
+  "close": "20:30",
+  "break": [
+   "15:00",
+   "17:00"
+  ]
+ },
+ "2931044": {
+  "verdict": "keep",
+  "reason": "닭요리 코스, 가격 높음, 불친절 1건",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "group": true,
+  "open": "08:00",
+  "close": "23:00"
+ },
+ "2766833": {
+  "verdict": "keep",
+  "reason": "창고형 카페, 2층 노키즈존",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "kids": true,
+  "open": "10:00",
+  "close": "21:00"
+ },
+ "2761429": {
+  "verdict": "keep",
+  "reason": "일요일 휴무, 만두전골, 대기 1시간 사례, 조기 소진",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "group": true,
+  "waitMin": 60,
+  "closed": [
+   "일"
+  ],
+  "open": "11:30",
+  "close": "21:00",
+  "break": [
+   "15:00",
+   "17:00"
+  ]
+ },
+ "2857053": {
+  "verdict": "keep",
+  "reason": "평점 3.8, 갈비탕 점심특선 14시까지, 주말 혼잡",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C",
+  "group": true,
+  "parking": true
+ },
+ "681521": {
+  "verdict": "none",
+  "reason": "후기 1건뿐",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)"
+ },
+ "2900761": {
+  "verdict": "keep",
+  "reason": "지리산 근처 떡갈비·정식",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "group": true,
+  "open": "10:00",
+  "close": "20:30"
+ },
+ "133086": {
+  "verdict": "keep",
+  "reason": "평점 3.9, 갈비, 단체 모임",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C",
+  "group": true,
+  "open": "10:00",
+  "close": "22:00"
+ },
+ "2838537": {
+  "verdict": "keep",
+  "reason": "후기 64건, 비빔국수, 평일 15시 마감, 오픈런",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "solo": true,
+  "waitMin": 15,
+  "open": "10:30",
+  "close": "15:00"
+ },
+ "133716": {
+  "verdict": "keep",
+  "reason": "평점 3.7, 마늘 정식, 좌식, 주말 대기 1시간",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "D",
+  "group": true,
+  "waitMin": 40,
+  "open": "10:30",
+  "close": "21:00"
+ },
+ "2853130": {
+  "verdict": "keep",
+  "reason": "잣두부·보리밥 정식, 아침고요수목원 근처, 줄서기 대기",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "group": true,
+  "waitMin": 15,
+  "open": "10:00",
+  "close": "22:00"
+ },
+ "2925417": {
+  "verdict": "keep",
+  "reason": "냉면, 좌식, 이전 소문 있음",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "solo": true,
+  "open": "11:00",
+  "close": "20:00"
+ },
+ "2680925": {
+  "verdict": "keep",
+  "reason": "평점 3.7, 정육점 구매 후 상차림, 가격 불만",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "D",
+  "group": true,
+  "open": "11:30",
+  "close": "21:00"
+ },
+ "1602119": {
+  "verdict": "keep",
+  "reason": "평점 3.9, 된장샤브, 주말 조기 주문 마감",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C",
+  "group": true,
+  "parking": true,
+  "waitMin": 20,
+  "open": "12:00",
+  "close": "21:00"
+ },
+ "2837243": {
+  "verdict": "keep",
+  "reason": "후기 28건, 옛 제사공장 카페",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C",
+  "parking": true,
+  "open": "10:30",
+  "close": "18:00"
+ },
+ "2862609": {
+  "verdict": "keep",
+  "reason": "평점 3.7, 내원사 계곡 닭백숙, 불친절 1건",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "D",
+  "group": true,
+  "open": "10:00",
+  "close": "20:30"
+ },
+ "1819822": {
+  "verdict": "keep",
+  "reason": "평점 3.7, 퓨전 한정식, 좌식",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C",
+  "group": true,
+  "open": "11:30",
+  "close": "21:00"
+ },
+ "2814774": {
+  "verdict": "keep",
+  "reason": "월요일 휴무, 한우, 점심 대기",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "group": true,
+  "waitMin": 20,
+  "closed": [
+   "월"
+  ],
+  "open": "11:00",
+  "close": "20:00"
+ },
+ "2914711": {
+  "verdict": "keep",
+  "reason": "월요일 휴무, 삼계탕, 점심 줄",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "solo": true,
+  "waitMin": 15,
+  "closed": [
+   "월"
+  ],
+  "open": "11:00",
+  "close": "21:00"
+ },
+ "2832885": {
+  "verdict": "keep",
+  "reason": "목요일 휴무, 정원 브런치 카페",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "kids": true,
+  "closed": [
+   "목"
+  ],
+  "open": "10:00",
+  "close": "20:30"
  }
 }
