@@ -181,9 +181,9 @@ function renderMap(t, trip) {
     if (!day.endPoint.isHome) path.push(new kakao.maps.LatLng(day.endPoint.lat, day.endPoint.lng));
     // 날짜별 경로선: 실제 도로를 따라 (js/road-route.js — 불러오기 전·실패 시에는 점선 직선)
     drawRoute(map, path.map(function (ll) { return { lat: ll.getLat(), lng: ll.getLng() }; }), color, function (ok, info) {
-      if (!ok) failed++; else km += info.distance;
+      if (!ok) failed++; else km += info.distance || 0;
       document.getElementById('route-note').textContent = routeNoteText(trip.transport, failed === 0, failed ? null : { distance: km });
-    });
+    }, trip.transport);
   });
   map.setBounds(bounds, 40, 40, 40, 40);
 }
@@ -194,6 +194,7 @@ function showPlace(p) {
     (p.photo ? '<img class="place-photo" src="' + esc(p.photo) + '" alt=""><small class="photo-credit">사진: 한국관광공사</small>' : '') +
     '<h3>' + esc(p.name) + '</h3>' +
     '<p class="helper-text muted">' + esc(p.type === '식당' ? cuisineOf(p) : (p.categoryName || p.type)) + (p.address ? ' · ' + esc(p.address) : '') + '</p>' +
+    legInfoHtml(p) +
     '<p class="place-links">' + (p.link ? '<a href="' + esc(p.link) + '" target="_blank" rel="noopener">카카오맵에서 보기</a>' : '') +
     '<a href="' + esc(route) + '" target="_blank" rel="noopener">카카오맵 길찾기</a>' +
       '<a href="' + esc(blogSearchUrl(p)) + '" target="_blank" rel="noopener">블로그 후기 보기</a></p>';

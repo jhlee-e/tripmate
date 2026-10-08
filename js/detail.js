@@ -433,7 +433,7 @@ function renderMap() {
   const note = document.getElementById('route-note');
   const route = drawRoute(map, path.map(function (ll) { return { lat: ll.getLat(), lng: ll.getLng() }; }), color, function (ok, info) {
     note.textContent = routeNoteText(trip.transport, ok, info);
-  });
+  }, trip.transport);
   mapObjects.push({ setMap: function () { route.remove(); } });
   if (path.length) map.setBounds(bounds, 40, 40, 40, 40);
 }
@@ -450,6 +450,7 @@ function showPlace(p) {
     '<p class="helper-text">' + (p.type === '숙소' ? '1박 ' : '1인 ') + (p.cost ? won(p.cost) : '무료') +
       (p.costCheck === '추정' ? ' (추정)' : '') + (p.stayMin && p.type !== '숙소' ? ' · 기본 체류 ' + p.stayMin + '분' : '') + '</p>' +
     (p.basis && p.scoredBy && p.scoredBy.indexOf('세부분류') === -1 ? '<p class="helper-text">' + esc(p.basis) + '</p>' : '') +
+    legInfoHtml(p) +
     '<p class="place-links">' +
       (p.link ? '<a href="' + esc(p.link) + '" target="_blank" rel="noopener">카카오맵에서 보기</a>' : '') +
       '<a href="' + esc(route) + '" target="_blank" rel="noopener">카카오맵 길찾기</a>' +
