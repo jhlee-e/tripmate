@@ -23,6 +23,8 @@ async function start() {
   trip = await loadTripFromUrl();
   const status = document.getElementById('status');
   if (!trip) { status.textContent = '여행 정보를 찾을 수 없어요.'; return; }
+  // 친구에게 '보기만' 권한으로 공유받은 여행은 고칠 수 없으므로 여행 정보 화면으로
+  if (await tripRole(trip) === 'viewer') { location.replace('trip.html?trip=' + trip.id); return; }
   document.getElementById('trip-summary').textContent = tripSummary(trip);
 
   try {
@@ -93,6 +95,7 @@ function renderSummary() {
   document.getElementById('budget-legend').innerHTML = parts.map(function (p) {
     return '<li><span class="dot ' + p[2] + '"></span>' + p[0] + ' ' + won(p[1]) + '</li>';
   }).join('') + '<li><span class="dot line"></span>최대 예산</li>';
+  document.getElementById('daily-cost').innerHTML = dailyCostTable(trip, timeline);
 }
 
 function renderTabs() {
@@ -426,9 +429,12 @@ function renderMap() {
     path.push(pos);
     if (day.startPoint.isHome) addPoint(day.endPoint, '숙', 'lodging');
   }
-  const line = new kakao.maps.Polyline({ path: path, strokeWeight: 4, strokeColor: color, strokeOpacity: 0.8 });
-  line.setMap(map);
-  mapObjects.push(line);
+  // 경로선: 실제 도로를 따라 (js/road-route.js — 불러오기 전·실패 시에는 점선 직선)
+  const note = document.getElementById('route-note');
+  const route = drawRoute(map, path.map(function (ll) { return { lat: ll.getLat(), lng: ll.getLng() }; }), color, function (ok, info) {
+    note.textContent = routeNoteText(trip.transport, ok, info);
+  });
+  mapObjects.push({ setMap: function () { route.remove(); } });
   if (path.length) map.setBounds(bounds, 40, 40, 40, 40);
 }
 
@@ -446,7 +452,8 @@ function showPlace(p) {
     (p.basis && p.scoredBy && p.scoredBy.indexOf('세부분류') === -1 ? '<p class="helper-text">' + esc(p.basis) + '</p>' : '') +
     '<p class="place-links">' +
       (p.link ? '<a href="' + esc(p.link) + '" target="_blank" rel="noopener">카카오맵에서 보기</a>' : '') +
-      '<a href="' + esc(route) + '" target="_blank" rel="noopener">카카오맵 길찾기</a></p>';
+      '<a href="' + esc(route) + '" target="_blank" rel="noopener">카카오맵 길찾기</a>' +
+      '<a href="' + esc(blogSearchUrl(p)) + '" target="_blank" rel="noopener">블로그 후기 보기</a></p>';
 }
 
 // ---------- 5. 저장 ----------
@@ -456,13 +463,24 @@ document.getElementById('save-btn').addEventListener('click', async function () 
   btn.disabled = true;
   msg.textContent = '저장 중…';
   try {
+    // 0) 함께 편집하는 친구가 그사이에 먼저 저장했는지 확인 (나중에 저장한 쪽이 덮어쓰므로 물어봄)
+    if (trip.updated_at) {
+      const now = await sb.from('trips').select('updated_at').eq('id', trip.id).single();
+      if (!now.error && now.data.updated_at !== trip.updated_at &&
+          !confirm('이 화면을 연 뒤에 다른 사람이 이 여행을 먼저 고쳤어요. 내 일정으로 덮어쓸까요?\n(취소하면 저장하지 않아요. 새로고침하면 바뀐 일정을 볼 수 있어요.)')) {
+        msg.textContent = '저장하지 않았어요.';
+        btn.disabled = false;
+        return;
+      }
+    }
     // 1) 여행에 고른 여행지·일정안·총비용·날짜별 시작 시각 기록
     const up = await sb.from('trips').update({
       region: plan.region, plan_type: plan.type, total_cost: Math.round(timeline.cost.total),
       // 날짜별 시작 시각 + 맨 끝에 숙소 도착 시각 (예: 3일 여행이면 [1일차, 2일차, 3일차, 숙소 도착])
       day_starts: plan.days.map(function (d) { return d.start; }).concat([plan.lodgingArrive || LODGING_ARRIVE])
-    }).eq('id', trip.id);
+    }).eq('id', trip.id).select().single();
     if (up.error) throw up.error;
+    trip.updated_at = up.data.updated_at;
     // 2) 예전 장소 목록 지우고 새로 넣기 (숙소는 day_no 0)
     const del = await sb.from('trip_places').delete().eq('trip_id', trip.id);
     if (del.error) throw del.error;

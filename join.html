@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TripMate - 여행 초대</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="page">
+    <header>
+      <h1>TripMate</h1>
+      <p class="subtitle">친구가 여행에 초대했어요</p>
+    </header>
+    <main>
+      <section class="card">
+        <p class="notice" id="status">초대를 확인하고 있어요…</p>
+        <p class="error-text" id="error-text" role="alert"></p>
+        <p class="helper-text center-text" id="links" hidden><a href="record.html">내 여행으로 가기</a></p>
+      </section>
+    </main>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase.js"></script>
+  <script>
+    // 초대 링크 수락 화면
+    // 입력: 주소의 ?code=초대코드, 로그인 정보 / 출력: join_trip 함수로 이 여행의 멤버가 된 뒤 여행 정보 화면으로 이동
+    //       로그인 전이면 로그인 화면으로 보내고, 로그인(또는 회원가입·메일 인증) 뒤 이 화면으로 돌아오게 주소를 기억해 둠
+    async function start() {
+      const code = new URLSearchParams(location.search).get('code');
+      const status = document.getElementById('status');
+      if (!code || !/^[a-z0-9]{6,32}$/.test(code)) { status.textContent = '초대 링크가 올바르지 않아요.'; return; }
+      const here = 'join.html?code=' + code;
+      const { data } = await sb.auth.getSession();
+      if (!data.session) {
+        try { localStorage.setItem('tripmate-next', here); } catch (e) {}
+        location.replace('index.html?next=' + encodeURIComponent(here));
+        return;
+      }
+      const res = await sb.rpc('join_trip', { code: code });
+      if (res.error) {
+        status.textContent = '';
+        document.getElementById('error-text').textContent = res.error.message.indexOf('초대') !== -1
+          ? res.error.message : '초대를 받지 못했어요: ' + res.error.message;
+        document.getElementById('links').hidden = false;
+        return;
+      }
+      status.textContent = '여행에 함께하게 됐어요! 여행 정보로 이동해요…';
+      location.replace('trip.html?trip=' + res.data);
+    }
+    start();
+  </script>
+</body>
+</html>

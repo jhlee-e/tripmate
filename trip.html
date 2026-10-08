@@ -12,6 +12,7 @@
       <span id="nav-user"></span>
       <a href="record.html">← 내 여행</a>
       <a href="condition.html">새 여행 만들기</a>
+      <a href="courses.html">공개 코스</a>
       <button type="button" class="link-btn" onclick="logout()">로그아웃</button>
     </nav>
     <header>
@@ -28,6 +29,16 @@
             <h2 class="section-title">여행 조건</h2>
             <dl class="info-list" id="info-list"></dl>
             <div class="trip-buttons" id="trip-buttons"></div>
+          </section>
+
+          <section class="card" id="friends-card" hidden>
+            <h2 class="section-title">함께 여행할 친구 <small>링크로 초대하면 일정·준비물을 같이 고칠 수 있어요</small></h2>
+            <div class="friends-body">
+              <div id="invite-box"></div>
+              <p class="helper-text" id="invite-msg"></p>
+              <ul class="member-list" id="member-list"></ul>
+              <p class="helper-text muted" id="member-empty" hidden>아직 함께하는 친구가 없어요.</p>
+            </div>
           </section>
 
           <section class="card" id="share-card" hidden>
@@ -47,6 +58,8 @@
             <p class="helper-text muted" id="total-meta"></p>
             <div class="budget-bar" id="budget-bar"></div>
             <ul class="budget-legend" id="budget-legend"></ul>
+            <h3 class="sub-title">일일 경비</h3>
+            <div id="daily-cost"></div>
           </section>
 
           <section class="card" id="schedule-card" hidden>
@@ -89,22 +102,35 @@
         <div class="trip-side">
           <section class="card map-card" id="map-card" hidden>
             <div id="detail-map" class="detail-map"></div>
+            <p class="helper-text muted route-note" id="route-note"></p>
             <div class="place-card" id="place-card"></div>
           </section>
 
           <section class="card checklist-card">
             <h2 class="section-title">준비물 체크리스트</h2>
-            <form class="address-row" id="item-form">
-              <input type="text" id="item-input" maxlength="40" placeholder="준비물 입력 (예: 보조배터리)">
-              <button type="submit" class="small-btn">추가</button>
-            </form>
-            <div class="checklist-tools">
-              <select id="import-select" class="import-select"></select>
-              <button type="button" class="link-btn danger-link" id="clear-btn" hidden>전체 삭제</button>
+            <div class="checklist-wrap">
+              <!-- 왼쪽: 내 체크리스트 (추천 준비물을 여기에 끌어다 놓으면 추가됨) -->
+              <div class="check-drop" id="check-drop">
+                <form class="address-row" id="item-form">
+                  <input type="text" id="item-input" maxlength="40" placeholder="준비물 입력 (예: 보조배터리)">
+                  <button type="submit" class="small-btn">추가</button>
+                </form>
+                <div class="checklist-tools">
+                  <select id="import-select" class="import-select"></select>
+                  <button type="button" class="link-btn danger-link" id="clear-btn" hidden>전체 삭제</button>
+                </div>
+                <p class="helper-text import-msg" id="import-msg"></p>
+                <ul class="check-list" id="check-list"></ul>
+                <p class="helper-text muted" id="check-progress"></p>
+                <p class="drop-hint">여기에 놓으면 추가돼요</p>
+              </div>
+              <!-- 오른쪽: 추천 준비물 (js/packing.js) -->
+              <div class="suggest-box">
+                <h3 class="sub-title">추천 준비물 <small>끌어다 놓거나 ＋를 누르세요</small></h3>
+                <p class="helper-text muted" id="weather-line"></p>
+                <div class="suggest-list" id="suggest-list"></div>
+              </div>
             </div>
-            <p class="helper-text import-msg" id="import-msg"></p>
-            <ul class="check-list" id="check-list"></ul>
-            <p class="helper-text muted" id="check-progress"></p>
           </section>
         </div>
       </div>
@@ -116,9 +142,13 @@
   <script src="supabase.js"></script>
   <script src="js/ui.js"></script>
   <script src="js/recommend.js"></script>
+  <script src="js/road-route.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/exifr@7.1.3/dist/lite.umd.js"></script>
   <script src="js/checklist.js"></script>
+  <script src="js/packing.js"></script>
   <script src="js/memories.js"></script>
+  <script src="js/export.js"></script>
+  <script src="js/share.js"></script>
   <script src="js/trip.js"></script>
 </body>
 </html>

@@ -12,6 +12,7 @@
       <span id="nav-user"></span>
       <a href="#" id="back-link">← 일정안 비교</a>
       <a href="record.html">내 여행</a>
+      <a href="courses.html">공개 코스</a>
       <button type="button" class="link-btn" onclick="logout()">로그아웃</button>
     </nav>
     <header>
@@ -35,6 +36,10 @@
         </div>
         <div class="budget-bar" id="budget-bar"></div>
         <ul class="budget-legend" id="budget-legend"></ul>
+        <details class="daily-details">
+          <summary>일일 경비 보기</summary>
+          <div id="daily-cost"></div>
+        </details>
       </section>
 
       <div class="detail-layout" id="detail-layout" hidden>
@@ -63,6 +68,7 @@
         <!-- 오른쪽: 지도 + 장소 카드 -->
         <section class="card map-card">
           <div id="detail-map" class="detail-map"></div>
+          <p class="helper-text muted route-note" id="route-note"></p>
           <div class="place-card" id="place-card">
             <p class="helper-text muted">지도 번호나 일정 항목을 누르면 장소 정보가 나와요.</p>
           </div>
@@ -76,6 +82,7 @@
   <script src="supabase.js"></script>
   <script src="js/ui.js"></script>
   <script src="js/recommend.js"></script>
+  <script src="js/road-route.js"></script>
   <script src="js/detail.js"></script>
 </body>
 </html>

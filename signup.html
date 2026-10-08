@@ -21,11 +21,13 @@
         </div>
         <div class="field-group">
           <label for="email">이메일</label>
-          <input type="email" id="email" placeholder="example@email.com">
+          <input type="email" id="email" placeholder="example@email.com" autocomplete="email">
+          <p class="field-warning" id="email-hint"></p>
         </div>
         <div class="field-group">
           <label for="password">비밀번호</label>
-          <input type="password" id="password" placeholder="6자 이상">
+          <input type="password" id="password" placeholder="6자 이상" autocomplete="new-password">
+          <p class="field-warning" id="password-hint"></p>
         </div>
         <div class="field-group">
           <label for="password-check">비밀번호 확인</label>
@@ -40,6 +42,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase.js"></script>
+  <script src="js/hangul-keys.js"></script>
   <script>
     const form = document.getElementById('signup-form');
     const message = document.getElementById('message');
@@ -51,14 +54,21 @@
       message.style.color = ok ? 'var(--accent)' : '';
     }
 
+    watchKeyboard(document.getElementById('email'), document.getElementById('email-hint'), true);
+    watchKeyboard(document.getElementById('password'), document.getElementById('password-hint'), false);
+
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const nickname = document.getElementById('nickname').value.trim();
-      const email = document.getElementById('email').value.trim();
+      const emailInput = document.getElementById('email');
+      if (hasHangul(emailInput.value)) emailInput.value = toEnglishKeys(emailInput.value);
+      const email = emailInput.value.trim();
       const password = document.getElementById('password').value;
       const passwordCheck = document.getElementById('password-check').value;
 
       if (!nickname || !email || !password) return show('모든 칸을 입력해 주세요.');
+      // 한/영 실수로 만든 비밀번호는 나중에 로그인할 때 헷갈리므로 가입 단계에서 막음
+      if (hasHangul(password)) return show('비밀번호에 한글이 들어갔어요. 한/영 키를 눌러 영어로 바꿔 주세요.');
       if (password.length < 6) return show('비밀번호는 6자 이상이어야 해요.');
       if (password !== passwordCheck) return show('비밀번호 확인이 일치하지 않아요.');
 

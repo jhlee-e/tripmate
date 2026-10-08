@@ -2,13 +2,18 @@
 // 입력: 여행 id, 내 다른 여행 목록, 사용자가 누른 체크·추가·삭제·불러오기
 // 출력: checklist 테이블의 행을 화면에 그리고, 바뀐 내용을 곧바로 DB에 저장
 //       (DB에 저장되므로 창이나 컴퓨터를 껐다 켜도 다시 로그인하면 그대로 불러와짐)
+//       돌려주는 값: { loaded(처음 불러오기 Promise), add(이름), items()(지금 항목 이름들), onChange(바뀔 때 부를 함수 자리) }
+//       → 추천 준비물(js/packing.js)이 이걸로 항목을 넣고, 이미 담은 것은 추천에서 빼서 보여 줌
 
-function setupChecklist(tripId, otherTrips) {
+function setupChecklist(tripId, otherTrips, readOnly) {
   const msg = document.getElementById('import-msg');
+  let rows = [];
+  const api = { onChange: null };
 
   async function load() {
     const { data, error } = await sb.from('checklist').select('*').eq('trip_id', tripId).order('id', { ascending: true });
     if (error) return showError(error);
+    rows = data;
     const list = document.getElementById('check-list');
     list.innerHTML = '';
     data.forEach(function (row) {
@@ -35,6 +40,8 @@ function setupChecklist(tripId, otherTrips) {
     const done = data.filter(function (r) { return r.checked; }).length;
     document.getElementById('check-progress').textContent =
       data.length ? '챙긴 준비물 ' + done + ' / ' + data.length : '아직 준비물이 없어요.';
+    if (readOnly) list.querySelectorAll('input, button').forEach(function (el) { el.disabled = true; });
+    if (api.onChange) api.onChange();
     return data;
   }
 
@@ -93,5 +100,15 @@ function setupChecklist(tripId, otherTrips) {
     msg.textContent = label + '에서 준비물 ' + toAdd.length + '개를 가져왔어요' + (skipped ? ' (이미 있는 ' + skipped + '개는 건너뜀).' : '.');
   });
 
-  return load();
+  if (readOnly) {   // 보기 전용으로 공유받은 여행: 추가·불러오기·삭제 막기
+    document.querySelectorAll('#item-form input, #item-form button, #import-select').forEach(function (el) { el.disabled = true; });
+  }
+
+  api.loaded = load();
+  api.add = function (item) {
+    if (rows.some(function (r) { return r.item.trim() === item.trim(); })) return Promise.resolve();
+    return addItems([item]);
+  };
+  api.items = function () { return rows.map(function (r) { return r.item; }); };
+  return api;
 }

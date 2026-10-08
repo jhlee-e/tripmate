@@ -2,16 +2,25 @@
 // 입력: (목록) public_courses 보기 전체, 검색어·정렬 / (코스 하나) 주소의 ?course=번호 → 그 코스의 일정(trip_places)·후기·한줄평(reviews)·공개 사진(photos)
 // 출력: 공개 코스 목록, 또는 코스 하나의 날짜별 일정·지도·후기·사진과 '내 여행에 담기' 버튼(→ condition.html?copy=번호)
 //       출발지·예산은 public_courses 보기에 들어 있지 않아서 화면에도 나오지 않음
+//       로그인하지 않은 사람: 목록과 코스 개요(코스 정보·여행 후기)까지만 보여 주고, 날짜별 일정·지도·사진은 로그인 후
 
 const DAY_COLORS = ['#2f8f7e', '#e07a2f', '#3b6fd8', '#b8437a', '#7a5cc4', '#c49a1a', '#4a8a2a'];
 let me = null;
 
 async function start() {
-  me = await requireLogin();
-  if (!me) return;
-  sb.from('users').select('nickname').eq('id', me.id).single().then(function (res) {
-    document.getElementById('nav-user').textContent = (res.data ? res.data.nickname : me.email) + '님';
-  });
+  const { data: sess } = await sb.auth.getSession();
+  me = sess.session ? sess.session.user : null;
+  if (me) {
+    sb.from('users').select('nickname').eq('id', me.id).single().then(function (res) {
+      document.getElementById('nav-user').textContent = (res.data ? res.data.nickname : me.email) + '님';
+    });
+  } else {
+    // 비로그인: 위쪽 메뉴를 '로그인 · 회원가입'으로 바꿈 (로그인 뒤 지금 보던 화면으로 돌아오도록 next 전달)
+    const back = encodeURIComponent('courses.html' + location.search);
+    document.querySelector('.top-nav').innerHTML = '<span id="nav-user">둘러보는 중</span>' +
+      '<a href="index.html?next=' + back + '">로그인</a><a href="signup.html">회원가입</a>';
+    document.getElementById('subtitle').textContent = '다른 여행자가 공개한 코스를 둘러보세요. 로그인하면 날짜별 일정·지도·사진까지 보고 내 여행에 담을 수 있어요';
+  }
   try {
     if (param('course')) await showCourse(Number(param('course')));
     else await showList();
@@ -48,7 +57,7 @@ async function showList() {
         '<span class="meta">📍 ' + esc(c.region) + ' · ' + nightsText(c.days) + ' · ' + esc(c.tempo) + ' · ' + esc(c.transport) +
           ' · ' + c.tags.map(function (t) { return '#' + esc(t); }).join(' ') + '</span>' +
         '<span class="meta">' + (c.rating ? starsText(c.rating) + ' · ' : '') + c.saved_count + '명이 담음 · ' +
-          (c.user_id === me.id ? '<span class="mine">내 코스</span>' : esc(c.nickname) + '님') + '</span>';
+          (me && c.user_id === me.id ? '<span class="mine">내 코스</span>' : esc(c.nickname) + '님') + '</span>';
       li.querySelector('strong').textContent = c.title;
       li.addEventListener('click', function () { location.href = 'courses.html?course=' + c.id; });
       list.appendChild(li);
@@ -59,27 +68,27 @@ async function showList() {
   render();
 }
 
-// ---------- 코스 하나 ----------
-async function showCourse(id) {
-  const c = await sb.from('public_courses').select('*').eq('id', id).maybeSingle();
-  if (c.error) throw c.error;
-  if (!c.data) { document.getElementById('status').textContent = '코스를 찾을 수 없어요. 비공개로 바뀌었을 수 있어요.'; return; }
-  const course = c.data;
-  const [pl, rv, ph] = await Promise.all([
-    sb.from('trip_places').select('*').eq('trip_id', course.trip_id).order('day_no').order('order_no'),
-    sb.from('reviews').select('*').eq('trip_id', course.trip_id),
-    sb.from('photos').select('*').eq('trip_id', course.trip_id).eq('is_public', true).order('created_at')
-  ]);
-  [pl, rv, ph].forEach(function (r) { if (r.error) throw r.error; });
-
+// ---------- 코스 개요 (로그인하지 않은 사람) ----------
+// 입력: public_courses 한 행 / 출력: 코스 정보·여행 후기와 '로그인하고 전체 일정 보기' 안내 (일정·지도·사진은 불러오지 않음)
+function showOverview(course) {
   document.title = 'TripMate - ' + course.title;
   document.getElementById('title').textContent = course.title;
-  document.getElementById('subtitle').textContent = course.region + ' · ' + nightsText(course.days) + ' · ' +
-    (course.user_id === me.id ? '내가 공개한 코스' : course.nickname + '님의 코스');
+  document.getElementById('subtitle').textContent = course.region + ' · ' + nightsText(course.days) + ' · ' + course.nickname + '님의 코스';
   document.getElementById('status').textContent = '';
   document.getElementById('course-view').hidden = false;
+  fillInfo(course);
+  const next = encodeURIComponent('courses.html?course=' + course.id);
+  const copyBtn = document.getElementById('copy-btn');
+  copyBtn.textContent = '로그인하고 전체 일정 보기';
+  copyBtn.href = 'index.html?next=' + next;
+  document.getElementById('copy-note').innerHTML = '날짜별 일정·지도·사진은 로그인한 회원에게만 보여요. 계정이 없다면 <a href="signup.html">회원가입</a>';
+  document.getElementById('schedule').innerHTML = '<div class="locked-box">🔒 ' + course.days + '일 동안의 일정과 지도는 로그인하면 볼 수 있어요.</div>';
+  document.querySelector('.trip-side').hidden = true;
+  document.getElementById('course-view').classList.add('overview-only');
+}
 
-  // 코스 정보 + 여행 전체 후기
+// 코스 정보 표 + 여행 전체 후기 (개요·전체 보기 공통)
+function fillInfo(course) {
   const rows = [
     ['여행지', course.region + ' · ' + course.plan_type + '안'],
     ['기간', nightsText(course.days)],
@@ -95,6 +104,31 @@ async function showCourse(id) {
     document.getElementById('review-box').innerHTML = '<p class="helper-text">' + starsText(course.rating) + ' 여행 후기</p>' +
       (course.review ? '<p class="review-quote">' + esc(course.review) + '</p>' : '');
   }
+}
+
+// ---------- 코스 하나 ----------
+async function showCourse(id) {
+  const c = await sb.from('public_courses').select('*').eq('id', id).maybeSingle();
+  if (c.error) throw c.error;
+  if (!c.data) { document.getElementById('status').textContent = '코스를 찾을 수 없어요. 비공개로 바뀌었을 수 있어요.'; return; }
+  const course = c.data;
+  if (!me) return showOverview(course);
+  const [pl, rv, ph] = await Promise.all([
+    sb.from('trip_places').select('*').eq('trip_id', course.trip_id).order('day_no').order('order_no'),
+    sb.from('reviews').select('*').eq('trip_id', course.trip_id).eq('user_id', course.user_id),   // 코스 주인의 후기만 (함께 간 친구 후기 제외)
+    sb.from('photos').select('*').eq('trip_id', course.trip_id).eq('is_public', true).order('created_at')
+  ]);
+  [pl, rv, ph].forEach(function (r) { if (r.error) throw r.error; });
+
+  document.title = 'TripMate - ' + course.title;
+  document.getElementById('title').textContent = course.title;
+  document.getElementById('subtitle').textContent = course.region + ' · ' + nightsText(course.days) + ' · ' +
+    (course.user_id === me.id ? '내가 공개한 코스' : course.nickname + '님의 코스');
+  document.getElementById('status').textContent = '';
+  document.getElementById('course-view').hidden = false;
+
+  // 코스 정보 + 여행 전체 후기
+  fillInfo(course);
   const copyBtn = document.getElementById('copy-btn');
   if (course.user_id === me.id) {
     copyBtn.textContent = '내 여행 정보로 가기';

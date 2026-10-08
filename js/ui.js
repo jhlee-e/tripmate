@@ -60,3 +60,35 @@ function showError(error) {
   if (el) el.textContent = error ? '오류: ' + error.message : '';
   if (error) console.error(error);
 }
+
+// 장소 이름으로 네이버 블로그 후기 검색 주소 만들기 (지역 이름을 붙여 같은 이름의 다른 가게와 덜 헷갈리게)
+// 입력: 장소(p.name, p.region) / 출력: 검색 결과 페이지 주소 — 후기 내용을 가져오지는 않고 링크만 연결
+function blogSearchUrl(p, region) {
+  const q = ((p.region || region || '') + ' ' + p.name).trim() + ' 후기';
+  return 'https://search.naver.com/search.naver?ssc=tab.blog.all&query=' + encodeURIComponent(q);
+}
+
+// 일일 경비 표 (여행 정보·일정 상세 화면 공통)
+// 입력: trip(시작일·인원), computeTimeline 결과(t.days[i].cost) / 출력: 날짜별 숙박·식비·교통·입장료·합계와 1인당 금액 표 HTML
+function dailyCostTable(trip, t) {
+  const head = '<tr><th>날짜</th><th>숙박</th><th>식비</th><th>교통</th><th>입장료</th><th>합계</th><th>1인당</th></tr>';
+  const body = t.days.map(function (d, i) {
+    const c = d.cost, date = new Date(trip.start_date);
+    date.setDate(date.getDate() + i);
+    return '<tr><td>' + (i + 1) + '일차 <small>' + (date.getMonth() + 1) + '/' + date.getDate() + '</small></td>' +
+      '<td>' + (c.lodging ? won(c.lodging) : '-') + '</td><td>' + won(c.food) + '</td><td>' + won(c.transport) + '</td>' +
+      '<td>' + won(c.admission) + '</td><td><strong>' + won(c.total) + '</strong></td><td>' + won(c.total / trip.people) + '</td></tr>';
+  }).join('');
+  return '<div class="table-scroll"><table class="daily-cost">' + head + body + '</table></div>' +
+    '<p class="helper-text muted">숙박비는 그날 밤 묵는 날에 넣었어요. 1일차 교통비에는 출발지에서 여행지까지, 마지막 날에는 집으로 돌아오는 비용이 들어 있어요.</p>';
+}
+
+// 이 여행에서 내 권한: 'owner'(만든 사람) | 'editor'(함께 편집) | 'viewer'(보기만) | null
+// 입력: trips 행 / 출력: 권한 문자열 — 공유 기능(sql/add_share.sql)을 아직 실행하지 않았으면 내 여행만 열리므로 'owner'
+async function tripRole(trip) {
+  const { data } = await sb.auth.getSession();
+  if (!data.session) return null;
+  if (trip.user_id === data.session.user.id) return 'owner';
+  const res = await sb.from('trip_members').select('role').eq('trip_id', trip.id).eq('user_id', data.session.user.id).maybeSingle();
+  return res.data ? res.data.role : null;
+}

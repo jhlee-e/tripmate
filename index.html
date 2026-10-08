@@ -17,21 +17,25 @@
       <form id="login-form" class="card" method="post" novalidate>
         <div class="field-group">
           <label for="email">이메일</label>
-          <input type="email" id="email" placeholder="example@email.com">
+          <input type="email" id="email" placeholder="example@email.com" autocomplete="email">
+          <p class="field-warning" id="email-hint"></p>
         </div>
         <div class="field-group">
           <label for="password">비밀번호</label>
-          <input type="password" id="password" placeholder="비밀번호">
+          <input type="password" id="password" placeholder="비밀번호" autocomplete="current-password">
+          <p class="field-warning" id="password-hint"></p>
         </div>
         <p class="error-text" id="message" role="alert"></p>
         <button type="submit" class="submit-btn" id="login-btn">로그인</button>
         <p class="helper-text">아직 계정이 없나요? <a href="signup.html">회원가입</a></p>
       </form>
+      <p class="helper-text center-text"><a href="courses.html">로그인 없이 공개 코스 구경하기 →</a></p>
     </main>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase.js"></script>
+  <script src="js/hangul-keys.js"></script>
   <script>
     const form = document.getElementById('login-form');
     const message = document.getElementById('message');
@@ -43,21 +47,40 @@
       message.style.color = ok ? 'var(--accent)' : '';
     }
 
-    // 이미 로그인된 상태(세션이 브라우저에 남아 있음)면 바로 조건 입력으로
+    // 한/영 실수 안내: 이메일 칸은 칸을 벗어날 때 한글 자판 글자를 영어로 바꿈, 비밀번호 칸은 안내만
+    watchKeyboard(document.getElementById('email'), document.getElementById('email-hint'), true);
+    watchKeyboard(document.getElementById('password'), document.getElementById('password-hint'), false);
+
+    // 로그인 뒤 갈 곳: 주소의 ?next= (공유 초대 링크·공개 코스에서 왔을 때), 없으면 조건 입력
+    // 회원가입 → 메일 인증을 거치면 주소가 바뀌므로 초대 링크는 브라우저에도 잠시 기억해 둠(join.html이 저장)
+    function nextPage() {
+      let next = new URLSearchParams(location.search).get('next');
+      if (!next) { try { next = localStorage.getItem('tripmate-next'); } catch (e) { next = null; } }
+      try { localStorage.removeItem('tripmate-next'); } catch (e) {}
+      return next && /^[a-z]+\.html(\?[^:]*)?$/.test(next) ? next : 'condition.html';   // 우리 사이트 화면만 허용
+    }
+
+    // 이미 로그인된 상태(세션이 브라우저에 남아 있음)면 바로 다음 화면으로
     sb.auth.getSession().then(({ data }) => {
-      if (data.session) location.href = 'condition.html';
+      if (data.session) location.href = nextPage();
     });
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const email = document.getElementById('email').value.trim();
+      const emailInput = document.getElementById('email');
+      if (hasHangul(emailInput.value)) emailInput.value = toEnglishKeys(emailInput.value);
+      const email = emailInput.value.trim();
       const password = document.getElementById('password').value;
       if (!email || !password) return show('이메일과 비밀번호를 입력해 주세요.');
 
       button.disabled = true;
       show('로그인 중...', true);
 
-      const { error } = await sb.auth.signInWithPassword({ email, password });
+      let { error } = await sb.auth.signInWithPassword({ email, password });
+      // 비밀번호에 한글이 섞였고 틀렸다면, 한/영 실수로 보고 영어 자판 글자로 바꿔 한 번 더 시도
+      if (error && hasHangul(password) && error.message.includes('Invalid login credentials')) {
+        ({ error } = await sb.auth.signInWithPassword({ email, password: toEnglishKeys(password) }));
+      }
 
       button.disabled = false;
       if (error) {
@@ -66,7 +89,7 @@
         if (error.message.includes('Invalid login credentials')) return show('이메일 또는 비밀번호가 맞지 않아요.');
         return show('로그인 실패: ' + error.message);
       }
-      location.href = 'condition.html';
+      location.href = nextPage();
     });
   </script>
 </body>

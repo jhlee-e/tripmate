@@ -4,6 +4,7 @@
 //       6차시: 나의 기록 지도 — 내 여행들의 일정 장소(여행별 색 점)와 사진(썸네일 동그라미)을 한 지도에
 
 const TRIP_COLORS = ['#2f8f7e', '#e07a2f', '#3b6fd8', '#b8437a', '#7a5cc4', '#c49a1a', '#4a8a2a', '#d0473b'];
+let myId = null;   // 내 사용자 id — 친구에게 공유받은 여행(주인이 다른 여행)을 구분할 때 사용
 
 async function loadTrips() {
   const { data, error } = await sb.from('trips').select('*').order('start_date', { ascending: true });
@@ -14,6 +15,7 @@ async function loadTrips() {
   document.getElementById('trip-empty').hidden = data.length > 0;
 
   data.forEach(function (trip) {
+    const shared = myId && trip.user_id !== myId;   // 친구가 초대해 준 여행
     const li = document.createElement('li');
     li.className = 'trip-item';
     li.innerHTML =
@@ -27,18 +29,27 @@ async function loadTrips() {
                      : '<span class="muted">아직 여행지를 고르지 않았어요</span>') +
       '</div>' +
       '<div class="trip-actions">' +
-        '<button type="button" class="small-btn danger">삭제</button>' +
+        '<button type="button" class="small-btn danger">' + (shared ? '나가기' : '삭제') + '</button>' +
       '</div>';
     li.querySelector('strong').textContent = tripTitle(trip) + ' (' + trip.days + '일)';
+    if (shared) li.querySelector('strong').insertAdjacentHTML('afterend', '<span class="shared-badge">👥 함께하는 여행</span>');
+    else if (trip.invite_code) li.querySelector('strong').insertAdjacentHTML('afterend', '<span class="shared-badge">👥 친구 초대 중</span>');
     li.querySelector('.trip-from').textContent = '출발: ' + (trip.departure_address || '-');
     li.addEventListener('click', function () { location.href = 'trip.html?trip=' + trip.id; });
     li.querySelector('button.danger').addEventListener('click', function (e) {
       e.stopPropagation();   // 삭제 버튼을 누를 때 여행 열기가 같이 일어나지 않게
-      deleteTrip(trip.id);
+      if (shared) leaveTrip(trip.id); else deleteTrip(trip.id);
     });
     list.appendChild(li);
   });
   return data;
+}
+
+async function leaveTrip(id) {
+  if (!confirm('이 여행에서 나갈까요? 다시 들어오려면 초대 링크가 필요해요.')) return;
+  const { error } = await sb.from('trip_members').delete().eq('trip_id', id).eq('user_id', myId);
+  if (error) return showError(error);
+  refreshAll();
 }
 
 async function deleteTrip(id) {
@@ -145,6 +156,7 @@ async function signedUrls(paths) {
 async function start() {
   const user = await requireLogin();
   if (!user) return;
+  myId = user.id;
   const { data } = await sb.from('users').select('nickname').eq('id', user.id).single();
   document.getElementById('nav-user').textContent = (data ? data.nickname : user.email) + '님';
   refreshAll();

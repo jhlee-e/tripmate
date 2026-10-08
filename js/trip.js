@@ -6,20 +6,24 @@
 
 const DAY_COLORS = ['#2f8f7e', '#e07a2f', '#3b6fd8', '#b8437a', '#7a5cc4', '#c49a1a', '#4a8a2a'];
 let map = null;
+const current = { plan: null, timeline: null };   // 파일 저장(export.js)에 넘길 지금 일정
 
 async function start() {
   const trip = await loadTripFromUrl();
   const status = document.getElementById('status');
   if (!trip) { status.textContent = '여행 정보를 찾을 수 없어요.'; return; }
+  const role = await tripRole(trip);   // 'owner' | 'editor' | 'viewer' (친구에게 공유받은 여행이면 editor·viewer)
+  setupTripShare(trip, role);          // 함께 여행할 친구 (js/share.js)
   document.getElementById('title').textContent = trip.region ? trip.region + ' 여행' : '여행 정보';
   document.getElementById('subtitle').textContent = tripTitle(trip) + ' (' + trip.days + '일)';
-  renderInfo(trip);
+  renderInfo(trip, role);
   status.textContent = '';
   document.getElementById('trip-layout').hidden = false;
 
   // 준비물 (다른 여행 목록은 불러오기용)
   const others = await sb.from('trips').select('id,start_date,end_date,region').neq('id', trip.id).order('start_date');
-  setupChecklist(trip.id, others.data || []);
+  const checklist = setupChecklist(trip.id, others.data || [], role === 'viewer');
+  if (role === 'viewer') document.querySelector('.suggest-box').hidden = true;
 
   // 일정
   try {
@@ -29,21 +33,26 @@ async function start() {
       ensureScores(places, trip);
       plan = await loadSavedPlan(trip, places);
     }
-    setupMemories(trip, plan);   // 일정이 없어도 후기·사진은 쓸 수 있음 (공개는 일정이 있어야 가능)
+    setupMemories(trip, plan, role);   // 일정이 없어도 후기·사진은 쓸 수 있음 (공개는 일정이 있어야 가능)
+    // 추천 준비물: 체크리스트를 다 불러온 뒤, 이미 담은 것은 빼고 보여 줌 (보기 전용이면 위에서 숨김)
+    if (role !== 'viewer') checklist.loaded.then(function () {
+      return setupPackingSuggestions(trip, plan, checklist.add, checklist.items);
+    }).then(function (sg) { checklist.onChange = sg.refresh; }).catch(showError);
     if (!plan) {
       document.getElementById('no-plan-card').hidden = false;
       document.getElementById('recommend-link').href = 'result.html?trip=' + trip.id;
       return;
     }
     const timeline = computeTimeline(trip, plan);
+    current.plan = plan; current.timeline = timeline;
     renderCost(trip, plan, timeline);
     renderSchedule(trip, plan, timeline);
     document.getElementById('map-card').hidden = false;
-    kakao.maps.load(function () { renderMap(timeline); });
+    kakao.maps.load(function () { renderMap(timeline, trip); });
   } catch (e) { showError(e); }
 }
 
-function renderInfo(trip) {
+function renderInfo(trip, role) {
   const rows = [
     ['날짜', trip.start_date + ' ~ ' + trip.end_date + ' (' + trip.days + '일)'],
     ['인원', peopleText(trip) + (trip.days > 1 ? ' · 방 ' + (trip.rooms || 1) + '개' : '')],
@@ -59,14 +68,30 @@ function renderInfo(trip) {
   }).join('');
 
   const buttons = document.getElementById('trip-buttons');
+  const canEdit = role !== 'viewer', owner = role === 'owner';
   buttons.innerHTML =
-    (trip.region ? '<a class="small-btn" href="detail.html?trip=' + trip.id + '">✏️ 일정 수정하기</a>' : '') +
-    '<a class="small-btn" href="result.html?trip=' + trip.id + '">' + (trip.region ? '여행지 다시 추천받기' : '여행지 추천받기') + '</a>' +
-    '<button type="button" class="small-btn danger" id="delete-btn">여행 삭제</button>';
+    (trip.region && canEdit ? '<a class="small-btn" href="detail.html?trip=' + trip.id + '">✏️ 일정 수정하기</a>' : '') +
+    (canEdit ? '<a class="small-btn" href="result.html?trip=' + trip.id + '">' + (trip.region ? '여행지 다시 추천받기' : '여행지 추천받기') + '</a>' : '') +
+    '<button type="button" class="small-btn" id="pdf-btn">📄 PDF로 저장</button>' +
+    '<button type="button" class="small-btn" id="xlsx-btn">📊 엑셀로 저장</button>' +
+    '<button type="button" class="small-btn danger" id="delete-btn">' + (owner ? '여행 삭제' : '이 여행에서 나가기') + '</button>';
+  document.getElementById('pdf-btn').addEventListener('click', function () { exportPdf(trip); });
+  document.getElementById('xlsx-btn').addEventListener('click', async function () {
+    this.disabled = true;
+    try { await exportXlsx(trip, current.plan, current.timeline); showError(null); } catch (e) { showError(e); }
+    this.disabled = false;
+  });
   document.getElementById('delete-btn').addEventListener('click', async function () {
-    if (!confirm('이 여행을 삭제할까요? 일정과 준비물도 함께 지워집니다.')) return;
-    const { error } = await sb.from('trips').delete().eq('id', trip.id);
-    if (error) return showError(error);
+    if (owner) {
+      if (!confirm('이 여행을 삭제할까요? 일정과 준비물도 함께 지워지고, 함께하는 친구들도 더 이상 볼 수 없어요.')) return;
+      const { error } = await sb.from('trips').delete().eq('id', trip.id);
+      if (error) return showError(error);
+    } else {
+      if (!confirm('이 여행에서 나갈까요? 다시 들어오려면 초대 링크가 필요해요.')) return;
+      const { data } = await sb.auth.getUser();
+      const { error } = await sb.from('trip_members').delete().eq('trip_id', trip.id).eq('user_id', data.user.id);
+      if (error) return showError(error);
+    }
     location.replace('record.html');
   });
 }
@@ -87,6 +112,7 @@ function renderCost(trip, plan, t) {
   document.getElementById('budget-legend').innerHTML = parts.map(function (p) {
     return '<li><span class="dot ' + p[2] + '"></span>' + p[0] + ' ' + won(p[1]) + '</li>';
   }).join('') + '<li><span class="dot line"></span>최대 예산</li>';
+  document.getElementById('daily-cost').innerHTML = dailyCostTable(trip, t);
   document.getElementById('cost-card').hidden = false;
 }
 
@@ -129,7 +155,8 @@ function renderSchedule(trip, plan, t) {
 }
 
 // 지도: 모든 날을 날짜별 색으로 (집은 멀어서 빼고 숙소·장소만)
-function renderMap(t) {
+function renderMap(t, trip) {
+  let km = 0, failed = 0;   // 날짜별 도로 거리 합계, 도로 경로를 못 받은 날 수
   map = new kakao.maps.Map(document.getElementById('detail-map'), { center: new kakao.maps.LatLng(36.3, 127.8), level: 9 });
   map.addControl(new kakao.maps.ZoomControl(), kakao.maps.ControlPosition.RIGHT);
   const bounds = new kakao.maps.LatLngBounds();
@@ -152,7 +179,11 @@ function renderMap(t) {
     if (!day.startPoint.isHome) pin(day.startPoint, '숙', true);
     day.items.forEach(function (it) { pin(it.stop.p, it.stop.meal ? '🍴' : (di + 1) + '-' + (++n), false); });
     if (!day.endPoint.isHome) path.push(new kakao.maps.LatLng(day.endPoint.lat, day.endPoint.lng));
-    new kakao.maps.Polyline({ path: path, strokeWeight: 4, strokeColor: color, strokeOpacity: 0.75 }).setMap(map);
+    // 날짜별 경로선: 실제 도로를 따라 (js/road-route.js — 불러오기 전·실패 시에는 점선 직선)
+    drawRoute(map, path.map(function (ll) { return { lat: ll.getLat(), lng: ll.getLng() }; }), color, function (ok, info) {
+      if (!ok) failed++; else km += info.distance;
+      document.getElementById('route-note').textContent = routeNoteText(trip.transport, failed === 0, failed ? null : { distance: km });
+    });
   });
   map.setBounds(bounds, 40, 40, 40, 40);
 }
@@ -164,7 +195,8 @@ function showPlace(p) {
     '<h3>' + esc(p.name) + '</h3>' +
     '<p class="helper-text muted">' + esc(p.type === '식당' ? cuisineOf(p) : (p.categoryName || p.type)) + (p.address ? ' · ' + esc(p.address) : '') + '</p>' +
     '<p class="place-links">' + (p.link ? '<a href="' + esc(p.link) + '" target="_blank" rel="noopener">카카오맵에서 보기</a>' : '') +
-    '<a href="' + esc(route) + '" target="_blank" rel="noopener">카카오맵 길찾기</a></p>';
+    '<a href="' + esc(route) + '" target="_blank" rel="noopener">카카오맵 길찾기</a>' +
+      '<a href="' + esc(blogSearchUrl(p)) + '" target="_blank" rel="noopener">블로그 후기 보기</a></p>';
 }
 
 start();

@@ -6,11 +6,15 @@ const PHOTO_BUCKET = 'trip-photos';
 const PHOTO_MAX_SIDE = 1600;     // 올리기 전에 긴 변을 1600px로 줄임 (휴대폰 원본 5~10MB → 수백 KB)
 const PHOTO_NEAR_KM = 1;         // 사진 GPS에서 이 거리 안에 일정 장소가 있으면 그 장소로 미리 골라 둠
 
-async function setupMemories(trip, plan) {
+// role: 'owner'이면 공개 설정까지, 함께하는 친구('editor'·'viewer')는 자기 후기·사진만 (공개 설정은 만든 사람만)
+async function setupMemories(trip, plan, role) {
   const places = planPlaces(plan);
-  setupShare(trip, plan);
-  setupReviews(trip, places);
-  setupPhotos(trip, places);
+  const { data: auth } = await sb.auth.getUser();
+  const me = auth.user.id;
+  if (role && role !== 'owner') document.getElementById('share-card').hidden = true;
+  else setupShare(trip, plan);
+  setupReviews(trip, places, me);
+  setupPhotos(trip, places, me);
 }
 
 // 일정에 들어간 장소 목록 (같은 장소는 한 번, 숙소 조식처럼 장소 파일에 없는 가짜 장소는 뺌, 숙소는 맨 끝)
@@ -104,8 +108,9 @@ async function setupShare(trip, plan) {
 }
 
 // ---------- 2. 후기: 여행 전체(별점 필수 + 글) · 장소별 한줄평(별점 선택 + 짧은 글) ----------
-async function setupReviews(trip, places) {
-  const res = await sb.from('reviews').select('*').eq('trip_id', trip.id);
+async function setupReviews(trip, places, me) {
+  // 후기는 사람마다 따로: 함께 간 친구의 후기는 섞지 않고 내 것만 불러옴
+  const res = await sb.from('reviews').select('*').eq('trip_id', trip.id).eq('user_id', me);
   if (res.error) return showError(res.error);
   const byPlace = {};
   let tripReview = null;
@@ -173,9 +178,7 @@ async function setupReviews(trip, places) {
 // ---------- 3. 사진 ----------
 // 사진 속 GPS가 있으면 그 위치를 쓰고 가까운 일정 장소를 미리 골라 둠, 없으면 일정 장소를 꼭 골라야 함
 
-async function setupPhotos(trip, places) {
-  const { data: auth } = await sb.auth.getUser();
-  const userId = auth.user.id;
+async function setupPhotos(trip, places, userId) {
   const fileInput = document.getElementById('photo-input');
   const pendingBox = document.getElementById('photo-pending');
   const uploadBtn = document.getElementById('photo-upload');
@@ -267,6 +270,12 @@ async function setupPhotos(trip, places) {
     document.getElementById('photo-empty').hidden = data.length > 0;
     if (!data.length) return;
     const urls = await signedUrls(data.map(function (r) { return r.url; }));
+    const names = {};   // 친구 사진에 붙일 닉네임
+    const others = data.map(function (r) { return r.user_id; }).filter(function (id, i, a) { return id !== userId && a.indexOf(id) === i; });
+    if (others.length) {
+      const u = await sb.from('users').select('id,nickname').in('id', others);
+      (u.data || []).forEach(function (x) { names[x.id] = x.nickname; });
+    }
     data.forEach(function (r) {
       const fig = document.createElement('figure');
       fig.className = 'photo-item';
@@ -276,6 +285,12 @@ async function setupPhotos(trip, places) {
       fig.querySelector('a').href = urls[r.url] || '#';
       fig.querySelector('img').src = urls[r.url] || '';
       fig.querySelector('.pi-place').textContent = r.place_name || (r.lat != null ? '📍 사진 위치' : '장소 없음');
+      if (r.user_id !== userId) {   // 함께 간 친구가 올린 사진: 볼 수만 있음 (공개·삭제는 올린 사람만)
+        fig.querySelector('figcaption').innerHTML = '<span class="pi-place"></span><span class="muted">' + esc(names[r.user_id] || '친구') + '님 사진</span>';
+        fig.querySelector('.pi-place').textContent = r.place_name || '📍 사진 위치';
+        grid.appendChild(fig);
+        return;
+      }
       const box = fig.querySelector('input');
       box.checked = r.is_public;
       box.addEventListener('change', async function () {

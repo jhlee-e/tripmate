@@ -589,13 +589,17 @@ function computeTimeline(trip, plan) {
     const endPoint = lastDay || !plan.lodging ? dep : plan.lodging;
     let pos = startPoint, clock = day.start, active = 0;
     const items = [];
+    // 일일 경비: 그날 밤 숙박비(마지막 날 제외) + 그날 식비·입장료·교통비
+    const dc = { lodging: plan.lodging && !lastDay ? plan.lodging.cost * (trip.rooms || 1) : 0, food: 0, admission: 0, transport: 0, total: 0 };
 
     function leg(to) {
       const intercity = !!(pos.isHome || to.isHome);
       const km = distanceKm(pos, to);
       const min = travelMin(km, trip.transport, intercity);
+      const fare = legCost(km, trip.transport, intercity, pay);
       distance += intercity && trip.transport === '자동차' ? km * INTERCITY.자동차.road : km;
-      cost.transport += legCost(km, trip.transport, intercity, pay);
+      cost.transport += fare;
+      dc.transport += fare;
       return { km: km, min: min };
     }
 
@@ -608,7 +612,7 @@ function computeTimeline(trip, plan) {
       if (stop.p.breakfastOf != null) {   // 숙소 조식: 어린이는 성인의 50%, 유아 0원
         c = (stop.p.cost || 0) * (pay - (trip.children || 0) * (1 - BREAKFAST.childRate));
       }
-      if (stop.p.type === '식당') cost.food += c; else cost.admission += c;
+      if (stop.p.type === '식당') { cost.food += c; dc.food += c; } else { cost.admission += c; dc.admission += c; }
       if (!stop.meal) { active += mv.min + stop.stay; visits++; } else active += mv.min;
       items.push({ stop: stop, index: i, moveMin: mv.min, moveKm: mv.km, arrive: arrive, begin: begin, end: end, cost: c });
       clock = end;
@@ -620,7 +624,8 @@ function computeTimeline(trip, plan) {
     let departMin = clock;
     if (!endPoint.isHome) departMin = Math.max(clock, (plan.lodgingArrive || LODGING_ARRIVE) - back.min);
     const endMin = departMin + back.min;
-    return { start: day.start, startPoint: startPoint, endPoint: endPoint, items: items, departMin: departMin,
+    dc.total = dc.lodging + dc.food + dc.admission + dc.transport;
+    return { cost: dc, start: day.start, startPoint: startPoint, endPoint: endPoint, items: items, departMin: departMin,
              freeMin: departMin - clock, backMin: back.min, backKm: back.km, endMin: endMin, activeMin: active, over: active > limit };
   });
 
