@@ -190,6 +190,7 @@ function renderMap(t, trip) {
     drawRoute(map, pts, color, function (ok, info) {
       if (!ok) failed++; else km += info.distance || 0;
       // 대중교통 경로가 없는 구간은 걷기로 보고 시간표·비용을 다시 계산 (지도는 이미 걷기로 그려짐)
+      if (ok && info.learned) autoWalked = true;   // 실제 대중교통 시간을 받았으면 시간표·비용 다시 계산
       if (ok && info.legs) info.legs.forEach(function (leg, i) {
         const ref = refs[i];
         if (leg.noTransit && ref && !ref.legMode && !ref.autoWalk) { ref.autoWalk = true; autoWalked = true; }

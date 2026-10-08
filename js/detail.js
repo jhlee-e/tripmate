@@ -189,7 +189,7 @@ function renderDay() {
 function moveLine(mode, min, km, dest, extra, ref) {
   const label = mode === 'walk' ? '🚶 걷기' : mode === 'transit' ? '🚌 대중교통' : (trip.transport === '자동차' ? '🚗 자동차' : '🚆 ' + trip.transport);
   const leg = mode && dest ? legInfo[pointKey(dest)] : null;
-  const ride = leg && leg.mode === 'transit' ? ' · ' + esc(leg.summary) + ' 약 ' + Math.max(1, Math.round(leg.time / 60)) + '분' : '';
+  const ride = leg && leg.mode === 'transit' ? ' · ' + esc(leg.summary) : '';
   const none = (leg && leg.noTransit) || (ref && ref.autoWalk && !ref.legMode) ? ' · 대중교통 경로가 없어 걷기' : '';
   const far = mode === 'walk' && km >= 2 ? ' <span class="over-text">⚠ 걷기엔 먼 거리 (택시 고려)</span>' : '';
   return '<p class="tl-move">↓ ' + label + ' ' + durationText(min) + ' · ' + km.toFixed(1) + 'km' + ride + none + (extra || '') + far +
@@ -472,16 +472,50 @@ function renderMap() {
   const route = drawRoute(map, pts, color, function (ok, info) {
     note.textContent = routeNoteText(trip.transport, ok, info);
     if (!ok || !info || !info.legs) return;
+    if (replaceUnreachable(info.legs, pts, refs)) return;   // 바꾼 장소가 있으면 거기서 다시 그림
     let changed = false;
     info.legs.forEach(function (leg, i) {
       const ref = refs[i];
       if (leg.noTransit && ref && !ref.legMode && !ref.autoWalk) { ref.autoWalk = true; changed = true; }
     });
-    if (changed) refresh(false);
+    if (changed || info.learned) refresh(false);   // 걷기로 바뀐 구간이 있거나 실제 대중교통 시간을 새로 받았으면 시간표 다시 계산
     else renderDay();   // 구간 안내(🚌 202 → …)를 타임라인에 표시
   }, trip.transport, modes);
   mapObjects.push({ setMap: function () { route.remove(); } });
   if (pts.length) map.setBounds(bounds, 40, 40, 40, 40);
+}
+
+// ---------- 대중교통으로 가기 어려운 장소 바꾸기 ----------
+// 이재훈 결정 (2026-10-09): 대중교통 여행이면, 대중교통 경로가 없고 걷기에도 먼(2km 이상) 장소는 추천하지 않음
+// 입력: 길찾기 결과(구간들), 경로 점, 각 점의 stop / 출력: 그런 장소를 같은 종류의 다른 장소로 바꾸고 true (없으면 false)
+//   새로 추천받은 일정(주소에 ?plan=)에서만 자동으로 바꿈. 저장된 일정은 사용자가 고른 것이라 바꾸지 않고 경고만 표시
+//   사용자가 걷기/대중교통을 직접 고른 구간, 숙소로 가는 구간은 건드리지 않음
+const FAR_WALK_KM = 2;
+const unreachable = new Set();   // 이번 화면에서 '대중교통 없음 + 먼 거리'로 확인된 장소 id
+let replaceRounds = 0;
+function replaceUnreachable(legs, pts, refs) {
+  if (trip.transport !== '대중교통' || !param('plan') || replaceRounds >= 6) return false;
+  const used = usedIds(), notes = [];
+  legs.forEach(function (leg, i) {
+    const stop = refs[i];
+    if (!leg.noTransit || !stop || !stop.p || stop.legMode || distanceKm(pts[i], pts[i + 1]) < FAR_WALK_KM) return;
+    unreachable.add(stop.p.id);
+    const prev = pts[i];
+    const pool = stop.p.type === '식당' ? mealRestaurants() : places.filter(function (p) { return p.type === '명소' && usable(p, trip); });
+    const cand = pool.filter(function (p) { return !used.has(p.id) && !unreachable.has(p.id); })
+      .sort(function (a, b) { return (b._s || 0) / (1 + distanceKm(prev, b) / 2) - (a._s || 0) / (1 + distanceKm(prev, a) / 2); })[0];
+    if (!cand) return;
+    notes.push(stop.p.name + ' → ' + cand.name);
+    used.add(cand.id);
+    stop.p = cand;
+    if (!stop.meal) stop.stay = cand.stayMin;
+    delete stop.autoWalk;
+  });
+  if (!notes.length) return false;
+  replaceRounds++;
+  refresh(true);
+  document.getElementById('save-msg').textContent = '대중교통으로 가기 어려운 곳을 바꿨어요: ' + notes.join(', ');
+  return true;
 }
 
 function panTo(p) { if (map) map.panTo(new kakao.maps.LatLng(p.lat, p.lng)); }

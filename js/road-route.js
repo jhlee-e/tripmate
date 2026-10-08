@@ -88,8 +88,14 @@ function drawRoute(map, points, color, onResult, transport, modes) {
     fetchRoadPath(points, '/api/transit', modes).then(function (j) {
       if (handle.removed || !j.legs || !j.legs.length) return;
       clear();
+      let learned = 0;   // 이번에 새로 알게 된 실제 대중교통 구간 수 → 화면이 시간표를 다시 계산할지 판단
       j.legs.forEach(function (leg, i) {
         legInfo[pointKey(points[i + 1])] = leg;
+        if (typeof transitLegs !== 'undefined' && (leg.mode === 'transit' || leg.noTransit)) {
+          const k = legKey(points[i], points[i + 1]);
+          if (!transitLegs[k]) learned++;
+          transitLegs[k] = { time: leg.time, fare: leg.fare, noTransit: !!leg.noTransit };
+        }
         if (leg.mode === 'walk') {
           // 걷기 구간: 먼저 직선 점선, 걷는 길을 받으면 그 길로 바꿈
           const tmp = line([[points[i].lat, points[i].lng], [points[i + 1].lat, points[i + 1].lng]], WALK_STYLE);
@@ -106,7 +112,8 @@ function drawRoute(map, points, color, onResult, transport, modes) {
           else line(st.path, { strokeWeight: st.type === 'SUBWAY' ? 6 : 5, strokeColor: color, strokeOpacity: 0.85 });
         });
       });
-      if (onResult) onResult(true, j);
+      // 같은 결과(j)는 다음 그리기 때 재사용되므로 j에 직접 적지 않고 복사본에 learned를 담아 넘김
+      if (onResult) onResult(true, Object.assign({}, j, { learned: learned }));
     }).catch(function (e) {
       console.warn('대중교통 경로를 불러오지 못해 직선으로 표시해요:', e.message);
       if (onResult) onResult(false, null);

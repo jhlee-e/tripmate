@@ -64,6 +64,12 @@ function localMode(km, transport, intercity, stop) {
   return km < WALK_KM ? 'walk' : 'transit';
 }
 
+// 카카오 대중교통 경로에서 받아 온 실제 구간 정보 (이재훈 결정 2026-10-09: 대중교통 시간은 카카오가 알려 주는 대로)
+//   키: '출발위도,경도>도착위도,경도' → { time(초), fare(원, 1인), noTransit }
+//   js/road-route.js가 길찾기 결과를 받을 때 채우고, computeTimeline이 평균 속도 대신 이 값을 씀 (아직 없으면 평균 속도로 추정)
+const transitLegs = {};
+function legKey(a, b) { return a.lat.toFixed(5) + ',' + a.lng.toFixed(5) + '>' + b.lat.toFixed(5) + ',' + b.lng.toFixed(5); }
+
 function travelMin(km, transport, intercity, mode) {
   if ((mode || localMode(km, transport, intercity)) === 'walk') return Math.round(km / WALK_KMH * 60);
   const local = km / LOCAL_KMH[transport] * 60;
@@ -609,12 +615,17 @@ function computeTimeline(trip, plan) {
       const intercity = !!(pos.isHome || to.isHome);
       const km = distanceKm(pos, to);
       const mode = localMode(km, trip.transport, intercity, stop);   // 'walk' | 'transit' | null(자동차·지역 간 이동)
-      const min = travelMin(km, trip.transport, intercity, mode);
-      const fare = legCost(km, trip.transport, intercity, pay, mode);
+      let min = travelMin(km, trip.transport, intercity, mode);
+      let fare = legCost(km, trip.transport, intercity, pay, mode);
+      const real = mode === 'transit' ? transitLegs[legKey(pos, to)] : null;   // 카카오가 알려 준 실제 시간·요금
+      if (real && !real.noTransit) {
+        min = Math.round(real.time / 60);
+        fare = (real.fare || LOCAL_FARE) * pay;
+      }
       distance += intercity && trip.transport === '자동차' ? km * INTERCITY.자동차.road : km;
       cost.transport += fare;
       dc.transport += fare;
-      return { km: km, min: min, mode: mode };
+      return { km: km, min: min, mode: mode, real: !!(real && !real.noTransit) };
     }
 
     day.stops.forEach(function (stop, i) {
@@ -628,7 +639,7 @@ function computeTimeline(trip, plan) {
       }
       if (stop.p.type === '식당') { cost.food += c; dc.food += c; } else { cost.admission += c; dc.admission += c; }
       if (!stop.meal) { active += mv.min + stop.stay; visits++; } else active += mv.min;
-      items.push({ stop: stop, index: i, moveMin: mv.min, moveKm: mv.km, moveMode: mv.mode, arrive: arrive, begin: begin, end: end, cost: c });
+      items.push({ stop: stop, index: i, moveMin: mv.min, moveKm: mv.km, moveMode: mv.mode, moveReal: mv.real, arrive: arrive, begin: begin, end: end, cost: c });
       clock = end;
       pos = stop.p;
     });
@@ -705,6 +716,6 @@ async function loadSavedPlan(trip, places) {
 
 // node로 시험할 때 쓰도록 내보내기 (브라우저에서는 무시됨)
 if (typeof module !== 'undefined') {
-  module.exports = { localMode, WALK_KM, TEMPO, rankRegions, buildPlans, buildPlan, preparePool, computeTimeline, distanceKm,
+  module.exports = { transitLegs, legKey, localMode, WALK_KM, TEMPO, rankRegions, buildPlans, buildPlan, preparePool, computeTimeline, distanceKm,
     travelMin, budgetCaps, hhmm, PLAN_INFO, isChain, LODGING_ARRIVE, SEA_REGIONS, foodKind, cuisineOf, pickRestaurant, ensureScores, estimateMinCost, fitBudget, syncBreakfast, breakfastPlace, lodgingBreakfast };
 }
