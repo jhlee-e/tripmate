@@ -12344,5 +12344,205 @@
   "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
   "q": "B",
   "solo": true
+ },
+ "134992": {
+  "verdict": "keep",
+  "reason": "평점 3.7, 낙지 요리, 신선도 불만 후기 1건",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "D",
+  "group": true
+ },
+ "2849725": {
+  "verdict": "keep",
+  "reason": "후기 21건, 벚꽃길 카페, 반려견 동반 가능",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "pet": true
+ },
+ "1828958": {
+  "verdict": "keep",
+  "reason": "월요일 휴무, 한우 정육식당, 점심 대기",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "group": true,
+  "waitMin": 10,
+  "closed": [
+   "월"
+  ],
+  "open": "11:00",
+  "close": "20:30"
+ },
+ "2901392": {
+  "verdict": "keep",
+  "reason": "정육점 구매 후 상차림비, 21:30 마감",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "group": true,
+  "kids": true,
+  "open": "11:30",
+  "close": "21:30"
+ },
+ "2837268": {
+  "verdict": "keep",
+  "reason": "시장 안 순대국밥, 이른 아침 영업, 시장 주차장",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "solo": true,
+  "open": "07:00",
+  "close": "16:00"
+ },
+ "2916454": {
+  "verdict": "keep",
+  "reason": "한우 정육식당, 갈비탕 포장 불만 일부",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "group": true,
+  "open": "11:00",
+  "close": "21:00"
+ },
+ "2850185": {
+  "verdict": "keep",
+  "reason": "능이 백숙·오리, 불친절 후기 일부",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "group": true,
+  "open": "11:00",
+  "close": "21:30"
+ },
+ "134644": {
+  "verdict": "keep",
+  "reason": "일요일 휴무, 송이돌솥밥, 좌식, 주말 대기 30분",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "group": true,
+  "waitMin": 30,
+  "closed": [
+   "일"
+  ],
+  "open": "11:00",
+  "close": "19:00"
+ },
+ "134374": {
+  "verdict": "none",
+  "reason": "구글 후기 없음",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)"
+ },
+ "2834343": {
+  "verdict": "keep",
+  "reason": "후기 24건, 오리고기, 위생 불만 1건",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "kids": true,
+  "group": true
+ },
+ "2531357": {
+  "verdict": "keep",
+  "reason": "한옥 숙소, 셀프 조식, 방음 약함, 대중교통 불편",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "parking": true
+ },
+ "2719855": {
+  "verdict": "keep",
+  "reason": "후기 19건, 소박한 한옥, 욕실 협소, 주차장 2곳",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C",
+  "parking": true
+ },
+ "1785294": {
+  "verdict": "keep",
+  "reason": "오동도 앞, 조식 비쌈, 청소 불만 일부",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "kids": true,
+  "parking": true
+ },
+ "2753311": {
+  "verdict": "keep",
+  "reason": "평점 3.8, 가격 높고 양 적다는 의견",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C",
+  "group": true,
+  "open": "11:00",
+  "close": "22:00"
+ },
+ "850880": {
+  "verdict": "keep",
+  "reason": "해운대 고깃집",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "group": true,
+  "open": "11:30",
+  "close": "21:30"
+ },
+ "2925289": {
+  "verdict": "keep",
+  "reason": "일요일 휴무, 16시 마감, 장칼국수, 대기 30분",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "A",
+  "solo": true,
+  "waitMin": 30,
+  "closed": [
+   "일"
+  ],
+  "open": "11:00",
+  "close": "16:00"
+ },
+ "132815": {
+  "verdict": "keep",
+  "reason": "대기 줄 빠르게 회전, 경복궁 인근",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "solo": true,
+  "waitMin": 20,
+  "open": "10:00",
+  "close": "22:00"
+ },
+ "2872401": {
+  "verdict": "keep",
+  "reason": "쌈 무한 리필, 2인 기준 쌈밥 정식",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "B",
+  "group": true,
+  "open": "10:00",
+  "close": "20:00"
+ },
+ "2734941": {
+  "verdict": "keep",
+  "reason": "평점 3.5(938건), 게장 2인 세트, 가격 불만",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "D",
+  "minPeople": 2,
+  "open": "09:00",
+  "close": "20:00"
+ },
+ "2777941": {
+  "verdict": "keep",
+  "reason": "평점 3.9, 낙지 요리",
+  "checked": "2026-10-08",
+  "how": "구글 지도 평점·후기 5개·영업시간 확인 (Claude)",
+  "q": "C",
+  "group": true,
+  "open": "10:40",
+  "close": "21:40"
  }
 }
