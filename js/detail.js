@@ -214,7 +214,8 @@ function bindModeButtons(el, ref) {
   });
 }
 
-// 후기 조사 정보 배지: 품질 등급·혼밥·최소 인원·주차·아이 동반·주의할 점
+// 후기 조사 정보 배지: 품질 등급·혼밥·최소 인원·주차·아이·반려동물·단체·대기·조사 메모
+// 입력: 장소 p / 출력: 배지 HTML 문자열 (정보가 없으면 '')
 function infoBadges(p) {
   const i = p.info;
   if (!i) return '';
@@ -222,11 +223,15 @@ function infoBadges(p) {
   if (i.q) b.push({ A: '👍 평이 아주 좋음', B: '평이 좋음', C: '평이 보통', D: '평이 엇갈림' }[i.q]);
   if (i.solo === true && p.type === '식당') b.push('혼밥 가능');
   if (i.minPeople) b.push(i.minPeople + '인부터');
-  if (i.parking === true) b.push('주차 가능');
-  if (i.parking === false) b.push('주차 어려움');
+  const park = parkingOf(i), parkNote = typeof i.parking === 'string' ? ' (' + i.parking + ')' : '';
+  if (park === true) b.push('주차 가능' + parkNote);
+  if (park === false) b.push('주차 어려움' + parkNote);
   if (i.kids) b.push('아이와 가기 좋음');
   if (i.pet) b.push('반려동물 가능');
-  (i.issues || []).forEach(function (x) { b.push('⚠ ' + x); });
+  if (i.group) b.push('단체 가능');
+  if (i.waitMin) b.push('대기 약 ' + i.waitMin + '분');
+  // 조사 메모: 주의할 점은 ⚠, 참고·장점은 ℹ (recommend.js의 issueKind로 구분)
+  (i.issues || []).forEach(function (x) { b.push((issueKind(x) === 'note' ? 'ℹ ' : '⚠ ') + x); });
   return b.length ? '<p class="info-badges">' + b.map(function (x) { return '<span>' + esc(x) + '</span>'; }).join('') + '</p>' : '';
 }
 

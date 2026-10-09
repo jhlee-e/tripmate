@@ -39,6 +39,7 @@ create table public.trips (
   transport         text not null,
   tags              text[] not null,          -- 선택 순서대로, 0번이 1순위
   tempo             text not null,
+  pet               boolean not null default false,   -- 반려동물 동반 (2026-10-10 추가, sql/add_pet.sql)
   region            text,                     -- 5차시: 고른 여행지
   plan_type         text,                     -- 5차시: 'A' | 'B' | 'C'
   total_cost        int,                      -- 5차시: 일정 총비용

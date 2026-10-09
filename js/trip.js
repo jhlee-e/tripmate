@@ -55,7 +55,7 @@ async function start() {
 function renderInfo(trip, role) {
   const rows = [
     ['날짜', trip.start_date + ' ~ ' + trip.end_date + ' (' + trip.days + '일)'],
-    ['인원', peopleText(trip) + (trip.days > 1 ? ' · 방 ' + (trip.rooms || 1) + '개' : '')],
+    ['인원', peopleText(trip) + (trip.days > 1 ? ' · 방 ' + (trip.rooms || 1) + '개' : '') + (trip.pet ? ' · 반려동물 동반' : '')],
     ['출발지', trip.departure_address || '-'],
     ['이동 수단', trip.transport],
     ['템포', trip.tempo],

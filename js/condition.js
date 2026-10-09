@@ -160,6 +160,7 @@ function collectCondition() {
     budgetMax: Number(document.getElementById('budget-max').value),
     people: readPeople(),         // { infants, children, teens, adults, total }
     rooms: Number(document.getElementById('rooms').value),
+    pet: document.getElementById('with-pet').checked,   // 반려동물 동반 (2026-10-10 추가)
     departure: departure,         // { address, lat, lng } — departure.js에서 만든 값
     transport: getSelectedValue('transport-group'),
     tags: selectedTags.slice(),   // 복사본 (선택 순서 유지)
@@ -234,7 +235,7 @@ async function handleSubmit(event) {
     transport: condition.transport,
     tags: condition.tags,
     tempo: condition.tempo
-  }, copyTripFields())).select().single();
+  }, condition.pet ? { pet: true } : {}, copyTripFields())).select().single();
   button.disabled = false;
 
   if (error) {

@@ -260,23 +260,61 @@ function hoursIssue(p, dow, begin, end) {
   if (end != null && i.close && end > hm(i.close) && hm(i.close) > hm(i.open || '00:00')) return i.close + ' 영업 종료 전에 나와야 해요';
   return '';
 }
-// 품질 등급·주차·아이 동반을 점수 배수로 (이재훈 요청: 인기 말고 다른 요소도 판단에 넣기 — 배수 값은 Claude 판단)
+// 주차 정보 하나로 맞추기: 조사 때 true/false 또는 '넓음'·'협소'·'골목 주차' 같은 글로 적혀 있음
+// 입력: p.info / 출력: true(주차 가능) · false(주차 어려움) · null(정보 없음)
+function parkingOf(i) {
+  const v = i && i.parking;
+  if (v === true || v === false) return v;
+  if (typeof v !== 'string' || !v) return null;
+  return /없음|협소|골목|어려|불편|도로변/.test(v) ? false : true;
+}
+
+// 조사 메모(issues) 한 줄을 세 종류로 나눔 — '오션뷰'·'조식 제공'처럼 좋은 점도 섞여 있어서 (분류 기준은 Claude 판단)
+// 입력: 글 한 줄 / 출력: 'unverified'(후기 부족) · 'caution'(주의할 점) · 'note'(참고·장점)
+const UNVERIFIED_RE = /후기.{0,5}(없음|적음|부실)/;
+const INFO_GAP_RE = /정보 없음|영업시간 확인 필요|표기\(확인 필요\)|확인 필요\)$/;
+const PLUS_RE = /저렴|가성비 (좋|평 좋)|호평|넉넉|넓음|무료|가능|제공|오션뷰|바다 전망|전망|친절 평|인기/;
+const CAUTION_RE = /불만|불친절|노후|비쌈|비싼|가격|위생|청결|혼잡|대기|줄 서|소음|방음|엇갈|실망|늦게|좁|어려|불편|부족|적다|적음|짜다|간 센|비린|냄새|외풍|무뚝뚝|지적|없음|주의|멂|외진|조기 마감|소진|휴무|만 영업|분부터|필요|추움|파손|벌레|곰팡이|낡|작다|달다|오래된|거부|환불|맵|매운맛|강풍|협소|불가|호객|품절|추가 요금|화장실 외부|공용 화장실|다는 후기/;
+function issueKind(text) {
+  if (UNVERIFIED_RE.test(text)) return 'unverified';
+  if (INFO_GAP_RE.test(text)) return 'note';
+  if (PLUS_RE.test(text) && !/불만|엇갈|비싼|비쌈/.test(text)) return 'note';
+  if (CAUTION_RE.test(text)) return 'caution';
+  return 'note';
+}
+
+// 후기 조사 결과를 점수 배수로 (이재훈 요청: 인기 말고 다른 요소도 판단에 넣기 — 배수 값은 Claude 판단)
+// 입력: 장소 p, 여행 조건 trip / 출력: 취향 점수에 곱할 수 (1이면 그대로)
 const QUALITY_MULT = { A: 1.15, B: 1.05, C: 0.95, D: 0.85 };
 function infoMultiplier(p, trip) {
   const i = p.info;
   if (!i) return 1;
   let m = QUALITY_MULT[i.q] || 1;
-  if (trip.transport === '자동차' && i.parking === true) m *= 1.05;
-  if (trip.transport === '자동차' && i.parking === false) m *= 0.9;
+  const park = parkingOf(i);
+  if (trip.transport === '자동차' && park === true) m *= 1.05;
+  if (trip.transport === '자동차' && park === false) m *= 0.9;
   if ((trip.infants || trip.children) && i.kids === true) m *= 1.05;
-  if (trip.tempo === '알차게' && i.waitMin >= 40) m *= 0.9;   // 줄이 긴 곳은 바쁜 일정에서 덜 추천
-  if (i.issues && i.issues.length) m *= 0.95;
+  if ((trip.infants || trip.children) && i.kids === false) m *= 0.85;
+  if (trip.pet && i.pet === true) m *= 1.2;                     // 반려동물 동반 (2026-10-10 이재훈 결정으로 조건 추가)
+  if (trip.pet && i.pet === false) m *= 0.7;
+  if (trip.people >= 6 && i.group === true) m *= 1.05;          // 6명 이상이면 단체석 있는 곳
+  if (trip.tempo === '알차게' && i.waitMin >= 40) m *= 0.9;      // 줄이 긴 곳은 바쁜 일정에서 덜 추천
+  const kinds = (i.issues || []).map(issueKind);
+  if (kinds.indexOf('unverified') !== -1) m *= 0.95;            // 후기가 없거나 적은 곳은 조금 낮춤 (이재훈 결정)
+  const cautions = kinds.filter(function (k) { return k === 'caution'; }).length;
+  m *= Math.max(0.88, Math.pow(0.97, cautions));                // 주의할 점 1개당 3%, 최대 12%까지만
   return m;
+}
+
+// 검색 결과 상호·주소가 달랐던 곳 (폐업·이전 가능성) — 추천에서 제외 (2026-10-10 이재훈 결정)
+function needsAddressCheck(p) {
+  return !!(p.info && p.info.issues && p.info.issues.some(function (x) { return x.indexOf('주소 확인 필요') !== -1; }));
 }
 
 // 여행에 넣을 수 있는 장소인지 (예산과 상관없는 조건)
 function usable(p, trip) {
   if (!p.recommend || isChain(p.name)) return false;
+  if (needsAddressCheck(p)) return false;
   if (p.info && p.info.minPeople && trip.people < p.info.minPeople) return false;   // 2인분부터인 곳은 1명 여행에서 제외
   if (p.info && p.info.solo === false && trip.people === 1) return false;
   if (p.audience === '10대' && !trip.teens) return false;    // 청소년 전용 공간은 청소년이 있을 때만
@@ -775,6 +813,6 @@ async function loadSavedPlan(trip, places) {
 
 // node로 시험할 때 쓰도록 내보내기 (브라우저에서는 무시됨)
 if (typeof module !== 'undefined') {
-  module.exports = { openAt, hoursIssue, dowOf, infoMultiplier, transitLegs, legKey, localMode, WALK_KM, TEMPO, rankRegions, buildPlans, buildPlan, preparePool, computeTimeline, distanceKm,
+  module.exports = { openAt, hoursIssue, dowOf, infoMultiplier, parkingOf, issueKind, needsAddressCheck, usable, transitLegs, legKey, localMode, WALK_KM, TEMPO, rankRegions, buildPlans, buildPlan, preparePool, computeTimeline, distanceKm,
     travelMin, budgetCaps, hhmm, PLAN_INFO, isChain, LODGING_ARRIVE, SEA_REGIONS, foodKind, cuisineOf, pickRestaurant, ensureScores, estimateMinCost, fitBudget, syncBreakfast, breakfastPlace, lodgingBreakfast };
 }
