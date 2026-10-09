@@ -384,13 +384,17 @@ function dishesOf(r) {
 
 // 지역 대표 먹거리·할거리 (data/signature.json — 지역마다 웹 검색으로 조사, 2026-10-10 Claude)
 // 이재훈 결정: 일정안마다 대표 먹거리 1곳 + 대표 할거리 1곳은 꼭 넣음
-// 장소 데이터에 메뉴 정보가 없어 '장소 이름에 키워드가 들어 있는지'로만 찾음 → 이름에 메뉴가 안 드러난 식당은 못 찾음
+// 찾는 방법: ① 장소 이름에 키워드가 들어 있거나 ② 그 메뉴를 판다고 웹 검색으로 확인한 식당 목록(restaurants)에 있음
+//   (장소 데이터에 메뉴 정보가 없어서 — 2026-10-10 지역별 식당 조사 추가)
 // 입력: 장소, 그 지역 대표 목록 { foods, spots } / 출력: 대표 항목 이름(예: '게국지') 또는 null
 function signatureOf(p, sig) {
   if (!sig || !p || !p.name) return null;
   const list = p.type === '식당' ? sig.foods : p.type === '명소' ? sig.spots : null;
   if (!list) return null;
-  for (const it of list) for (const k of (it.keywords || [])) if (k && p.name.indexOf(k) !== -1) return it.name;
+  for (const it of list) {
+    if (it.restaurants && it.restaurants.indexOf(p.name) !== -1) return it.name;   // 그 메뉴를 판다고 검색으로 확인한 식당 (이름에 메뉴가 없어도)
+    for (const k of (it.keywords || [])) if (k && p.name.indexOf(k) !== -1) return it.name;
+  }
   return null;
 }
 // 화면 표시용 글자: '대표 먹거리 · 게국지' (대표가 아니면 '')
