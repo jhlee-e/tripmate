@@ -143,6 +143,7 @@ function renderDay() {
           (it.hoursIssue ? '<p class="field-warning">⚠ ' + esc(it.hoursIssue) + ' — 시간을 바꾸거나 ⇄로 교체해 주세요</p>' : '') +
           infoBadges(p) +
           '<button type="button" class="tl-name link-btn"></button>' +
+          (signatureLabel(p, places.signature) ? '<span class="sig-badge">★ ' + esc(signatureLabel(p, places.signature)) + '</span>' : '') +
           '<p class="tl-meta">' + esc(isFood ? cuisineOf(p) : (p.categoryName || p.type)) + ' · ' + (it.cost ? won(it.cost) : '무료') + '</p>' +
         '</div>' +
       '</div>' +

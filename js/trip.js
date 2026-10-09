@@ -32,6 +32,7 @@ async function start() {
       places = await loadPlaces(trip.region);
       ensureScores(places, trip);
       plan = await loadSavedPlan(trip, places);
+      if (plan) plan.signature = places.signature;   // 대표 먹거리·할거리 표시용
     }
     setupMemories(trip, plan, role);   // 일정이 없어도 후기·사진은 쓸 수 있음 (공개는 일정이 있어야 가능)
     // 추천 준비물: 체크리스트를 다 불러온 뒤, 이미 담은 것은 빼고 보여 줌 (보기 전용이면 위에서 숨김)
@@ -131,8 +132,10 @@ function renderSchedule(trip, plan, t) {
     day.items.forEach(function (it, i) {
       const p = it.stop.p;
       const label = it.stop.meal ? '🍴 ' + it.stop.meal : (++n) + '';
+      const sigText = signatureLabel(p, plan.signature);
       html += '<li class="mini-item" data-day="' + di + '" data-i="' + i + '"><span class="mini-time">' + hhmm(it.begin) + '</span>' +
         '<span class="mini-no">' + label + '</span><span class="mini-name">' + esc(p.name) +
+          (sigText ? ' <span class="sig-badge">★ ' + esc(sigText) + '</span>' : '') +
           (it.hoursIssue ? ' <span class="over-text" title="' + esc(it.hoursIssue) + '">⚠ ' + esc(it.hoursIssue) + '</span>' : '') +
           (it.queue ? ' <small class="muted">줄 약 ' + it.queue + '분</small>' : '') + '</span>' +
         '<span class="mini-cost">' + (it.cost ? won(it.cost) : '') + '</span></li>';

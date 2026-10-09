@@ -30,6 +30,17 @@ const LUNCH = { from: 11 * 60 + 30, until: 14 * 60 };   // 점심을 넣는 시�
 const DINNER_FROM = 17 * 60 + 30;
 const LODGING_ARRIVE = 20 * 60;   // 숙소 도착 시각: 20:00 이후 (이재훈 결정, 상세 화면에서 바꿀 수 있음). 마지막 날 집 도착은 제한 없음
 const MEAL_STAY = 60;
+const DAY_END = 22 * 60;          // 명소 방문은 22:00 전에 끝나게 (2026-10-10 추가)
+// 여행 시작일이 오늘이면 1일차 출발 시각 = 지금 + 준비 30분 (10분 단위 올림), 아니면 09:00 (2026-10-10 이재훈 요청)
+// 입력: trip, 지금 시각(시험용, 없으면 현재) / 출력: 분 단위 시각
+function firstDayStart(trip, now) {
+  now = now || new Date();
+  const pad = function (n) { return String(n).padStart(2, '0'); };
+  const today = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate());
+  if (trip.start_date !== today) return DAY_START;
+  const m = Math.ceil((now.getHours() * 60 + now.getMinutes() + 30) / 10) * 10;
+  return Math.min(Math.max(DAY_START, m), 23 * 60 + 50);
+}
 // 흔한 체인점(프랜차이즈) 이름 — 이름에 들어 있으면 추천에서 제외 (이재훈 결정: 브랜드 이름 목록 방식)
 const CHAIN_BRANDS = ['스타벅스', '투썸플레이스', '이디야', '메가커피', '메가MGC', '컴포즈커피', '빽다방', '할리스',
   '엔제리너스', '커피빈', '폴바셋', '파스쿠찌', '탐앤탐스', '카페베네', '공차', '설빙', '배스킨', '던킨',
@@ -232,6 +243,8 @@ function budgetCaps(trip) {
 // ---------- 후기·영업시간 조사 정보 (p.info — tools/review_record.py, 2026-10-09 이재훈 요청 1~8번) ----------
 // p.info: { q: 품질 등급 A~D, solo, minPeople, group, waitMin, issues, parking, kids, pet, closed: ['월'..], open, close, break }
 const DOW = ['일', '월', '화', '수', '목', '금', '토'];
+// 쉬는 시간은 '15:00-17:00' 글자가 기본이지만 일부 장소는 ['15:00', '17:00'] 배열로 저장돼 있어 둘 다 받음
+function breakRange(b) { return Array.isArray(b) ? b : String(b).split('-'); }
 function hm(t) { const a = String(t).split(':'); return Number(a[0]) * 60 + Number(a[1] || 0); }
 // 여행 d일차(1부터)의 요일 이름
 function dowOf(trip, d) { const x = new Date(trip.start_date + 'T00:00:00'); x.setDate(x.getDate() + d - 1); return DOW[x.getDay()]; }
@@ -246,7 +259,7 @@ function openAt(p, dow, minute) {
     if (minute < o || minute >= c) return false;
   }
   if (i.break) {
-    const b = i.break.split('-');
+    const b = breakRange(i.break);
     if (minute >= hm(b[0]) && minute < hm(b[1])) return false;
   }
   return true;
@@ -256,7 +269,7 @@ function hoursIssue(p, dow, begin, end) {
   const i = p.info;
   if (!i) return '';
   if (i.closed && i.closed.indexOf(dow) !== -1) return dow + '요일 휴무';
-  if (!openAt(p, dow, begin)) return '영업시간 아님 (' + (i.open || '?') + '~' + (i.close || '?') + (i.break ? ', 쉬는 시간 ' + i.break : '') + ')';
+  if (!openAt(p, dow, begin)) return '영업시간 아님 (' + (i.open || '?') + '~' + (i.close || '?') + (i.break ? ', 쉬는 시간 ' + breakRange(i.break).join('-') : '') + ')';
   if (end != null && i.close && end > hm(i.close) && hm(i.close) > hm(i.open || '00:00')) return i.close + ' 영업 종료 전에 나와야 해요';
   return '';
 }
@@ -311,6 +324,82 @@ function needsAddressCheck(p) {
   return !!(p.info && p.info.issues && p.info.issues.some(function (x) { return x.indexOf('주소 확인 필요') !== -1; }));
 }
 
+// ---------- 계절 (2026-10-10 이재훈 요청: 계절을 활동 추천에 반영 — 배수 값은 Claude 판단) ----------
+// 입력: 장소 p, 여행 시작 월(1~12) / 출력: 점수에 곱할 수 (1이면 그대로, 0.05면 사실상 제외)
+function tripMonth(trip) { return Number(String(trip.start_date || '').slice(5, 7)) || (new Date().getMonth() + 1); }
+function seasonMultiplier(p, month) {
+  if (p.type !== '명소') return 1;
+  const c = p.category || '';
+  const summer = month >= 6 && month <= 8, hot = month === 7 || month === 8;
+  const winter = month === 12 || month <= 2;
+  const spring = month === 4 || month === 5, autumn = month === 10 || month === 11;
+  // 물놀이: 여름에만
+  if (c === 'NA020900') return hot ? 1.15 : (month === 6 || month === 9 ? 0.9 : 0.6);                 // 해변·해수욕장 (경치 구경은 사계절 가능)
+  if (['LS020100', 'LS020200', 'LS020400', 'LS020800', 'LS021300'].indexOf(c) !== -1) return summer ? 1.15 : (month === 5 || month === 9 ? 0.6 : 0.15);  // 제트스키·카약·스노클링·래프팅·패러세일
+  if (c === 'VE020200') return summer ? 1.2 : 0.6;                                                    // 워터파크 (실내 워터파크도 있어 완전히 빼지 않음)
+  if (c === 'NA010400') return summer ? 1.2 : (autumn ? 1.0 : (winter ? 0.6 : 0.9));                   // 계곡
+  // 겨울 레저: 겨울에만
+  if (c === 'LS010800') return winter ? 1.2 : (month === 11 || month === 3 ? 0.4 : 0.05);              // 스키·스노보드
+  if (c === 'LS011000') return winter ? 1.15 : 0.3;                                                   // 썰매장
+  if (c === 'LS010900') return winter ? 1.1 : 0.9;                                                    // 스케이트
+  if (c === 'EX050100' || c === 'EX050200') return winter ? 1.15 : (hot ? 0.85 : 1);                   // 온천·찜질방
+  // 꽃·단풍: 봄·가을
+  if (c === 'NA040700') return spring || month === 10 ? 1.15 : (winter ? 0.8 : 1);                     // 수목원·정원
+  if (['NA010100', 'NA010200', 'NA040600', 'NA040100', 'NA040200', 'NA040300'].indexOf(c) !== -1)      // 산·숲·휴양림·국립/도립/군립공원
+    return autumn ? 1.15 : (spring ? 1.05 : (hot ? 0.95 : (winter ? 0.85 : 1)));
+  // 그 밖: 한여름·한겨울엔 실내를 조금 더, 야외를 조금 덜
+  if (hot) return p.indoor ? 1.05 : 0.95;
+  if (winter) return p.indoor ? 1.08 : 0.9;
+  return 1;
+}
+
+// ---------- 같은 종류 반복 줄이기 (2026-10-10 이재훈 요청: 해수욕장 4곳·같은 메뉴 반복 방지) ----------
+// 명소 종류 = 관광 분류 코드(예: NA020900 해변). 같은 종류를 이미 고른 횟수 c에 따라 점수를 나눔: 1/(1+3c) → 2번째 ¼, 3번째 1/7
+// 큰 분류(앞 4자리, 예: NA02 하천·해양)도 겹치면 조금 깎음: 1/(1+0.5c). 다른 종류 후보가 모자랄 때만 같은 종류가 다시 뽑힘 (배수는 Claude 판단)
+function attractionKind(p) { return p.category || ('name:' + p.name); }
+function attractionGroup(p) { return p.category ? p.category.slice(0, 4) : null; }
+function varietyFactor(kindCount, groupCount, p) {
+  const k = kindCount[attractionKind(p)] || 0, g = attractionGroup(p) ? (groupCount[attractionGroup(p)] || 0) : 0;
+  return 1 / (1 + 3 * k) / (1 + 0.5 * Math.max(0, g - k));
+}
+// 대표 메뉴 이름 (식당 이름에서 찾음) — 같은 메뉴(순두부·막국수·물회 …)는 두 번째부터 크게 깎음
+const DISH_WORDS = [['순두부', '순두부'], ['막국수', '막국수'], ['물회', '물회'], ['짬뽕', '짬뽕'], ['간장게장', '게장'], ['게장', '게장'], ['게국지', '게국지'],
+  ['해장국', '해장국'], ['감자탕', '감자탕'], ['뼈해장', '해장국'], ['국밥', '국밥'], ['칼국수', '칼국수'], ['칼제비', '칼국수'], ['수제비', '수제비'], ['냉면', '냉면'], ['면옥', '냉면'], ['밀면', '밀면'],
+  ['옹심이', '옹심이'], ['떡갈비', '떡갈비'], ['돼지갈비', '갈비'], ['갈비', '갈비'], ['삼겹', '삼겹살'], ['한우', '한우'], ['정육', '한우'], ['닭갈비', '닭갈비'], ['곱창', '곱창'], ['막창', '곱창'],
+  ['오리', '오리'], ['장어', '장어'], ['아구', '아귀'], ['아귀', '아귀'], ['대게', '대게'], ['홍게', '대게'], ['꼬막', '꼬막'], ['조개구이', '조개구이'], ['전복', '전복'], ['굴', '굴'],
+  ['횟집', '회'], ['회센터', '회'], ['수산', '회'], ['초밥', '초밥'], ['스시', '초밥'], ['돈가스', '돈가스'], ['돈까스', '돈가스'], ['곰탕', '곰탕'], ['설렁탕', '설렁탕'], ['추어탕', '추어탕'],
+  ['삼계탕', '삼계탕'], ['백숙', '백숙'], ['쌈밥', '쌈밥'], ['비빔밥', '비빔밥'], ['보리밥', '보리밥'], ['한정식', '한정식'], ['백반', '백반'], ['순대', '순대'], ['족발', '족발'], ['보쌈', '보쌈'],
+  ['짜장', '짜장'], ['반점', '중식'], ['피자', '피자'], ['버거', '버거'], ['파스타', '파스타'], ['만두', '만두'], ['국수', '국수'], ['생선구이', '생선구이'], ['두부', '두부'], ['치킨', '치킨'], ['찜닭', '찜닭']];
+function dishOf(r) {
+  const n = r.name || '';
+  for (const [w, d] of DISH_WORDS) if (n.indexOf(w) !== -1) return d;
+  return null;
+}
+// 이름에 든 메뉴 전부 (예: '동해막국수&순두부칼국수' → 순두부·막국수·칼국수)
+function dishesOf(r) {
+  const n = r.name || '', out = [];
+  for (const [w, d] of DISH_WORDS) if (n.indexOf(w) !== -1 && out.indexOf(d) === -1) out.push(d);
+  return out;
+}
+
+// 지역 대표 먹거리·할거리 (data/signature.json — 지역마다 웹 검색으로 조사, 2026-10-10 Claude)
+// 이재훈 결정: 일정안마다 대표 먹거리 1곳 + 대표 할거리 1곳은 꼭 넣음
+// 장소 데이터에 메뉴 정보가 없어 '장소 이름에 키워드가 들어 있는지'로만 찾음 → 이름에 메뉴가 안 드러난 식당은 못 찾음
+// 입력: 장소, 그 지역 대표 목록 { foods, spots } / 출력: 대표 항목 이름(예: '게국지') 또는 null
+function signatureOf(p, sig) {
+  if (!sig || !p || !p.name) return null;
+  const list = p.type === '식당' ? sig.foods : p.type === '명소' ? sig.spots : null;
+  if (!list) return null;
+  for (const it of list) for (const k of (it.keywords || [])) if (k && p.name.indexOf(k) !== -1) return it.name;
+  return null;
+}
+// 화면 표시용 글자: '대표 먹거리 · 게국지' (대표가 아니면 '')
+function signatureLabel(p, sig) {
+  const n = signatureOf(p, sig);
+  return n ? (p.type === '식당' ? '대표 먹거리' : '대표 할거리') + ' · ' + n : '';
+}
+const SIG_FOOD_KM = 12;   // 대표 먹거리 식당이 지금 위치에서 이 거리 안이면 그 끼니에 넣음 (Claude 판단)
+
 // 여행에 넣을 수 있는 장소인지 (예산과 상관없는 조건)
 function usable(p, trip) {
   if (!p.recommend || isChain(p.name)) return false;
@@ -331,7 +420,8 @@ function preparePool(trip, places) {
   const tempo = TEMPO[trip.tempo];
   const nights = trip.days - 1;
   const base = places.filter(function (p) { return usable(p, trip); });
-  base.forEach(function (p) { p._s = withPopularity(tagScore(p.tags, trip.tags), p.popularity) * infoMultiplier(p, trip); });
+  const month = tripMonth(trip);
+  base.forEach(function (p) { p._s = withPopularity(tagScore(p.tags, trip.tags), p.popularity) * infoMultiplier(p, trip) * seasonMultiplier(p, month); });
 
   for (let step = 0; step <= 20; step++) {
     const relax = 1 + step * 0.1;
@@ -393,7 +483,8 @@ function attractionKey(type, anchor) {
 }
 
 // 지금 위치 근처 식당 고르기 (가까울수록 유리, 일정안 성격 반영)
-// 같은 메뉴 종류를 이미 먹었으면 점수를 나눠 깎고(1회 → ½, 2회 → ⅓), 바로 전 끼니와 같은 종류면 크게 깎음(×0.2)
+// 같은 메뉴 종류를 이미 먹었으면 점수를 나눠 깎고(1회 → ¼, 2회 → 1/7), 바로 전 끼니와 같은 종류면 크게 깎음(×0.2)
+// 같은 대표 메뉴(dishOf: 순두부·물회 …)는 ×0.1 (2026-10-10 강화)
 //   → 국밥 다음엔 회·면·고기처럼 다른 종류가 먼저 뽑힘. 근처에 다른 종류가 전혀 없을 때만 같은 종류 허용
 function pickRestaurant(type, list, pos, used, eaten, lastGroup) {
   let best = null, bestVal = -1;
@@ -406,8 +497,9 @@ function pickRestaurant(type, list, pos, used, eaten, lastGroup) {
     else if (type === 'B') val = s / (1 + 3 * d);
     else val = s / ((1 + d) * (1 + r.cost / 5000));
     const g = cuisineOf(r);
-    val /= 1 + (eaten[g] || 0);
+    val /= 1 + (g === '한식(기타)' ? 1 : 3) * (eaten[g] || 0);   // 같은 메뉴 종류: 2번째부터 ¼ (넓은 '한식(기타)'만 ½)
     if (g === lastGroup) val *= 0.2;
+    if (dishesOf(r).some(function (x) { return eaten['dish:' + x]; })) val *= 0.1;            // 같은 대표 메뉴(순두부·막국수 …)를 또 먹는 건 마지막 수단
     if (val > bestVal) { bestVal = val; best = r; }
   });
   return best;
@@ -441,9 +533,45 @@ function buildPlan(type, trip, pool) {
   const topCenter = centroid(pool.attractions.slice().sort(byDesc(function (p) { return p._s; })).slice(0, 30));
   const lodging = trip.days > 1 ? pickLodging(type, pool, topCenter) : null;
   const anchor = lodging || topCenter;
-  const ranked = pool.attractions.slice().sort(byDesc(attractionKey(type, anchor)));
+  const keyOf = attractionKey(type, anchor);
+  const keyVal = new Map();
+  pool.attractions.forEach(function (p) { keyVal.set(p.id, keyOf(p)); });
+  const ranked = pool.attractions.slice().sort(function (a, b) { return keyVal.get(b.id) - keyVal.get(a.id); });
+  const kindCount = {}, groupCount = {}, taken = new Set();   // 명소 종류별로 고른 횟수, 이미 후보로 꺼낸 곳
+  // 대표 할거리: 일정안 점수 순으로 가장 앞선 곳을 맨 먼저 꺼냄 (제철이 아닌 곳 — 계절 배수 0.5 미만 — 은 제외)
+  const sig = pool.signature || null;
+  const month = tripMonth(trip);
+  const sigSpots = sig ? ranked.filter(function (p) { return signatureOf(p, sig) && seasonMultiplier(p, month) >= 0.5; }) : [];
+  // 대표 먹거리 식당: 예산 상한 안 → 없으면 상한을 넘는 곳까지
+  let sigFoods = sig ? pool.restaurants.filter(function (r) { return signatureOf(r, sig); }) : [];
+  if (sig && !sigFoods.length) sigFoods = pool.all.restaurants.filter(function (r) { return signatureOf(r, sig); });
+  let sigSpotTaken = !sigSpots.length, sigFoodDone = !sigFoods.length;
+  let curDay = 1;
+  // 다음에 넣을 명소: 일정안 점수 × 종류 반복 감점(varietyFactor)이 가장 큰 곳
+  // ranked가 점수 높은 순이라, 남은 곳의 점수가 지금 최고값보다 낮아지면 더 볼 필요 없음
+  function takeNextAttraction() {
+    let best = null, bestVal = -Infinity;
+    if (!sigSpotTaken) {
+      sigSpotTaken = true;
+      best = sigSpots.find(function (p) { return !used.has(p.id) && !taken.has(p.id); }) || null;
+      if (best) bestVal = Infinity;
+    }
+    for (let i = 0; i < ranked.length && bestVal !== Infinity; i++) {
+      const p = ranked[i], k = keyVal.get(p.id);
+      if (k <= bestVal) break;
+      if (used.has(p.id) || taken.has(p.id)) continue;
+      const v = k * varietyFactor(kindCount, groupCount, p);
+      if (v > bestVal) { bestVal = v; best = p; }
+    }
+    if (best) {
+      taken.add(best.id);
+      kindCount[attractionKind(best)] = (kindCount[attractionKind(best)] || 0) + 1;
+      if (attractionGroup(best)) groupCount[attractionGroup(best)] = (groupCount[attractionGroup(best)] || 0) + 1;
+    }
+    return best;
+  }
   const used = new Set();
-  let next = 0, carry = [], deferred = [];
+  let carry = [], deferred = [];
   let today = null;   // 지금 만드는 날의 요일 (식당 영업시간 확인용)
   const days = [];
   let mealMove = 0;
@@ -452,22 +580,25 @@ function buildPlan(type, trip, pool) {
 
   for (let d = 1; d <= trip.days; d++) {
     const lastDay = d === trip.days;
+    curDay = d;
     // 오늘 갈 후보: 어제 못 간 곳(이월) + 순위표에서 다음 곳들
     const dow = dowOf(trip, d);
     const picks = [];
     const later = [];   // 오늘 휴무라 다른 날로 미룬 곳
     carry.concat(deferred).forEach(function (p) { if (openAt(p, dow)) picks.push(p); else later.push(p); });
     deferred = later;
-    while (picks.length < tempo.count && next < ranked.length) {
-      const p = ranked[next++];
-      if (used.has(p.id)) continue;
+    while (picks.length < tempo.count) {
+      const p = takeNextAttraction();
+      if (!p) break;
       if (openAt(p, dow)) picks.push(p); else deferred.push(p);
     }
     today = dow;
     let pos = d === 1 ? dep : lodging;
     const ordered = nearestNeighbor(d === 1 ? anchor : pos, picks);
     const stops = [];
-    let clock = DAY_START, active = 0, lunch = false, dinner = false, visited = 0;
+    const dayStart = d === 1 ? firstDayStart(trip) : DAY_START;   // 오늘 출발이면 지금 시각 이후부터
+    let clock = dayStart, active = 0, visited = 0;
+    let lunch = dayStart > LUNCH.until, dinner = dayStart >= DAY_END - 60;   // 늦게 시작하면 이미 지난 끼니는 건너뜀
     carry = [];
     mealMove = 0;
 
@@ -490,11 +621,15 @@ function buildPlan(type, trip, pool) {
       const back = lastDay || !lodging ? travelMin(distanceKm(p, dep), trip.transport, true)
                                        : travelMin(distanceKm(p, lodging), trip.transport, false);
       // 활동 시간을 넘으면 그날 마감, 남은 곳은 다음 날로 이월 (단, 하루 최소 1곳)
-      if (visited > 0 && active + mealMove + move + p.stayMin + back > limit) {
+      // 밤 10시를 넘기는 곳도 다음 날로 (늦게 출발한 첫날은 0곳일 수 있음 — 2026-10-10 이재훈 결정)
+      if (clock + move + p.stayMin > (p.indoor ? DAY_END : DAY_END - 60) ||   // 야외는 21:00까지
+          (visited > 0 && active + mealMove + move + p.stayMin + back > limit)) {
         carry = ordered.slice(i);
         break;
       }
-      stops.push(makeStop(p, 'visit'));
+      const vs = makeStop(p, 'visit');
+      if (signatureOf(p, sig)) vs.sig = signatureOf(p, sig);
+      stops.push(vs);
       used.add(p.id);
       clock += move + p.stayMin;
       active += move + p.stayMin;
@@ -503,21 +638,56 @@ function buildPlan(type, trip, pool) {
     }
     if (!lunch && (visited > 0 || clock <= LUNCH.until)) clock = addMeal(stops, 'lunch', pos, clock);
     if (!dinner && (!lastDay || clock >= DINNER_FROM)) clock = addMeal(stops, 'dinner', pos, clock);   // 마지막 날은 늦게 끝날 때만 저녁
-    days.push({ start: DAY_START, stops: stops });
+    days.push({ start: dayStart, stops: stops });
   }
+  if (!sigFoodDone) forceSignatureFood();
   return { type: type, region: pool.region, lodging: lodging, days: days, relax: pool.relax };
+
+  // 끝까지 대표 먹거리를 못 넣었으면: 대표 식당과 가장 가까운 끼니 하나를 바꿈 (그날 문 연 곳 우선)
+  function forceSignatureFood() {
+    let best = null;
+    days.forEach(function (day, di) {
+      const dow = dowOf(trip, di + 1);
+      day.stops.forEach(function (st, si) {
+        if (!st.meal) return;
+        const prev = si > 0 ? day.stops[si - 1].p : (di === 0 ? anchor : (lodging || anchor));
+        sigFoods.forEach(function (r) {
+          if (used.has(r.id)) return;
+          const km = distanceKm(prev, r) + (openAt(r, dow, st.meal === '점심' ? LUNCH.from + 30 : DINNER_FROM + 30) ? 0 : 1000);
+          if (!best || km < best.km) best = { km: km, st: st, r: r };
+        });
+      });
+    });
+    if (!best) return;
+    used.delete(best.st.p.id);
+    used.add(best.r.id);
+    best.st.p = best.r;
+    best.st.sig = signatureOf(best.r, sig);
+    sigFoodDone = true;
+  }
 
   // 식당을 일정에 넣고, 식사가 끝나는 시각을 돌려줌
   function addMeal(stops, kind, pos, clock) {
     // 그 끼니 시각(점심 12:00·저녁 18:00 무렵)에 문을 여는 식당만 (휴무일·브레이크타임 제외)
     const mealAt = Math.max(clock, kind === 'lunch' ? LUNCH.from + 30 : DINNER_FROM + 30);
     const openList = pool.restaurants.filter(function (r) { return openAt(r, today, mealAt); });
-    const r = pickRestaurant(type, openList.length ? openList : pool.restaurants, pos.isHome ? anchor : pos, used, eaten, lastGroup);
+    const from = pos.isHome ? anchor : pos;
+    let r = null;
+    if (!sigFoodDone) {
+      // 대표 먹거리: 가까우면(12km 안) 이번 끼니에, 마지막 날(또는 전날 저녁)이면 거리와 상관없이
+      const lastChance = curDay === trip.days || (kind === 'dinner' && curDay === trip.days - 1);
+      const sr = pickRestaurant(type, sigFoods.filter(function (x) { return openAt(x, today, mealAt); }), from, used, eaten, lastGroup);
+      if (sr && (lastChance || distanceKm(from, sr) <= SIG_FOOD_KM)) r = sr;
+    }
+    if (!r) r = pickRestaurant(type, openList.length ? openList : pool.restaurants, from, used, eaten, lastGroup);
     if (!r) return clock;
     used.add(r.id);
     lastGroup = cuisineOf(r);
     eaten[lastGroup] = (eaten[lastGroup] || 0) + 1;
-    stops.push(makeStop(r, kind));
+    dishesOf(r).forEach(function (x) { eaten['dish:' + x] = (eaten['dish:' + x] || 0) + 1; });
+    const ms = makeStop(r, kind);
+    if (signatureOf(r, sig)) { ms.sig = signatureOf(r, sig); sigFoodDone = true; }
+    stops.push(ms);
     const move = travelMin(distanceKm(pos.isHome ? anchor : pos, r), trip.transport, !!pos.isHome);
     mealMove += move;   // 식당까지 가는 시간은 활동 시간에 포함 (식사 시간은 제외)
     const at = Math.max(clock + move, kind === 'lunch' ? LUNCH.from : DINNER_FROM);
@@ -530,6 +700,7 @@ function buildPlans(trip, region, places) {
   const pool = preparePool(trip, places);
   if (!pool) return null;
   pool.region = region;
+  pool.signature = places.signature || null;   // loadPlaces가 붙여 줌
   const plans = {};
   ['A', 'B', 'C'].forEach(function (k) {
     plans[k] = fitBudget(trip, syncBreakfast(trip, buildPlan(k, trip, pool), pool.all.restaurants), pool);
@@ -571,7 +742,12 @@ function breakfastPlace(l) {
 
 // 숙소 근처 아침 식당 고르기: ① 3km 안 국밥·백반·분식·면 → ② 10km 안 같은 종류 → ③ 10km 안 한식(기타)
 //   → ④ 3km 안 아무 식사 식당 → ⑤ 가장 가까운 식당 (아침에 어울리는 메뉴 순서는 Claude 판단)
-function pickBreakfastRestaurant(lodging, restaurants, used) {
+// avoidDish: 이미 일정에 있는 대표 메뉴(dishOf) — 그 메뉴 식당은 다른 곳이 전혀 없을 때만 (2026-10-10, 막국수 점심 → 막국수 아침 같은 중복 방지)
+function pickBreakfastRestaurant(lodging, restaurants, used, avoidDish) {
+  if (avoidDish && avoidDish.size) {
+    const r = pickBreakfastRestaurant(lodging, restaurants.filter(function (x) { return !dishesOf(x).some(function (k) { return avoidDish.has(k); }); }), used);
+    if (r) return r;
+  }
   const near = restaurants.filter(function (r) { return !used.has(r.id); })
     .map(function (r) { return { r: r, d: distanceKm(lodging, r), bf: BREAKFAST_GROUPS.indexOf(cuisineOf(r)) !== -1 }; })
     .sort(function (a, b) { return a.d - b.d; });
@@ -596,6 +772,8 @@ function syncBreakfast(trip, plan, restaurants) {
   const used = new Set();
   plan.days.forEach(function (d) { d.stops.forEach(function (st) { used.add(st.p.id); }); });
   const b = lodgingBreakfast(plan.lodging);
+  const dishes = new Set();   // 일정에 이미 있는 대표 메뉴
+  plan.days.forEach(function (d) { d.stops.forEach(function (st) { if (st.meal && st.p) dishesOf(st.p).forEach(function (k) { dishes.add(k); }); }); });
   plan.days.forEach(function (day, i) {
     if (i === 0) return;
     let stop = day.stops.find(function (st) { return st.meal === '아침'; });
@@ -608,8 +786,8 @@ function syncBreakfast(trip, plan, restaurants) {
       stop.p = breakfastPlace(plan.lodging);
     } else if (!stop.p || stop.p.breakfastOf != null) {   // 숙소 조식이 없는 숙소로 바뀜 → 근처 식당
       if (stop.p) used.delete(stop.p.id);
-      const r = pickBreakfastRestaurant(plan.lodging, restaurants, used);
-      if (r) { stop.p = r; used.add(r.id); } else day.stops.splice(day.stops.indexOf(stop), 1);
+      const r = pickBreakfastRestaurant(plan.lodging, restaurants, used, dishes);
+      if (r) { stop.p = r; used.add(r.id); dishesOf(r).forEach(function (k) { dishes.add(k); }); } else day.stops.splice(day.stops.indexOf(stop), 1);
     }
   });
   return plan;
@@ -661,7 +839,7 @@ function fitBudget(trip, plan, pool) {
     plan.days.forEach(function (d) {
       d.stops.forEach(function (st) {
         const cur = st.p;
-        if (!(cur.cost > 0)) return;
+        if (!(cur.cost > 0) || st.sig) return;   // 대표 먹거리·할거리는 예산 맞추기에서 바꾸지 않음
         const isFood = cur.type === '식당';
         const list = isFood ? pool.all.restaurants : pool.all.attractions;
         const range = isFood ? 5 : 10;
@@ -758,7 +936,7 @@ function computeTimeline(trip, plan) {
 // 장소 점수가 아직 없으면 계산해 붙임 (저장된 일정을 불러온 경우 등)
 function ensureScores(places, trip) {
   places.forEach(function (p) {
-    if (p._s == null) p._s = withPopularity(tagScore(p.tags || {}, trip.tags), p.popularity) * infoMultiplier(p, trip);
+    if (p._s == null) p._s = withPopularity(tagScore(p.tags || {}, trip.tags), p.popularity) * infoMultiplier(p, trip) * seasonMultiplier(p, tripMonth(trip));
   });
 }
 
@@ -774,7 +952,16 @@ async function loadJSON(path) {
   return _fileCache[path];
 }
 function loadRegions() { return loadJSON('data/regions.json'); }
-function loadPlaces(region) { return loadJSON('data/places/' + encodeURIComponent(region) + '.json'); }
+// 장소 배열에 그 지역 대표 먹거리·할거리(places.signature)를 붙여서 돌려줌 (파일이 없어도 일정은 만들어짐)
+async function loadPlaces(region) {
+  const places = await loadJSON('data/places/' + encodeURIComponent(region) + '.json');
+  if (places.signature === undefined) {
+    let all = null;
+    try { all = await loadJSON('data/signature.json'); } catch (e) { console.warn(e); }
+    places.signature = (all && all[region]) || null;
+  }
+  return places;
+}
 
 // 저장된 trip_places 행 → plan 구조로 되돌리기
 // 입력: trip(region·plan_type·day_starts), 그 지역 장소 배열 / 출력: plan (저장된 일정이 없으면 null)
@@ -813,6 +1000,6 @@ async function loadSavedPlan(trip, places) {
 
 // node로 시험할 때 쓰도록 내보내기 (브라우저에서는 무시됨)
 if (typeof module !== 'undefined') {
-  module.exports = { openAt, hoursIssue, dowOf, infoMultiplier, parkingOf, issueKind, needsAddressCheck, usable, transitLegs, legKey, localMode, WALK_KM, TEMPO, rankRegions, buildPlans, buildPlan, preparePool, computeTimeline, distanceKm,
+  module.exports = { signatureOf, signatureLabel, dishesOf, firstDayStart, seasonMultiplier, tripMonth, varietyFactor, attractionKind, dishOf, openAt, hoursIssue, dowOf, infoMultiplier, parkingOf, issueKind, needsAddressCheck, usable, transitLegs, legKey, localMode, WALK_KM, TEMPO, rankRegions, buildPlans, buildPlan, preparePool, computeTimeline, distanceKm,
     travelMin, budgetCaps, hhmm, PLAN_INFO, isChain, LODGING_ARRIVE, SEA_REGIONS, foodKind, cuisineOf, pickRestaurant, ensureScores, estimateMinCost, fitBudget, syncBreakfast, breakfastPlace, lodgingBreakfast };
 }

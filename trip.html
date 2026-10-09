@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="page wide">
+  <div class="page wide trip-wide">
     <nav class="top-nav">
       <span id="nav-user"></span>
       <a href="record.html">← 내 여행</a>
@@ -22,90 +22,70 @@
     <main>
       <p class="notice" id="status">여행 정보를 불러오고 있어요…</p>
 
-      <div class="detail-layout trip-layout" id="trip-layout" hidden>
-        <!-- 왼쪽: 여행 조건 · 비용 · 날짜별 일정 -->
-        <div class="trip-main">
-          <section class="card">
-            <h2 class="section-title">여행 조건</h2>
-            <dl class="info-list" id="info-list"></dl>
-            <div class="trip-buttons" id="trip-buttons"></div>
-          </section>
+      <div class="trip-page" id="trip-layout" hidden>
+        <div class="trip-grid">
+          <!-- 왼쪽: 여행 조건 · 비용 · 친구 · 공개 -->
+          <aside class="trip-info">
+            <section class="card">
+              <h2 class="section-title">여행 조건</h2>
+              <dl class="info-list" id="info-list"></dl>
+              <div class="trip-buttons" id="trip-buttons"></div>
+            </section>
+            <section class="card" id="cost-card" hidden>
+              <h2 class="section-title">비용</h2>
+              <p class="plan-total" id="total-cost"></p>
+              <p class="helper-text muted" id="total-meta"></p>
+              <div class="budget-bar" id="budget-bar"></div>
+              <ul class="budget-legend" id="budget-legend"></ul>
+              <h3 class="sub-title">일일 경비</h3>
+              <div id="daily-cost"></div>
+            </section>
+            <section class="card" id="friends-card" hidden>
+              <h2 class="section-title">함께 여행할 친구 <small>링크로 초대하면 일정·준비물을 같이 고칠 수 있어요</small></h2>
+              <div class="friends-body">
+                <div id="invite-box"></div>
+                <p class="helper-text" id="invite-msg"></p>
+                <ul class="member-list" id="member-list"></ul>
+                <p class="helper-text muted" id="member-empty" hidden>아직 함께하는 친구가 없어요.</p>
+              </div>
+            </section>
+            <section class="card" id="share-card" hidden>
+              <h2 class="section-title">공개 설정</h2>
+              <label class="toggle-row"><input type="checkbox" id="share-public"> 이 코스를 다른 사람에게 공개</label>
+              <div class="address-row">
+                <input type="text" id="share-title" maxlength="40" placeholder="코스 제목">
+                <button type="button" class="small-btn" id="share-save">저장</button>
+              </div>
+              <p class="helper-text muted">일정·후기·한줄평이 공개돼요. 출발지 주소와 예산은 보이지 않고, 사진은 '공개'로 고른 것만 보여요.</p>
+              <p class="helper-text" id="share-msg"></p>
+            </section>
+          </aside>
 
-          <section class="card" id="friends-card" hidden>
-            <h2 class="section-title">함께 여행할 친구 <small>링크로 초대하면 일정·준비물을 같이 고칠 수 있어요</small></h2>
-            <div class="friends-body">
-              <div id="invite-box"></div>
-              <p class="helper-text" id="invite-msg"></p>
-              <ul class="member-list" id="member-list"></ul>
-              <p class="helper-text muted" id="member-empty" hidden>아직 함께하는 친구가 없어요.</p>
-            </div>
-          </section>
+          <!-- 가운데: 날짜별 일정 (이 화면의 중심) -->
+          <div class="trip-center">
+            <section class="card" id="schedule-card" hidden>
+              <h2 class="section-title">일정 <small>장소를 누르면 지도에 표시돼요</small></h2>
+              <div id="schedule"></div>
+            </section>
+            <section class="card" id="no-plan-card" hidden>
+              <h2 class="section-title">일정</h2>
+              <p class="helper-text">아직 여행지와 일정을 고르지 않았어요.</p>
+              <a class="submit-btn" id="recommend-link" href="#">여행지 추천받기</a>
+            </section>
+          </div>
 
-          <section class="card" id="share-card" hidden>
-            <h2 class="section-title">공개 설정</h2>
-            <label class="toggle-row"><input type="checkbox" id="share-public"> 이 코스를 다른 사람에게 공개</label>
-            <div class="address-row">
-              <input type="text" id="share-title" maxlength="40" placeholder="코스 제목">
-              <button type="button" class="small-btn" id="share-save">저장</button>
-            </div>
-            <p class="helper-text muted">일정·후기·한줄평이 공개돼요. 출발지 주소와 예산은 보이지 않고, 사진은 '공개'로 고른 것만 보여요.</p>
-            <p class="helper-text" id="share-msg"></p>
-          </section>
-
-          <section class="card" id="cost-card" hidden>
-            <h2 class="section-title">비용</h2>
-            <p class="plan-total" id="total-cost"></p>
-            <p class="helper-text muted" id="total-meta"></p>
-            <div class="budget-bar" id="budget-bar"></div>
-            <ul class="budget-legend" id="budget-legend"></ul>
-            <h3 class="sub-title">일일 경비</h3>
-            <div id="daily-cost"></div>
-          </section>
-
-          <section class="card" id="schedule-card" hidden>
-            <h2 class="section-title">일정 <small>장소를 누르면 지도에 표시돼요</small></h2>
-            <div id="schedule"></div>
-          </section>
-          <section class="card" id="no-plan-card" hidden>
-            <h2 class="section-title">일정</h2>
-            <p class="helper-text">아직 여행지와 일정을 고르지 않았어요.</p>
-            <a class="submit-btn" id="recommend-link" href="#">여행지 추천받기</a>
-          </section>
-
-          <section class="card" id="review-card">
-            <h2 class="section-title">여행 후기</h2>
-            <div id="review-stars"></div>
-            <textarea id="review-text" rows="4" maxlength="1000" placeholder="여행은 어땠나요? 좋았던 점, 다음에 가는 사람에게 알려 주고 싶은 점"></textarea>
-            <div class="save-row">
-              <button type="button" class="small-btn" id="review-save">후기 저장</button>
-              <span class="helper-text" id="review-msg"></span>
-            </div>
-            <div id="place-review-box" hidden>
-              <h3 class="sub-title">장소별 한줄평 <small>별점·글을 바꾸면 바로 저장돼요 (별점은 선택)</small></h3>
-              <ul class="place-reviews" id="place-reviews"></ul>
-            </div>
-          </section>
-
-          <section class="card" id="photo-card">
-            <h2 class="section-title">여행 사진</h2>
-            <label class="small-btn file-btn">📷 사진 고르기<input type="file" id="photo-input" accept="image/jpeg,image/png,image/webp" multiple hidden></label>
-            <p class="helper-text muted">사진에 GPS 위치가 있으면 자동으로 가까운 장소를 골라 둬요. 위치가 없으면 일정의 장소를 골라 주세요.</p>
-            <ul class="pending-list" id="photo-pending"></ul>
-            <button type="button" class="submit-btn" id="photo-upload" hidden>사진 올리기</button>
-            <p class="helper-text" id="photo-msg"></p>
-            <div class="photo-grid" id="photo-grid"></div>
-            <p class="helper-text muted" id="photo-empty">아직 올린 사진이 없어요.</p>
-          </section>
+          <!-- 오른쪽: 지도 · 장소 카드 (스크롤해도 따라옴) -->
+          <div class="trip-map">
+            <section class="card map-card" id="map-card" hidden>
+              <div id="detail-map" class="detail-map"></div>
+              <p class="helper-text muted route-note" id="route-note"></p>
+              <div class="place-card" id="place-card"></div>
+            </section>
+          </div>
         </div>
 
-        <!-- 오른쪽: 지도 · 준비물 -->
-        <div class="trip-side">
-          <section class="card map-card" id="map-card" hidden>
-            <div id="detail-map" class="detail-map"></div>
-            <p class="helper-text muted route-note" id="route-note"></p>
-            <div class="place-card" id="place-card"></div>
-          </section>
-
+        <!-- 아래: 준비물 · 후기 · 사진 -->
+        <div class="trip-bottom">
           <section class="card checklist-card">
             <h2 class="section-title">준비물 체크리스트</h2>
             <div class="checklist-wrap">
@@ -131,6 +111,29 @@
                 <div class="suggest-list" id="suggest-list"></div>
               </div>
             </div>
+          </section>
+          <section class="card" id="review-card">
+            <h2 class="section-title">여행 후기</h2>
+            <div id="review-stars"></div>
+            <textarea id="review-text" rows="4" maxlength="1000" placeholder="여행은 어땠나요? 좋았던 점, 다음에 가는 사람에게 알려 주고 싶은 점"></textarea>
+            <div class="save-row">
+              <button type="button" class="small-btn" id="review-save">후기 저장</button>
+              <span class="helper-text" id="review-msg"></span>
+            </div>
+            <div id="place-review-box" hidden>
+              <h3 class="sub-title">장소별 한줄평 <small>별점·글을 바꾸면 바로 저장돼요 (별점은 선택)</small></h3>
+              <ul class="place-reviews" id="place-reviews"></ul>
+            </div>
+          </section>
+          <section class="card" id="photo-card">
+            <h2 class="section-title">여행 사진</h2>
+            <label class="small-btn file-btn">📷 사진 고르기<input type="file" id="photo-input" accept="image/jpeg,image/png,image/webp" multiple hidden></label>
+            <p class="helper-text muted">사진에 GPS 위치가 있으면 자동으로 가까운 장소를 골라 둬요. 위치가 없으면 일정의 장소를 골라 주세요.</p>
+            <ul class="pending-list" id="photo-pending"></ul>
+            <button type="button" class="submit-btn" id="photo-upload" hidden>사진 올리기</button>
+            <p class="helper-text" id="photo-msg"></p>
+            <div class="photo-grid" id="photo-grid"></div>
+            <p class="helper-text muted" id="photo-empty">아직 올린 사진이 없어요.</p>
           </section>
         </div>
       </div>
