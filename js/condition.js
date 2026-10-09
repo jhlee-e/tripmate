@@ -3,6 +3,7 @@
 //       + 여행지 정하는 방식(추천받기 / 지역 직접 선택, region-pick.js)
 // 출력: 검사를 통과하면 하나의 객체(condition)로 묶어 Supabase trips 테이블에 저장한 뒤
 //       추천받기 → 여행지 추천 화면(result.html), 지역 직접 선택 → 그 지역의 일정안 비교 화면(plans.html)으로 이동
+//       '친구와 함께 정하기'를 체크했으면 → 취향 모으기 화면(together.html)으로 이동
 
 // ---------- 0. 날짜 제한 ----------
 // 시작일은 오늘부터, 종료일은 시작일부터 고를 수 있게 min 값을 정함
@@ -161,6 +162,7 @@ function collectCondition() {
     people: readPeople(),         // { infants, children, teens, adults, total }
     rooms: Number(document.getElementById('rooms').value),
     pet: document.getElementById('with-pet').checked,   // 반려동물 동반 (2026-10-10 추가)
+    together: document.getElementById('together').checked,   // 친구와 함께 정하기 (7차시)
     departure: departure,         // { address, lat, lng } — departure.js에서 만든 값
     transport: getSelectedValue('transport-group'),
     tags: selectedTags.slice(),   // 복사본 (선택 순서 유지)
@@ -235,11 +237,13 @@ async function handleSubmit(event) {
     transport: condition.transport,
     tags: condition.tags,
     tempo: condition.tempo
-  }, condition.pet ? { pet: true } : {}, copyTripFields())).select().single();
+  }, condition.pet ? { pet: true } : {}, condition.together && !copyCourse ? { together: true } : {},
+     copyTripFields())).select().single();
   button.disabled = false;
 
   if (error) {
-    errorText.textContent = '저장 실패: ' + error.message;
+    errorText.textContent = '저장 실패: ' + (error.message.indexOf('together') !== -1
+      ? '\'함께 정하기\'를 쓰려면 Supabase에서 sql/add_together.sql을 먼저 실행해 주세요.' : error.message);
     console.error(error);
     return;
   }
@@ -249,6 +253,10 @@ async function handleSubmit(event) {
     button.disabled = true;
     await finishCopy(data);
     button.disabled = false;
+  } else if (condition.together) {
+    // 함께 정하기: 친구 취향을 모으는 화면으로 (지역을 직접 골랐으면 그 지역도 넘김)
+    location.href = 'together.html?trip=' + data.id +
+      (condition.mode === 'direct' ? '&region=' + encodeURIComponent(condition.region) + '&direct=1' : '');
   } else if (condition.mode === 'direct') {
     // 지역을 직접 골랐으면 여행지 추천을 건너뛰고 그 지역의 일정안 비교로 바로 이동
     // (trips.region은 일정을 '저장'할 때 채워지므로 여기서는 주소로만 넘김)

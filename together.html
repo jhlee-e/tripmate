@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TripMate - 함께 정하기</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="page">
+    <nav class="top-nav">
+      <span id="nav-user"></span>
+      <a href="record.html">내 여행</a>
+      <a href="courses.html">공개 코스</a>
+      <button type="button" class="link-btn" onclick="logout()">로그아웃</button>
+    </nav>
+    <header>
+      <h1>👥 함께 정하기</h1>
+      <p class="subtitle" id="trip-summary"></p>
+    </header>
+    <main>
+      <p class="notice" id="status">여행 정보를 불러오는 중…</p>
+      <div id="together-body" hidden>
+        <section class="card" id="invite-card">
+          <h2>1. 친구 부르기</h2>
+          <div id="invite-box"></div>
+          <p class="helper-text muted" id="invite-msg"></p>
+        </section>
+
+        <section class="card">
+          <h2>2. 내 취향</h2>
+          <p class="helper-text muted">처음 고른 태그가 1순위예요. 날마다 각자의 1순위 취향 장소가 1곳씩 일정에 들어가요.</p>
+          <div class="chip-row" id="my-tags"></div>
+          <button type="button" class="small-btn" id="my-save">내 취향 저장</button>
+          <p class="helper-text muted" id="my-msg"></p>
+        </section>
+
+        <section class="card" id="proxy-card" hidden>
+          <h2>3. 친구 취향 대신 입력</h2>
+          <p class="helper-text muted">링크를 열기 어려운 친구의 취향을 물어보고 대신 넣어 주세요.</p>
+          <input type="text" id="proxy-name" maxlength="20" placeholder="친구 이름 (예: 민수)">
+          <div class="chip-row" id="proxy-tags"></div>
+          <button type="button" class="small-btn" id="proxy-add">추가</button>
+          <p class="helper-text muted" id="proxy-msg"></p>
+        </section>
+
+        <section class="card">
+          <h2>모인 취향 <small id="count-text"></small></h2>
+          <ul class="member-list" id="pref-list"></ul>
+          <p class="helper-text muted">친구가 링크로 들어와 취향을 고르면 이 목록에 자동으로 나타나요.</p>
+        </section>
+
+        <p class="error-text" id="error-text" role="alert"></p>
+        <button type="button" class="submit-btn" id="go-btn" hidden>모두 모였어요 — 여행지 추천받기</button>
+        <p class="helper-text center-text" id="wait-text" hidden></p>
+        <p class="helper-text muted" id="method-note">
+          추천 방식: 사람마다 '만족도 = 고른 태그 점수 ÷ 만점'을 계산해 평균을 내고, 누군가의 만족도가 40% 미만인 여행지는
+          (최저 만족도 ÷ 40%)배로 점수를 깎아요. 한 사람만 손해 보는 곳이 위로 올라오지 않게 하기 위해서예요.
+        </p>
+      </div>
+    </main>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/share.js"></script>
+  <script src="js/together.js"></script>
+</body>
+</html>

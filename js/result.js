@@ -44,10 +44,22 @@ async function start() {
       '점수 = 고른 취향의 지역 평균 점수(1순위 1.5배) × 인기도 보정 × (1 − 왕복 이동 시간 ÷ 전체 활동 시간) × 예산 보정 × 랜덤(0.9~1.1). ' +
       '예산 보정: 그 지역 최소 비용 추정이 최대 예산을 넘으면 (예산 ÷ 추정)²배. 일정의 총비용이 예산을 넘으면 더 싼 숙소·식당·명소로 자동으로 바꿔요. ' +
       '이동 시간과 비용은 직선거리로 계산한 추정값이에요.';
+    if (isGroup(trip)) document.getElementById('method-note').textContent +=
+      ' 함께 정하기: 취향 점수 대신 ' + trip.group.length + '명의 평균 만족도를 쓰고, 누군가의 만족도가 40% 미만이면 (최저 만족도 ÷ 40%)배로 깎아요. ' +
+      '일정에는 날마다 각자의 1순위 취향 장소를 1곳씩 먼저 넣어요.';
   } catch (e) {
     console.error(e);
     document.getElementById('error-text').textContent = '오류: ' + e.message;
   }
+}
+
+// 함께 정하기: 사람별 만족도 (40% 미만은 빨간색 — 여행지 점수가 깎인 이유)
+function groupLine(trip, r) {
+  if (!r.sats) return '';
+  return '<li>👥 만족도: ' + trip.group.map(function (m, i) {
+    const pct = Math.round(r.sats[i] * 100);
+    return '<span' + (r.sats[i] < GROUP_MIN_SAT ? ' class="warn"' : '') + '>' + esc(m.name) + ' ' + pct + '%</span>';
+  }).join(' · ') + '</li>';
 }
 
 function renderCard(trip, item, order, round) {
@@ -60,7 +72,11 @@ function renderCard(trip, item, order, round) {
     .filter(function (p) { return p.type === '명소' && p.photo && p.recommend; })
     .sort(function (a, b) { return (b._s || 0) - (a._s || 0); })[0];
   // 추천 이유: 고른 취향별 지역 평균 점수
-  const tagText = trip.tags.map(function (t) { return t + ' ' + info.tagAvg[t].toFixed(1); }).join(' · ');
+  // 함께 정하기면 모두가 고른 태그를 합쳐서 보여 줌
+  const shownTags = isGroup(trip)
+    ? trip.group.reduce(function (all, m) { m.tags.forEach(function (t) { if (all.indexOf(t) === -1) all.push(t); }); return all; }, [])
+    : trip.tags;
+  const tagText = shownTags.map(function (t) { return t + ' ' + info.tagAvg[t].toFixed(1); }).join(' · ');
   const relax = item.plans.A.relax > 1 ? '<li class="warn">예산 상한을 ' + Math.round((item.plans.A.relax - 1) * 100) + '% 올려서 찾은 곳이에요</li>' : '';
 
   const card = document.createElement('a');
@@ -73,6 +89,7 @@ function renderCard(trip, item, order, round) {
         '<small>' + esc(info.sido) + '</small><span class="region-score">' + r.score.toFixed(1) + '점<small>랜덤 ×' + r.jitter.toFixed(2) + '</small></span></div>' +
       '<ul class="reason-list">' +
         '<li>취향 점수(5점 만점 평균): ' + esc(tagText) + '</li>' +
+        groupLine(trip, r) +
         '<li>인기 명소 10곳 평균 인기도 ' + info.popTop10.toFixed(1) + ' / 5' + (cover ? ' · 대표: ' + esc(cover.name) : '') + '</li>' +
         '<li>출발지에서 편도 약 ' + durationText(r.oneWayMin) + ' (' + trip.transport + ', 추정)</li>' + relax +
       '</ul>' +

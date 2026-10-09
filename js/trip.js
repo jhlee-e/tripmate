@@ -41,7 +41,7 @@ async function start() {
     }).then(function (sg) { checklist.onChange = sg.refresh; }).catch(showError);
     if (!plan) {
       document.getElementById('no-plan-card').hidden = false;
-      document.getElementById('recommend-link').href = 'result.html?trip=' + trip.id;
+      document.getElementById('recommend-link').href = (trip.together ? 'together.html?trip=' : 'result.html?trip=') + trip.id;   // 함께 정하기면 취향 모으기부터
       return;
     }
     const timeline = computeTimeline(trip, plan);

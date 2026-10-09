@@ -45,6 +45,13 @@
         document.getElementById('links').hidden = false;
         return;
       }
+      // 함께 정하기 여행이고 아직 일정이 없으면 → 취향 고르는 화면으로 (7차시)
+      const t = await sb.from('trips').select('together,region').eq('id', res.data).maybeSingle();
+      if (t.data && t.data.together && !t.data.region) {
+        status.textContent = '여행에 함께하게 됐어요! 내 취향을 고르러 가요…';
+        location.replace('together.html?trip=' + res.data);
+        return;
+      }
       status.textContent = '여행에 함께하게 됐어요! 여행 정보로 이동해요…';
       location.replace('trip.html?trip=' + res.data);
     }

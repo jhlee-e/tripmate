@@ -30,7 +30,25 @@ async function loadTripFromUrl() {
   const { data, error } = await sb.from('trips').select('*').eq('id', id).single();
   if (error) { console.error(error); return null; }
   if (!data.rooms) data.rooms = 1;   // rooms 열을 추가하기 전에 저장한 여행
+  if (data.together) data.group = await loadGroup(data);
   return data;
+}
+
+// 함께 정하기 여행의 사람별 취향 (7차시)
+// 입력: trips 행 / 출력: [{ name, tags, userId }] — 만든 사람이 맨 앞, 취향을 아직 안 고른 사람은 빠짐
+async function loadGroup(trip) {
+  const res = await sb.from('trip_prefs').select('user_id,name,tags,created_at').eq('trip_id', trip.id).order('created_at');
+  if (res.error) { console.warn('trip_prefs를 못 읽었어요 (sql/add_together.sql 실행 필요):', res.error); return null; }
+  const ids = [trip.user_id].concat(res.data.filter(function (r) { return r.user_id; }).map(function (r) { return r.user_id; }));
+  const u = await sb.from('users').select('id,nickname').in('id', ids);
+  const names = {};
+  (u.data || []).forEach(function (x) { names[x.id] = x.nickname; });
+  const group = [{ name: names[trip.user_id] || '만든 사람', tags: trip.tags || [], userId: trip.user_id }];
+  res.data.forEach(function (r) {
+    if (r.user_id === trip.user_id) return;
+    if (r.tags && r.tags.length) group.push({ name: r.user_id ? (names[r.user_id] || '친구') : (r.name || '친구'), tags: r.tags, userId: r.user_id });
+  });
+  return group;
 }
 
 function tripSummary(trip) {

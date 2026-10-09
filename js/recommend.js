@@ -108,6 +108,55 @@ function tagScore(tags, userTags) {
   return s;
 }
 
+// ---------- 함께 정하기 (7차시, 2026-10-10) ----------
+// trip.group: [{ name, tags }] — 만든 사람 + 친구들 (loadTripFromUrl이 together 여행일 때 채움). 2명 미만이면 혼자 여행과 똑같이 계산
+// 여행지 만족도 = 이 지역의 그 사람 취향 점수 ÷ 그 사람에게 가장 잘 맞는 지역의 점수 → 0~1 (1 = 나한테 최고인 곳)
+//   (처음엔 '÷ 만점'으로 했으나 지역 점수가 명소 평균이라 1~2점대여서 모두 14~38%가 나옴 → 2026-10-10 이재훈 결정으로 변경)
+// 장소 만족도 = 그 사람이 고른 태그 점수 ÷ 만점(모든 태그 5점일 때)
+// 여행지: 평균 만족도, 단 누군가 40% 미만이면 × (최저 만족도 ÷ 0.4) (이재훈 결정: 평균 + 최소 보장, 기준 40%)
+// 장소: 평균 만족도만 (최소 보장은 '매일 각자의 1순위 취향 장소 1곳씩'으로 대신 — buildPlan)
+// 점수 크기는 만든 사람의 만점에 맞춰 곱함 → 혼자 여행의 점수와 같은 범위
+const GROUP_MIN_SAT = 0.4;
+const GROUP_TAG_MIN = 4;   // 장소의 그 태그 점수가 4점 이상이면 '그 취향 장소'로 봄 (Claude 판단)
+
+function tagMax(userTags) { return userTags.length ? 5 * (userTags.length + 0.5) : 1; }
+function isGroup(trip) { return !!(trip.group && trip.group.length >= 2); }
+
+function satisfactions(tags, trip, best) {
+  return trip.group.map(function (m, i) { return tagScore(tags, m.tags) / (best ? (best[i] || 1) : tagMax(m.tags)); });
+}
+
+// 여행지용 — 입력: 지역 태그 평균, trip, best(사람별 최고 지역 점수) / 출력: { score, sats(사람별 만족도 배열 또는 null) }
+function regionTagScore(tags, trip, best) {
+  if (!isGroup(trip)) return { score: tagScore(tags, trip.tags), sats: null };
+  const sats = satisfactions(tags, trip, best);
+  const avg = sats.reduce(function (a, b) { return a + b; }, 0) / sats.length;
+  const low = Math.min.apply(null, sats);
+  const guard = low < GROUP_MIN_SAT ? low / GROUP_MIN_SAT : 1;
+  return { score: avg * guard * tagMax(trip.tags), sats: sats };
+}
+
+// 장소용 — 출력: 점수 하나
+function placeTagScore(tags, trip) {
+  if (!isGroup(trip)) return tagScore(tags, trip.tags);
+  const sats = satisfactions(tags, trip);
+  return sats.reduce(function (a, b) { return a + b; }, 0) / sats.length * tagMax(trip.tags);
+}
+
+// 각자의 1순위 태그 (겹치면 하나로) — 출력: [{ tag, names: [...] }]
+function groupFirstTags(trip) {
+  if (!isGroup(trip)) return [];
+  const out = [];
+  trip.group.forEach(function (m) {
+    if (!m.tags.length) return;
+    const t = m.tags[0];
+    let e = out.find(function (x) { return x.tag === t; });
+    if (!e) { e = { tag: t, names: [] }; out.push(e); }
+    e.names.push(m.name);
+  });
+  return out;
+}
+
 // 인기도 반영: 최종 점수 = 점수 × (1 + 인기도/5) → 인기도 5점이면 2배 (이재훈 결정)
 function withPopularity(score, popularity) {
   return score * (1 + (popularity || 0) / 5);
@@ -204,16 +253,23 @@ function rankRegions(trip, regions, round) {
   const dep = departureOf(trip);
   const totalActive = trip.days * tempo.hours * 60;
   const out = [];
+  function eligible(r) {
+    if (SEA_REGIONS.indexOf(r.region) !== -1) return false;     // 배·비행기로 가야 하는 섬 제외
+    if (trip.days > 1 && (r.counts['숙소'] || 0) === 0) return false;   // 숙소 없는 지역은 당일치기만 (이재훈 결정)
+    return (r.counts['명소'] || 0) >= tempo.count;
+  }
+  // 함께 정하기: 사람마다 갈 수 있는 지역 중 취향 점수 최고값 (만족도의 기준)
+  const best = isGroup(trip) ? trip.group.map(function (m) {
+    return regions.reduce(function (mx, r) { return eligible(r) ? Math.max(mx, tagScore(r.tagAvg, m.tags)) : mx; }, 0);
+  }) : null;
 
   regions.forEach(function (r) {
-    if (SEA_REGIONS.indexOf(r.region) !== -1) return;     // 배·비행기로 가야 하는 섬 제외
-    const lodgings = r.counts['숙소'] || 0;
-    if (trip.days > 1 && lodgings === 0) return;          // 숙소 없는 지역은 당일치기만 (이재훈 결정)
-    if ((r.counts['명소'] || 0) < tempo.count) return;
+    if (!eligible(r)) return;
     const distKm = distanceKm(dep, r);
     const oneWayMin = travelMin(distKm, trip.transport, true);
     const ratio = 2 * oneWayMin / totalActive;
-    const base = withPopularity(tagScore(r.tagAvg, trip.tags), r.popTop10);
+    const taste = regionTagScore(r.tagAvg, trip, best);          // 함께 정하기면 평균 + 최소 보장
+    const base = withPopularity(taste.score, r.popTop10);
     const jitter = regionJitter(trip.id, round || 0, r.region);
     // 예산: 이 지역에 가면 최소 얼마 드는지 추정해, 최대 예산을 넘으면 (예산 ÷ 최소 비용)² 만큼 깎음 (Claude 설계)
     //   → 예산이 빠듯하면 가깝고 싼 지역이 위로 올라옴. 예산 안이면 깎지 않음
@@ -222,7 +278,7 @@ function rankRegions(trip, regions, round) {
     const score = base * (1 - ratio) * budgetFactor * jitter;
     if (score <= 0) return;
     out.push({ region: r.region, score: score, jitter: jitter, oneWayMin: oneWayMin, distKm: distKm, info: r,
-               estCost: estCost, budgetFactor: budgetFactor });
+               estCost: estCost, budgetFactor: budgetFactor, sats: taste.sats });
   });
   return out.sort(function (a, b) { return b.score - a.score; });
 }
@@ -425,7 +481,7 @@ function preparePool(trip, places) {
   const nights = trip.days - 1;
   const base = places.filter(function (p) { return usable(p, trip); });
   const month = tripMonth(trip);
-  base.forEach(function (p) { p._s = withPopularity(tagScore(p.tags, trip.tags), p.popularity) * infoMultiplier(p, trip) * seasonMultiplier(p, month); });
+  base.forEach(function (p) { p._s = withPopularity(placeTagScore(p.tags, trip), p.popularity) * infoMultiplier(p, trip) * seasonMultiplier(p, month); });
 
   for (let step = 0; step <= 20; step++) {
     const relax = 1 + step * 0.1;
@@ -553,6 +609,23 @@ function buildPlan(type, trip, pool) {
   let curDay = 1;
   // 다음에 넣을 명소: 일정안 점수 × 종류 반복 감점(varietyFactor)이 가장 큰 곳
   // ranked가 점수 높은 순이라, 남은 곳의 점수가 지금 최고값보다 낮아지면 더 볼 필요 없음
+  // 함께 정하기: 그 태그 점수가 GROUP_TAG_MIN 이상인 곳 중 일정안 점수가 가장 높은 곳 (오늘 문 연 곳만)
+  const firstTags = groupFirstTags(trip);
+  function takeForTag(tag, dow) {
+    let best = null, bestVal = -Infinity;
+    ranked.forEach(function (p) {
+      if (used.has(p.id) || taken.has(p.id) || !openAt(p, dow)) return;
+      if (((p.tags || {})[tag] || 0) < GROUP_TAG_MIN) return;
+      const v = keyVal.get(p.id) * varietyFactor(kindCount, groupCount, p);
+      if (v > bestVal) { bestVal = v; best = p; }
+    });
+    if (best) {
+      taken.add(best.id);
+      kindCount[attractionKind(best)] = (kindCount[attractionKind(best)] || 0) + 1;
+      if (attractionGroup(best)) groupCount[attractionGroup(best)] = (groupCount[attractionGroup(best)] || 0) + 1;
+    }
+    return best;
+  }
   function takeNextAttraction() {
     let best = null, bestVal = -Infinity;
     if (!sigSpotTaken) {
@@ -591,6 +664,18 @@ function buildPlan(type, trip, pool) {
     const later = [];   // 오늘 휴무라 다른 날로 미룬 곳
     carry.concat(deferred).forEach(function (p) { if (openAt(p, dow)) picks.push(p); else later.push(p); });
     deferred = later;
+    // 함께 정하기: 매일 각자의 1순위 취향 장소를 1곳씩 먼저 넣음 (이재훈 결정)
+    //   이미 오늘 후보에 그 취향 장소가 있으면 건너뜀. 하루 방문 수보다 1순위 취향 종류가 많으면 날마다 순서를 돌려 고루 넣음
+    if (firstTags.length) {
+      const need = firstTags.filter(function (f) {
+        return !picks.some(function (p) { return ((p.tags || {})[f.tag] || 0) >= GROUP_TAG_MIN; });
+      });
+      for (let k = 0; k < need.length && picks.length < tempo.count; k++) {
+        const f = need[(k + d - 1) % need.length];
+        const p = takeForTag(f.tag, dow);
+        if (p) picks.push(p);
+      }
+    }
     while (picks.length < tempo.count) {
       const p = takeNextAttraction();
       if (!p) break;
@@ -940,7 +1025,7 @@ function computeTimeline(trip, plan) {
 // 장소 점수가 아직 없으면 계산해 붙임 (저장된 일정을 불러온 경우 등)
 function ensureScores(places, trip) {
   places.forEach(function (p) {
-    if (p._s == null) p._s = withPopularity(tagScore(p.tags || {}, trip.tags), p.popularity) * infoMultiplier(p, trip) * seasonMultiplier(p, tripMonth(trip));
+    if (p._s == null) p._s = withPopularity(placeTagScore(p.tags || {}, trip), p.popularity) * infoMultiplier(p, trip) * seasonMultiplier(p, tripMonth(trip));
   });
 }
 
