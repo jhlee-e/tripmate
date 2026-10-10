@@ -6,6 +6,15 @@
 
 let departure = null;
 
+// 저장해 둔 출발 위치를 다시 채우기 (조건 수정하기 — js/condition-edit.js)
+// 지도가 아직 준비 전이면 값만 먼저 넣고, 준비되면 핀을 꽂음
+let departurePending = null, departureApply = null;
+function presetDeparture(d) {
+  departure = { address: d.address, lat: d.lat, lng: d.lng };
+  document.getElementById('departure-address').value = d.address;
+  if (departureApply) departureApply(d); else departurePending = d;
+}
+
 kakao.maps.load(function () {
   // 대한민국 전체가 보이도록 지도 만들기 (level: 숫자가 클수록 넓게 보임, 1~14)
   const departureMap = new kakao.maps.Map(document.getElementById('departure-map'), {
@@ -84,6 +93,13 @@ kakao.maps.load(function () {
       }
     });
   }
+
+  departureApply = function (d) {
+    setDeparture(d.lat, d.lng, d.address);
+    departureMap.setLevel(5);
+    departureMap.setCenter(new kakao.maps.LatLng(d.lat, d.lng));
+  };
+  if (departurePending) { departureApply(departurePending); departurePending = null; }
 
   document.getElementById('address-search-btn').addEventListener('click', function () {
     new daum.Postcode({ oncomplete: pickByAddress }).open();

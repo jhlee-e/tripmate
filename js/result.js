@@ -10,6 +10,8 @@ async function start() {
   const status = document.getElementById('status');
   if (!trip) { status.textContent = '여행 정보를 찾을 수 없어요. 조건을 다시 입력해 주세요.'; return; }
   document.getElementById('trip-summary').textContent = tripSummary(trip);
+  const navEdit = document.querySelector('.top-nav a[href="condition.html"]');   // '조건 다시 입력'도 지난 입력을 불러오게
+  if (navEdit) { navEdit.href = editConditionUrl(trip.id); navEdit.textContent = '조건 수정하기'; }
 
   try {
     const regions = await loadRegions();
@@ -34,6 +36,7 @@ async function start() {
     picked.sort(function (a, b) { return (b.fits - a.fits) || (b.rank.score - a.rank.score); });
     if (picked.length === 0) {
       status.textContent = '최대 예산(' + won(trip.budget_max) + ')의 120% 안에서 갈 수 있는 여행지가 없어요. 최대 예산을 늘리거나 여행 일수·인원을 조정해 보세요.';
+      showEditConditionButton(status, editConditionUrl(trip.id));
       return;
     }
     status.textContent = '';

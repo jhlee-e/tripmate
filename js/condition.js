@@ -248,7 +248,9 @@ async function handleSubmit(event) {
   const button = document.getElementById('submit-btn');
   button.disabled = true;
   // 코스 담기 모드면 여행지·일정안·시작 시각·원래 여행 번호도 함께 저장 (course-copy.js)
-  const { data, error } = await sb.from('trips').insert(Object.assign({
+  // 조건 수정하기로 왔고 아직 여행지를 안 고른 여행이면 그 여행을 고침, 아니면 새로 만듦 (js/condition-edit.js)
+  const editId = typeof editTripId === 'function' ? editTripId() : null;
+  const row = Object.assign({
     start_date: condition.startDate,
     end_date: condition.endDate,
     days: condition.days,
@@ -266,8 +268,12 @@ async function handleSubmit(event) {
     transport: condition.transport,
     tags: condition.tags,
     tempo: condition.tempo
-  }, condition.pet ? { pet: true } : {}, condition.together && !copyCourse ? { together: true } : {},
-     copyTripFields())).select().single();
+  }, condition.pet || (editId && 'pet' in editTrip) ? { pet: condition.pet } : {},
+     (condition.together && !copyCourse) || (editId && 'together' in editTrip) ? { together: !!condition.together && !copyCourse } : {},
+     copyTripFields());
+  const { data, error } = editId
+    ? await sb.from('trips').update(row).eq('id', editId).select().single()
+    : await sb.from('trips').insert(row).select().single();
   button.disabled = false;
 
   if (error) {

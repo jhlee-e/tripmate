@@ -110,3 +110,20 @@ async function tripRole(trip) {
   const res = await sb.from('trip_members').select('role').eq('trip_id', trip.id).eq('user_id', data.session.user.id).maybeSingle();
   return res.data ? res.data.role : null;
 }
+
+// 조건 수정하기 주소: 지난 입력을 불러와 고칠 수 있게 여행 번호를 넘김 (js/condition-edit.js)
+// 입력: 여행 번호, 직접 고른 지역(있으면) / 출력: 'condition.html?edit=…' 주소
+function editConditionUrl(tripId, region) {
+  return 'condition.html?edit=' + tripId + (region ? '&region=' + encodeURIComponent(region) + '&direct=1' : '');
+}
+
+// 결과가 없을 때 안내 문구 아래에 '조건 수정하기' 버튼을 붙임
+function showEditConditionButton(afterEl, url) {
+  if (document.getElementById('edit-condition-btn')) return;
+  const a = document.createElement('a');
+  a.id = 'edit-condition-btn';
+  a.className = 'submit-btn';
+  a.href = url;
+  a.textContent = '✏️ 조건 수정하기 (입력한 내용 그대로)';
+  afterEl.insertAdjacentElement('afterend', a);
+}

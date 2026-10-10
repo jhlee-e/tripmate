@@ -15,15 +15,16 @@ async function start() {
   try {
     const places = await loadPlaces(region);
     const plans = buildPlans(trip, region, places);
+    const editUrl = editConditionUrl(trip.id, param('direct') ? region : null);   // 지난 입력을 불러오는 '조건 수정하기'
     const noPlan = '최대 예산(' + won(trip.budget_max) + ')의 120% 안에서는 ' + region + ' 일정을 만들 수 없어요. 최대 예산을 늘리거나 다른 지역을 골라 보세요.';
-    if (!plans) { status.textContent = noPlan; return; }
+    if (!plans) { status.textContent = noPlan; showEditConditionButton(status, editUrl); return; }
     status.textContent = '';
     // 최대 예산 +20%를 넘는 일정안은 빼고 보여 줌 (2026-10-10 이재훈 결정)
     const all = ['A', 'B', 'C'].map(function (k) {
       return { key: k, plan: plans[k], t: computeTimeline(trip, plans[k]) };
     });
     const rows = all.filter(function (r) { return withinBudgetLimit(trip, r.t.cost.total); });
-    if (!rows.length) { status.textContent = noPlan; return; }
+    if (!rows.length) { status.textContent = noPlan; showEditConditionButton(status, editUrl); return; }
     if (rows.length < all.length) {
       status.textContent = all.filter(function (r) { return rows.indexOf(r) === -1; })
         .map(function (r) { return r.key + '안'; }).join('·') + '은 최대 예산을 20% 넘게 넘어서 뺐어요.';
