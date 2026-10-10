@@ -605,6 +605,13 @@ function buildPlan(type, trip, pool) {
   // 대표 먹거리 식당: 예산 상한 안 → 없으면 상한을 넘는 곳까지
   let sigFoods = sig ? pool.restaurants.filter(function (r) { return signatureOf(r, sig); }) : [];
   if (sig && !sigFoods.length) sigFoods = pool.all.restaurants.filter(function (r) { return signatureOf(r, sig); });
+  // 대표 먹거리가 여러 개면 signature.json에 적힌 순서(앞일수록 더 대표)대로: 첫 메뉴를 파는 식당이 있으면 그 메뉴만 후보로
+  //   (예전: 메뉴 구분 없이 가까운 식당 → 대구에서 막창 대신 납작만두가 뽑힘, 2026-10-10 이재훈 지적)
+  if (sigFoods.length) {
+    const rankOf = function (r) { const n = signatureOf(r, sig); return sig.foods.findIndex(function (f) { return f.name === n; }); };
+    const top = Math.min.apply(null, sigFoods.map(rankOf));
+    sigFoods = sigFoods.filter(function (r) { return rankOf(r) === top; });
+  }
   let sigSpotTaken = !sigSpots.length, sigFoodDone = !sigFoods.length;
   let curDay = 1;
   // 다음에 넣을 명소: 일정안 점수 × 종류 반복 감점(varietyFactor)이 가장 큰 곳
