@@ -33,23 +33,26 @@ async function exportPdf(trip) {
 
 // ---------- PDF용 일차별 지도 (2026-10-10 이재훈 요청) ----------
 // 입력: 지금 일정의 시간표(current.timeline, trip.js) / 출력: #print-maps 칸에 '1일차', '2일차' … 지도를 하나씩 그림
-//   화면에서는 보이지 않는 곳(화면 왼쪽 밖)에 두었다가 인쇄할 때만 일정 바로 아래에 나옴 (style.css @media print)
+//   화면 밖(왼쪽)에서 그린 뒤 각 날짜 일정 칸(.day-block) 안으로 옮김 → 인쇄할 때 '그날 일정 | 그날 지도'가 나란히 (2026-10-10 이재훈 요청)
+//   화면에서는 날짜 칸 안의 인쇄용 지도를 숨김 (style.css)
 //   큰 지도 하나는 인쇄할 때 크기가 바뀌면서 깨져 보여서, 인쇄 폭에 맞춘 고정 크기 지도를 날마다 따로 만듦
 //   경로는 화면 지도에서 이미 받아 둔 것을 다시 씀(road-route.js가 기억) → 길찾기 서버를 또 부르지 않음
-const PRINT_MAP_W = 680, PRINT_MAP_H = 400;   // 인쇄 폭(A4 세로, 여백 제외 약 700px)에 맞춤 (Claude 판단)
+const PRINT_MAP_W = 330, PRINT_MAP_H = 300;   // A4 세로 폭(여백 제외 약 700px)의 절반쯤 — 나머지 절반에 일정 (Claude 판단)
 
 async function buildPrintMaps(trip) {
   const box = document.getElementById('print-maps');
   const t = current.timeline;
   if (!box || !t || typeof kakao === 'undefined' || !kakao.maps || !kakao.maps.Map) return;
   box.innerHTML = '';
+  document.querySelectorAll('#schedule .print-day-map').forEach(function (x) { x.remove(); });   // 지난번에 옮겨 둔 지도
+  const sections = [];
   const waits = t.days.map(function (day, di) {
     const color = DAY_COLORS[di % DAY_COLORS.length];
     const date = new Date(trip.start_date + 'T00:00:00');
     date.setDate(date.getDate() + di);
     const sec = document.createElement('section');
     sec.className = 'print-day-map';
-    sec.innerHTML = '<h3>' + (di + 1) + '일차 지도 <small>' + (date.getMonth() + 1) + '/' + date.getDate() + ' (' + DOW[date.getDay()] + ')</small></h3>';
+    sections.push(sec);
     const el = document.createElement('div');
     el.className = 'print-map';
     el.style.width = PRINT_MAP_W + 'px';
@@ -85,6 +88,9 @@ async function buildPrintMaps(trip) {
   });
   await Promise.all(waits);
   await new Promise(function (r) { setTimeout(r, 400); });   // 걷는 길 등 늦게 그려지는 선을 조금 더 기다림
+  // 다 그린 지도를 그 날짜 일정 칸 안으로 옮김
+  const blocks = document.querySelectorAll('#schedule .day-block');
+  sections.forEach(function (sec, di) { if (blocks[di] && sec.isConnected) blocks[di].appendChild(sec); });
 }
 
 function loadScriptOnce(url) {
