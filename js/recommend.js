@@ -326,6 +326,7 @@ function roomFor(p, trip) {
     if (isPerBed(r)) c *= need;   // 침대당 요금
     if (c < bestCost) { bestCost = c; best = r; }
   });
+  p._noFit = !best && priced.length > 0;   // 객실은 있는데 방 하나 인원이 들어가는 객실이 없음 → 추천에서 뺌(usable)
   if (!best && priced.length) best = priced.slice().sort(function (a, b) { return (b.max || 0) - (a.max || 0); })[0];
   p._roomKey = key; p._room = best;
   return best;
@@ -362,7 +363,7 @@ function lodgingLabel(p, trip) {
   const avg = lodgingAvgRoomNight(p, trip);
   return (r ? r.name + (isPerBed(r) ? '(침대 ' + perRoomPeople(trip) + '개)' : r.max ? '(최대 ' + r.max + '명)' : '') + ' · ' : '') + '1박 ' +
          (trip.days > 2 ? '평균 ' : '') + Math.round(avg).toLocaleString('ko-KR') + '원' +
-         (r ? (r.src === 'search' ? ' (검색 추정)' : '') : (p.costCheck === '추정' ? ' (추정)' : ''));
+         (r ? (r.src === 'search' ? ' (여기어때 검색)' : r.src === 'stats' ? ' (통계 추정)' : '') : (p.costCheck === '추정' ? ' (추정)' : ''));
 }
 
 // ---------- 3. 예산 상한과 후보 거르기 ----------
@@ -556,6 +557,7 @@ function usable(p, trip) {
   if (p.audience === '10대' && !trip.teens) return false;    // 청소년 전용 공간은 청소년이 있을 때만
   if (p.type === '명소' && !(p.stayMin > 0)) return false;   // 체류 시간 0 = 야영장 등 숙박 시설
   if (p.type === '숙소' && !(p.cost > 0) && !roomFor(p, trip)) return false;   // 가격 모르는 숙소 제외 (객실 요금이 있으면 사용)
+  if (p.type === '숙소' && roomFor(p, trip) && p._noFit) return false;           // 방 하나에 잘 인원이 들어가는 객실이 없는 숙소 제외
   return true;
 }
 
