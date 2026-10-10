@@ -285,6 +285,11 @@ function rankRegions(trip, regions, round) {
 
 // ---------- 3. 예산 상한과 후보 거르기 ----------
 
+// 일정안 총비용이 최대 예산을 넘어도 되는 한도: 최대 20%까지만 (2026-10-10 이재훈 결정)
+//   이보다 비싼 일정안·여행지는 보여 주지 않고, 하나도 없으면 '없다'고 안내
+const BUDGET_OVER_LIMIT = 1.2;
+function withinBudgetLimit(trip, total) { return total <= trip.budget_max * BUDGET_OVER_LIMIT; }
+
 // 항목별 상한가: 최대 예산(budgetMax) 기준 (이재훈 결정)
 function budgetCaps(trip) {
   const max = trip.budget_max, nights = trip.days - 1, rooms = trip.rooms || 1;
