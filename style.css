@@ -509,39 +509,45 @@ a.small-btn { display: inline-flex; align-items: center; justify-content: center
 .trip-side .map-card { position: static; }
 .trip-side .detail-map { height: 360px; }
 
-/* trip.html 배치 (2026-10-10 변경): 왼쪽 여행 조건·비용 | 가운데 일정 | 오른쪽 지도(따라옴) / 아래 준비물·후기·사진 */
+/* trip.html 배치 (2026-10-10 2차 변경): 위 여행 조건(가로) / 일정 | 지도 → 친구 → 공개 / 비용(가로) / 준비물·후기·사진 */
 .page.trip-wide { max-width: 1440px; }
 .trip-page { margin-top: 18px; display: flex; flex-direction: column; gap: 18px; }
 .trip-page[hidden], .trip-page [hidden] { display: none !important; }
-.trip-grid { display: grid; grid-template-columns: minmax(240px, 280px) minmax(360px, 1.2fr) minmax(320px, 1fr); gap: 18px; align-items: start; }
-.trip-grid:has(#map-card[hidden]) { grid-template-columns: minmax(240px, 280px) 1fr; }
-.trip-info, .trip-center, .trip-map { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
 .trip-page .card + .card { margin-top: 0; }
-.trip-info .card { padding: 16px; }
-.trip-info .info-list { grid-template-columns: 64px 1fr; font-size: 0.85rem; }
-.trip-map .map-card { position: sticky; top: 16px; }
-.trip-map .detail-map { height: min(60vh, 560px); }
-.trip-map .place-card { max-height: 32vh; overflow-y: auto; }
+
+/* 여행 조건: 항목을 가로로 여러 칸 + 버튼 줄 */
+.trip-top { padding: 16px 20px; }
+.trip-top .section-title { margin-bottom: 10px; }
+.trip-top .info-list { grid-template-columns: repeat(4, auto minmax(0, 1fr)); gap: 8px 14px; font-size: 0.86rem; margin-bottom: 12px; }
+.trip-top .info-list dt { white-space: nowrap; }
+
+/* 가운데 두 칸: 일정이 넓게, 오른쪽은 지도·친구·공개를 위에서부터 */
+.trip-grid { display: grid; grid-template-columns: minmax(380px, 1.25fr) minmax(340px, 1fr); gap: 18px; align-items: start; }
+.trip-center, .trip-map { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.trip-map .map-card { position: static; }   /* 아래에 친구·공개 카드가 있어 따라오기(sticky)는 끔 — 장소를 누르면 지도로 스크롤 (trip.js) */
+.trip-map .detail-map { height: min(58vh, 520px); }
+.trip-map .place-card { max-height: 30vh; overflow-y: auto; }
 .trip-center .mini-timeline { font-size: 0.92rem; }
+
+/* 비용: 왼쪽 합계·예산 그래프 | 오른쪽 일일 경비 표 */
+.cost-wide { display: grid; grid-template-columns: minmax(260px, 1fr) minmax(0, 2fr); gap: 12px 28px; align-items: start; }
+.cost-wide .cost-daily .sub-title { margin-top: 0; }
+.cost-wide .daily-cost { font-size: 0.84rem; }
+
 .trip-bottom { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
 .trip-bottom .checklist-card { grid-column: 1 / -1; }
 .sig-badge { display: inline-block; margin: 2px 0 0 4px; padding: 1px 8px; border-radius: 999px; background: #fff3d6; color: #8a5a00; font-size: 0.75rem; font-weight: 600; white-space: nowrap; }
 @media (max-width: 1180px) {
-  .trip-grid { grid-template-columns: minmax(340px, 1fr) minmax(300px, 1fr); }
-  .trip-info { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); align-items: start; }
-  .trip-grid:has(#map-card[hidden]) { grid-template-columns: 1fr; }
+  .trip-top .info-list { grid-template-columns: repeat(2, auto minmax(0, 1fr)); }
+  .cost-wide { grid-template-columns: 1fr; }
 }
-@media (max-width: 760px) {
+@media (max-width: 860px) {
   .trip-grid, .trip-bottom { grid-template-columns: 1fr; }
-  .trip-map .map-card { position: static; }
   .trip-map .detail-map { height: 300px; }
   .trip-map .place-card { max-height: none; }
-  /* 휴대폰: 여행 조건 → 일정 → 지도 → 비용·친구·공개 순서 */
-  .trip-info { display: contents; }
-  .trip-info > .card:first-child { order: 1; }
-  .trip-center { order: 2; }
-  .trip-map { order: 3; }
-  .trip-info > .card:not(:first-child) { order: 4; }
+}
+@media (max-width: 560px) {
+  .trip-top .info-list { grid-template-columns: auto minmax(0, 1fr); }
 }
 .info-list { display: grid; grid-template-columns: 80px 1fr; gap: 6px 12px; margin: 0 0 14px; font-size: 0.9rem; }
 .info-list dt { color: var(--text-muted); }
@@ -700,7 +706,7 @@ textarea:focus { outline: none; border-color: var(--accent); }
   .top-nav, .trip-buttons, #friends-card, #share-card, #review-card, #photo-card, #no-plan-card,
   #item-form, .checklist-tools, .import-msg, .suggest-box, .drop-hint, .check-item .link-btn,
   .place-card, .route-note, .error-text, .notice { display: none !important; }
-  .detail-layout, .trip-layout, .checklist-wrap, .trip-grid, .trip-bottom { display: block; }
+  .detail-layout, .trip-layout, .checklist-wrap, .trip-grid, .trip-bottom, .cost-wide { display: block; }
   .trip-main, .trip-side, .trip-info, .trip-center, .trip-map, .trip-page { display: block; }
   .trip-map .map-card { position: static; }
   .card { box-shadow: none; border: 1px solid #ccc; break-inside: avoid; margin: 0 0 12px !important; }

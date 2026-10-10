@@ -152,6 +152,7 @@ function renderSchedule(trip, plan, t) {
         const it = t.days[Number(li.dataset.day)].items[Number(li.dataset.i)];
         showPlace(it.stop.p);
         if (map) map.panTo(new kakao.maps.LatLng(it.stop.p.lat, it.stop.p.lng));
+        scrollMapIntoView();
       });
     });
     box.appendChild(sec);
@@ -209,6 +210,13 @@ function renderMap(t, trip) {
     }, trip.transport, modes);
   });
   map.setBounds(bounds, 40, 40, 40, 40);
+}
+
+// 지도가 화면 밖(일정을 아래로 내려 본 경우)이면 지도가 보이게 부드럽게 스크롤 — 지도가 따라오지 않게 바꿔서 추가
+function scrollMapIntoView() {
+  const el = document.getElementById('map-card');
+  const r = el.getBoundingClientRect();
+  if (r.top < 0 || r.top > window.innerHeight * 0.5) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function showPlace(p) {
