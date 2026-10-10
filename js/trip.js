@@ -212,6 +212,52 @@ function renderMap(t, trip) {
   map.setBounds(bounds, 40, 40, 40, 40);
 }
 
+// ---------- 두 칸 균형 맞추기 (2026-10-10 이재훈 요청) ----------
+// 입력: 일정 칸 높이(L), 지도+공개 설정 높이(R), 함께 여행할 친구 카드 높이(h)
+// 출력: 친구 카드를 오른쪽(지도 아래) 또는 왼쪽(일정 아래 = 공개 설정 왼쪽) 중 두 칸 높이 차가 더 작은 쪽에 둠
+//   일정이 짧으면 왼쪽 빈자리로 옮겨서 친구·공개 설정이 나란히 보이게 됨
+//   한 칸 배치(좁은 화면)에서는 원래 자리(지도 아래)로 되돌림. 40px 이상 나아질 때만 옮겨 왔다 갔다 하지 않게 함 (Claude 판단)
+const GRID_GAP = 18;
+let balanceQueued = false;
+function balanceLayout() {
+  if (balanceQueued) return;
+  balanceQueued = true;
+  requestAnimationFrame(function () {
+    balanceQueued = false;
+    const grid = document.querySelector('.trip-grid');
+    const left = document.querySelector('.trip-center'), right = document.querySelector('.trip-map');
+    const friends = document.getElementById('friends-card'), share = document.getElementById('share-card');
+    if (!grid || !friends) return;
+    const twoCols = getComputedStyle(grid).gridTemplateColumns.split(' ').length > 1;
+    const inLeft = friends.parentElement === left;
+    if (!twoCols || friends.hidden) {
+      if (inLeft) right.insertBefore(friends, share);   // 원래 자리로
+      return;
+    }
+    function colHeight(col) {   // 친구 카드를 뺀 칸 높이
+      let hgt = 0, n = 0;
+      Array.from(col.children).forEach(function (c) {
+        if (c === friends || c.hidden) return;
+        hgt += c.offsetHeight; n++;
+      });
+      return hgt + Math.max(0, n - 1) * GRID_GAP;
+    }
+    const L = colHeight(left), R = colHeight(right), h = friends.offsetHeight + GRID_GAP;
+    const diffRight = Math.abs(L - (R + h)), diffLeft = Math.abs(L + h - R);
+    if (!inLeft && diffLeft + 40 < diffRight) left.appendChild(friends);
+    else if (inLeft && diffRight + 40 < diffLeft) right.insertBefore(friends, share);
+  });
+}
+// 일정·지도·친구 목록이 그려지거나 창 크기가 바뀌면 다시 계산
+if (window.ResizeObserver) {
+  const ro = new ResizeObserver(balanceLayout);
+  ['schedule-card', 'no-plan-card', 'map-card', 'friends-card', 'share-card'].forEach(function (id) {
+    const el = document.getElementById(id);
+    if (el) ro.observe(el);
+  });
+}
+window.addEventListener('resize', balanceLayout);
+
 // 지도가 화면 밖(일정을 아래로 내려 본 경우)이면 지도가 보이게 부드럽게 스크롤 — 지도가 따라오지 않게 바꿔서 추가
 function scrollMapIntoView() {
   const el = document.getElementById('map-card');
