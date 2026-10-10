@@ -428,7 +428,7 @@ function renderLodging() {
   plan.days.forEach(function (d) { d.stops.forEach(function (s) { all.push(s.p); }); });
   const center = all.length ? { lat: all.reduce(function (s, p) { return s + p.lat; }, 0) / all.length,
                                 lng: all.reduce(function (s, p) { return s + p.lng; }, 0) / all.length } : plan.lodging;
-  const list = places.filter(function (p) { return p.type === '숙소' && p.cost > 0 && p.recommend; })
+  const list = places.filter(function (p) { return p.type === '숙소' && (p.cost > 0 || roomFor(p, trip)) && p.recommend; })
     .map(function (p) { return { p: p, km: distanceKm(center, p) }; })
     .sort(function (a, b) { return a.km - b.km; }).slice(0, 30);
   if (plan.lodging && !list.some(function (x) { return x.p.id === plan.lodging.id; })) {
@@ -437,7 +437,7 @@ function renderLodging() {
   const select = document.getElementById('lodging-select');
   select.innerHTML = list.map(function (x, k) {
     return '<option value="' + k + '"' + (plan.lodging && x.p.id === plan.lodging.id ? ' selected' : '') + '>' +
-      esc(x.p.name) + ' · 1박 ' + won(x.p.cost) + ' · 일정 중심에서 ' + x.km.toFixed(1) + 'km</option>';
+      esc(x.p.name) + ' · ' + esc(lodgingLabel(x.p, trip)) + ' · 일정 중심에서 ' + x.km.toFixed(1) + 'km</option>';
   }).join('');
   select.onchange = function () {
     plan.lodging = list[Number(select.value)].p;
@@ -552,8 +552,8 @@ function showPlace(p) {
     (p.photo ? '<img class="place-photo" src="' + esc(p.photo) + '" alt=""><small class="photo-credit">사진: 한국관광공사</small>' : '') +
     '<h3>' + esc(p.name) + '</h3>' +
     '<p class="helper-text muted">' + esc(p.categoryName || p.type) + (p.address ? ' · ' + esc(p.address) : '') + '</p>' +
-    '<p class="helper-text">' + (p.type === '숙소' ? '1박 ' : '1인 ') + (p.cost ? won(p.cost) : '무료') +
-      (p.costCheck === '추정' ? ' (추정)' : '') + (p.stayMin && p.type !== '숙소' ? ' · 기본 체류 ' + p.stayMin + '분' : '') + '</p>' +
+    '<p class="helper-text">' + (p.type === '숙소' && typeof trip !== 'undefined' && trip ? esc(lodgingLabel(p, trip)) :
+      (p.type === '숙소' ? '1박 ' : '1인 ') + (p.cost ? won(p.cost) : '무료') + (p.costCheck === '추정' ? ' (추정)' : '')) + (p.stayMin && p.type !== '숙소' ? ' · 기본 체류 ' + p.stayMin + '분' : '') + '</p>' +
     (p.basis && p.scoredBy && p.scoredBy.indexOf('세부분류') === -1 ? '<p class="helper-text">' + esc(p.basis) + '</p>' : '') +
     legInfoHtml(p) +
     '<p class="place-links">' +

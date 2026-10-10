@@ -283,6 +283,84 @@ function rankRegions(trip, regions, round) {
   return out.sort(function (a, b) { return b.score - a.score; });
 }
 
+// ---------- 숙박비: 객실·날짜별 요금 (2026-10-10 이재훈 요청) ----------
+// p.rooms (tools/merge_rooms.py가 TourAPI 객실 정보·웹 검색으로 채움):
+//   [{ name, base(기준 인원), max(최대 인원), off: [주중, 주말], peak: [주중, 주말], src }]  요금은 방 1개 1박(원), 0 = 모름
+// 객실 정보가 없는 숙소는 지금처럼 p.cost(종류별 추정값)를 씀
+// 주말 = 그날 밤이 금·토요일, 성수기 = 7/15~8/20·12/24~12/31 (이재훈 결정)
+function nightInfo(trip, n) {   // n = 0부터, n번째 밤
+  const d = new Date(trip.start_date + 'T00:00:00');
+  d.setDate(d.getDate() + n);
+  const md = (d.getMonth() + 1) * 100 + d.getDate();
+  return { weekend: d.getDay() === 5 || d.getDay() === 6,
+           peak: (md >= 715 && md <= 820) || md >= 1224 };
+}
+
+// 방 하나에 자야 하는 인원 = 유아를 뺀 인원 ÷ 방 수 (올림) — 유아는 보통 추가 요금 없이 함께 잠 (Claude 판단)
+function perRoomPeople(trip) {
+  return Math.ceil(Math.max(1, trip.people - (trip.infants || 0)) / (trip.rooms || 1));
+}
+
+// 객실 하나의 그날 밤 요금: 정확한 칸이 비어 있으면 가까운 칸으로 대신 (비수기 같은 요일 → 성수기 같은 요일 → 비수기 주중)
+function roomFee(r, night) {
+  const k = night.weekend ? 1 : 0;
+  const order = night.peak ? [r.peak && r.peak[k], r.off && r.off[k], r.peak && r.peak[1 - k], r.off && r.off[1 - k]]
+                           : [r.off && r.off[k], r.off && r.off[1 - k], r.peak && r.peak[k], r.peak && r.peak[1 - k]];
+  for (const v of order) if (v > 0) return v;
+  return 0;
+}
+
+// 이 여행에 쓸 객실: 최대 인원이 방 하나 인원 이상인 객실 중 여행 전체 요금이 가장 싼 것
+//   맞는 객실이 없으면 가장 큰 객실 (출력: 객실 또는 null)
+function roomFor(p, trip) {
+  if (!p || !p.rooms || !p.rooms.length) return null;
+  const key = trip.start_date + '|' + trip.days + '|' + perRoomPeople(trip);
+  if (p._roomKey === key) return p._room;
+  const need = perRoomPeople(trip), nights = Math.max(1, trip.days - 1);
+  const priced = p.rooms.filter(function (r) { return roomFee(r, { weekend: false, peak: false }) > 0; });
+  let best = null, bestCost = Infinity;
+  priced.forEach(function (r) {
+    if ((r.max || r.base || 2) < need) return;
+    let c = 0;
+    for (let n = 0; n < nights; n++) c += roomFee(r, nightInfo(trip, n));
+    if (c < bestCost) { bestCost = c; best = r; }
+  });
+  if (!best && priced.length) best = priced.slice().sort(function (a, b) { return (b.max || 0) - (a.max || 0); })[0];
+  p._roomKey = key; p._room = best;
+  return best;
+}
+
+// n번째 밤 숙박비 (방 수 포함)
+function lodgingNightCost(p, trip, n) {
+  if (!p) return 0;
+  const r = roomFor(p, trip);
+  const one = r ? roomFee(r, nightInfo(trip, n)) : (p.cost || 0);
+  return one * (trip.rooms || 1);
+}
+
+// 여행 전체 숙박비
+function lodgingTripCost(p, trip) {
+  let c = 0;
+  for (let n = 0; n < trip.days - 1; n++) c += lodgingNightCost(p, trip, n);
+  return c;
+}
+
+// 방 1개 1박 평균 (예산 상한과 비교·정렬용)
+function lodgingAvgRoomNight(p, trip) {
+  const nights = Math.max(1, trip.days - 1);
+  if (trip.days - 1 <= 0) return p.cost || 0;
+  return lodgingTripCost(p, trip) / (nights * (trip.rooms || 1));
+}
+
+// 화면 표시용: '디럭스 더블(최대 2명) · 1박 평균 120,000원'
+function lodgingLabel(p, trip) {
+  const r = roomFor(p, trip);
+  const avg = lodgingAvgRoomNight(p, trip);
+  return (r ? r.name + (r.max ? '(최대 ' + r.max + '명)' : '') + ' · ' : '') + '1박 ' +
+         (trip.days > 2 ? '평균 ' : '') + Math.round(avg).toLocaleString('ko-KR') + '원' +
+         (r ? (r.src === 'search' ? ' (검색 추정)' : '') : (p.costCheck === '추정' ? ' (추정)' : ''));
+}
+
 // ---------- 3. 예산 상한과 후보 거르기 ----------
 
 // 일정안 총비용이 최대 예산을 넘어도 되는 한도: 최대 20%까지만 (2026-10-10 이재훈 결정)
@@ -473,7 +551,7 @@ function usable(p, trip) {
   if (p.info && p.info.solo === false && trip.people === 1) return false;
   if (p.audience === '10대' && !trip.teens) return false;    // 청소년 전용 공간은 청소년이 있을 때만
   if (p.type === '명소' && !(p.stayMin > 0)) return false;   // 체류 시간 0 = 야영장 등 숙박 시설
-  if (p.type === '숙소' && !(p.cost > 0)) return false;      // 가격 모르는 숙소 제외
+  if (p.type === '숙소' && !(p.cost > 0) && !roomFor(p, trip)) return false;   // 가격 모르는 숙소 제외 (객실 요금이 있으면 사용)
   return true;
 }
 
@@ -494,7 +572,7 @@ function preparePool(trip, places) {
     base.forEach(function (p) {
       if (p.type === '명소' && p.cost <= caps.admission * relax) pool.attractions.push(p);
       else if (p.type === '식당' && foodKind(p) === 'meal' && p.cost <= caps.meal * relax) pool.restaurants.push(p);   // 디저트·주점은 식사로 안 넣음
-      else if (p.type === '숙소' && p.cost <= caps.lodging * relax) pool.lodgings.push(p);
+      else if (p.type === '숙소' && lodgingAvgRoomNight(p, trip) <= caps.lodging * relax) pool.lodgings.push(p);   // 객실·날짜별 요금 평균
     });
     const enough = pool.attractions.length >= tempo.count * trip.days &&
                    pool.restaurants.length >= 2 * trip.days &&
@@ -531,12 +609,13 @@ function centroid(list) {
 function byDesc(key) { return function (a, b) { return key(b) - key(a); }; }
 
 // 일정안별 숙소 고르기
-function pickLodging(type, pool, center) {
+function pickLodging(type, pool, center, trip) {
   if (pool.lodgings.length === 0) return null;
   const list = pool.lodgings.slice();
-  if (type === 'A') list.sort(function (a, b) { return (b._s - a._s) || (a.cost - b.cost); });
+  const price = function (p) { return lodgingAvgRoomNight(p, trip); };
+  if (type === 'A') list.sort(function (a, b) { return (b._s - a._s) || (price(a) - price(b)); });
   if (type === 'B') list.sort(function (a, b) { return distanceKm(center, a) - distanceKm(center, b); });
-  if (type === 'C') list.sort(function (a, b) { return (a.cost - b.cost) || (b._s - a._s); });
+  if (type === 'C') list.sort(function (a, b) { return (price(a) - price(b)) || (b._s - a._s); });
   return list[0];
 }
 
@@ -596,7 +675,7 @@ function buildPlan(type, trip, pool) {
   const dep = departureOf(trip);
   const limit = tempo.hours * 60;
   const topCenter = centroid(pool.attractions.slice().sort(byDesc(function (p) { return p._s; })).slice(0, 30));
-  const lodging = trip.days > 1 ? pickLodging(type, pool, topCenter) : null;
+  const lodging = trip.days > 1 ? pickLodging(type, pool, topCenter, trip) : null;
   const anchor = lodging || topCenter;
   const keyOf = attractionKey(type, anchor);
   const keyVal = new Map();
@@ -928,11 +1007,12 @@ function fitBudget(trip, plan, pool) {
 
     // 숙소
     if (plan.lodging && nights > 0) {
-      const cur = plan.lodging;
+      const cur = plan.lodging, curCost = lodgingTripCost(cur, trip);
       pool.all.lodgings.forEach(function (l) {
-        if (l.cost >= cur.cost) return;
+        const lCost = lodgingTripCost(l, trip);
+        if (lCost >= curCost) return;
         const km = distanceKm(cur, l);
-        consider((cur.cost - l.cost) * rooms * nights, loss(cur, l, km, 5),
+        consider(curCost - lCost, loss(cur, l, km, 5),
                  function () { plan.lodging = l; syncBreakfast(trip, plan, pool.all.restaurants); }, cur, l);
       });
     }
@@ -974,7 +1054,7 @@ function computeTimeline(trip, plan) {
   const cost = { lodging: 0, food: 0, admission: 0, transport: 0, total: 0 };
   let distance = 0, visits = 0;
 
-  if (plan.lodging) cost.lodging = plan.lodging.cost * (trip.rooms || 1) * nights;
+  if (plan.lodging) cost.lodging = lodgingTripCost(plan.lodging, trip);   // 객실·날짜별 요금 합 (nights박)
 
   const days = plan.days.map(function (day, idx) {
     const d = idx + 1, lastDay = d === plan.days.length;
@@ -983,7 +1063,7 @@ function computeTimeline(trip, plan) {
     let pos = startPoint, clock = day.start, active = 0;
     const items = [];
     // 일일 경비: 그날 밤 숙박비(마지막 날 제외) + 그날 식비·입장료·교통비
-    const dc = { lodging: plan.lodging && !lastDay ? plan.lodging.cost * (trip.rooms || 1) : 0, food: 0, admission: 0, transport: 0, total: 0 };
+    const dc = { lodging: plan.lodging && !lastDay ? lodgingNightCost(plan.lodging, trip, idx) : 0, food: 0, admission: 0, transport: 0, total: 0 };
 
     function leg(to, stop) {
       const intercity = !!(pos.isHome || to.isHome);
