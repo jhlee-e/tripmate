@@ -71,12 +71,15 @@ function drawRoute(map, points, color, onResult, transport, modes) {
   const lines = [];
   function line(path, opt) {
     const l = new kakao.maps.Polyline(Object.assign({ path: path.map(function (p) { return new kakao.maps.LatLng(p[0], p[1]); }) }, opt));
-    l.setMap(map);
+    l.setMap(handle.hidden ? null : map);   // 숨긴 날이면 나중에 그려지는 선도 숨긴 채로
     lines.push(l);
     return l;
   }
+  // 숨기기·보이기 (여행 정보 화면에서 한 날짜만 보기 — 2026-10-10)
+  const handle = { removed: false, hidden: false,
+    remove: function () { this.removed = true; lines.forEach(function (l) { l.setMap(null); }); },
+    setVisible: function (v) { this.hidden = !v; lines.forEach(function (l) { l.setMap(v ? map : null); }); } };
   line(points.map(function (p) { return [p.lat, p.lng]; }), { strokeWeight: 3, strokeColor: color, strokeOpacity: 0.6, strokeStyle: 'shortdash' });
-  const handle = { removed: false, remove: function () { this.removed = true; lines.forEach(function (l) { l.setMap(null); }); } };
   if (points.length < 2) {   // 그릴 구간이 없어도 '끝났음'은 알려 줌 (여러 날을 기다리는 화면을 위해)
     if (onResult) setTimeout(function () { onResult(true, { distance: 0, legs: [] }); });
     return handle;
@@ -102,6 +105,7 @@ function drawRoute(map, points, color, onResult, transport, modes) {
           fetchWalkPath(points[i], points[i + 1]).then(function (path) {
             if (handle.removed || !path || path.length < 2) return;
             tmp.setMap(null);
+            if (lines.indexOf(tmp) !== -1) lines.splice(lines.indexOf(tmp), 1);   // 다시 보이기 할 때 직선이 살아나지 않게
             line(path, WALK_STYLE);
           });
           return;

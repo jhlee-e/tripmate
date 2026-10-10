@@ -125,8 +125,9 @@ function renderSchedule(trip, plan, t) {
     sec.className = 'day-block';
     const date = new Date(trip.start_date);
     date.setDate(date.getDate() + di);
-    let html = '<h3 style="color:' + DAY_COLORS[di % DAY_COLORS.length] + '">' + (di + 1) + '일차 <small>' +
-      (date.getMonth() + 1) + '/' + date.getDate() + '</small></h3><ol class="mini-timeline">';
+    let html = '<h3 class="day-head" role="button" tabindex="0" title="누르면 지도에 이 날짜만 보여요 (다시 누르면 전체)" style="color:' + DAY_COLORS[di % DAY_COLORS.length] + '">' +
+      (di + 1) + '일차 <small>' + (date.getMonth() + 1) + '/' + date.getDate() + '</small>' +
+      '<span class="day-head-hint">지도에서 이 날만 보기</span></h3><ol class="mini-timeline">';
     html += '<li class="mini-point">' + hhmm(day.start) + ' ' + (di === 0 || !plan.lodging ? '🏠 출발 (아침은 집에서)' : '🏨 숙소에서 출발') + '</li>';
     let n = 0;
     day.items.forEach(function (it, i) {
@@ -150,14 +151,20 @@ function renderSchedule(trip, plan, t) {
     sec.querySelectorAll('.mini-item').forEach(function (li) {
       li.addEventListener('click', function () {
         const it = t.days[Number(li.dataset.day)].items[Number(li.dataset.i)];
+        // 다른 날짜만 보고 있었다면 이 장소의 날짜로 바꿈 (숨긴 핀으로 지도가 움직이지 않게)
+        if (selectedDay !== null && selectedDay !== Number(li.dataset.day)) { selectedDay = Number(li.dataset.day); applyDayFilter(false); }
         showPlace(it.stop.p);
         if (map) map.panTo(new kakao.maps.LatLng(it.stop.p.lat, it.stop.p.lng));
         scrollMapIntoView();
       });
     });
+    const head = sec.querySelector('.day-head');
+    head.addEventListener('click', function () { selectDay(di); });
+    head.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectDay(di); } });
     box.appendChild(sec);
   });
   document.getElementById('schedule-card').hidden = false;
+  applyDayFilter();   // 시간표를 다시 그려도 선택한 날짜 유지
 }
 
 // 지도: 모든 날을 날짜별 색으로 (집은 멀어서 빼고 숙소·장소만)
@@ -166,8 +173,11 @@ function renderMap(t, trip) {
   map = new kakao.maps.Map(document.getElementById('detail-map'), { center: new kakao.maps.LatLng(36.3, 127.8), level: 9 });
   map.addControl(new kakao.maps.ZoomControl(), kakao.maps.ControlPosition.RIGHT);
   const bounds = new kakao.maps.LatLngBounds();
+  dayLayers = [];
   t.days.forEach(function (day, di) {
     const color = DAY_COLORS[di % DAY_COLORS.length];
+    const layer = { overlays: [], route: null, bounds: new kakao.maps.LatLngBounds() };   // 날짜별 핀·경로선 (한 날짜만 보기용)
+    dayLayers.push(layer);
     const pts = [], modes = [], refs = [];   // 경로 점, 각 점으로 오는 구간의 걷기/대중교통, 그 선택을 담는 곳
     let n = 0;
     function pushPt(p, mode, ref) {
@@ -177,13 +187,16 @@ function renderMap(t, trip) {
     function pin(p, label, dark) {
       const pos = new kakao.maps.LatLng(p.lat, p.lng);
       bounds.extend(pos);
+      layer.bounds.extend(pos);
       const el = document.createElement('button');
       el.type = 'button';
       el.className = 'map-pin';
       el.style.background = dark ? '#333' : color;
       el.textContent = label;
       el.addEventListener('click', function () { showPlace(p); });
-      new kakao.maps.CustomOverlay({ position: pos, content: el, yAnchor: 0.5 }).setMap(map);
+      const ov = new kakao.maps.CustomOverlay({ position: pos, content: el, yAnchor: 0.5 });
+      ov.setMap(map);
+      layer.overlays.push(ov);
     }
     if (!day.startPoint.isHome) { pin(day.startPoint, '숙', true); pushPt(day.startPoint); }
     day.items.forEach(function (it) { pin(it.stop.p, it.stop.meal ? '🍴' : (di + 1) + '-' + (++n), false); pushPt(it.stop.p, it.moveMode, it.stop); });
@@ -193,7 +206,7 @@ function renderMap(t, trip) {
       pushPt(day.endPoint, day.backMode, dayPlan.backStop);
     }
     // 날짜별 경로선: 실제 길을 따라 (js/road-route.js — 불러오기 전·실패 시에는 점선 직선)
-    drawRoute(map, pts, color, function (ok, info) {
+    layer.route = drawRoute(map, pts, color, function (ok, info) {
       if (!ok) failed++; else km += info.distance || 0;
       // 대중교통 경로가 없는 구간은 걷기로 보고 시간표·비용을 다시 계산 (지도는 이미 걷기로 그려짐)
       if (ok && info.learned) autoWalked = true;   // 실제 대중교통 시간을 받았으면 시간표·비용 다시 계산
@@ -209,7 +222,37 @@ function renderMap(t, trip) {
       }
     }, trip.transport, modes);
   });
-  map.setBounds(bounds, 40, 40, 40, 40);
+  allBounds = bounds;
+  applyDayFilter(true);
+}
+
+// ---------- 한 날짜만 보기 (2026-10-10 이재훈 요청) ----------
+// 입력: 일정에서 'n일차' 제목을 누름 / 출력: 그 날짜 칸이 어둡게 선택되고, 지도에는 그날 핀·경로만 보이며 그날에 맞춰 확대
+//       같은 날짜를 다시 누르면 선택이 풀리고 모든 날짜가 보임
+let selectedDay = null, dayLayers = [], allBounds = null;
+
+function selectDay(di) {
+  selectedDay = selectedDay === di ? null : di;
+  applyDayFilter(true);
+}
+
+// fit: 지도를 보이는 날짜에 맞춰 다시 확대할지 (시간표만 다시 그릴 때는 지도 위치를 그대로 둠)
+function applyDayFilter(fit) {
+  document.querySelectorAll('#schedule .day-block').forEach(function (b, i) {
+    b.classList.toggle('selected', i === selectedDay);
+    b.classList.toggle('dimmed', selectedDay !== null && i !== selectedDay);
+    const hint = b.querySelector('.day-head-hint');
+    if (hint) hint.textContent = i === selectedDay ? '이 날만 보는 중 · 다시 누르면 전체' : '지도에서 이 날만 보기';
+  });
+  if (!map || !dayLayers.length) return;
+  dayLayers.forEach(function (layer, i) {
+    const show = selectedDay === null || i === selectedDay;
+    layer.overlays.forEach(function (ov) { ov.setMap(show ? map : null); });
+    if (layer.route && layer.route.setVisible) layer.route.setVisible(show);
+  });
+  if (!fit) return;
+  const b = selectedDay === null ? allBounds : dayLayers[selectedDay].bounds;
+  if (b && !b.isEmpty()) map.setBounds(b, 40, 40, 40, 40);
 }
 
 // ---------- 두 칸 균형 맞추기 (2026-10-10 이재훈 요청) ----------

@@ -557,6 +557,17 @@ a.small-btn { display: inline-flex; align-items: center; justify-content: center
 .day-block + .day-block { margin-top: 16px; }
 .day-block h3 { margin: 0 0 6px; font-size: 1rem; }
 .day-block h3 small { color: var(--text-muted); font-weight: 400; }
+.day-block { border-radius: 10px; transition: background 0.15s, opacity 0.15s; }
+.day-head { display: flex; align-items: baseline; gap: 6px; cursor: pointer; border-radius: 8px; padding: 4px 6px; margin-left: -6px !important; user-select: none; }
+.day-head:hover { background: rgba(0, 0, 0, 0.05); }
+.day-head:focus-visible { outline: 2px solid var(--accent); }
+.day-head-hint { margin-left: auto; font-size: 0.72rem; font-weight: 400; color: var(--text-muted); opacity: 0; transition: opacity 0.15s; }
+.day-head:hover .day-head-hint { opacity: 1; }
+/* 선택한 날짜: 칸이 조금 어두워짐 / 나머지 날짜는 흐리게 */
+.day-block.selected { background: rgba(0, 0, 0, 0.07); padding: 6px 10px 8px; margin-left: -10px; margin-right: -10px; }
+.day-block.selected .day-head-hint { opacity: 1; }
+.day-block.selected .day-head-hint::before { content: '✓ '; }
+.day-block.dimmed { opacity: 0.55; }
 .mini-timeline { list-style: none; margin: 0; padding: 0; font-size: 0.88rem; }
 .mini-point { padding: 4px 0; color: var(--text-muted); }
 .mini-item { display: grid; grid-template-columns: 48px 64px 1fr auto; gap: 6px; align-items: baseline; padding: 6px 4px; border-radius: 8px; cursor: pointer; }
@@ -714,6 +725,8 @@ textarea:focus { outline: none; border-color: var(--accent); }
   .card { box-shadow: none; border: 1px solid #ccc; break-inside: avoid; margin: 0 0 12px !important; }
   #schedule-card { break-inside: auto; }
   .day-block { break-inside: avoid; }
+  .day-block.selected, .day-block.dimmed { background: none; opacity: 1; padding: 0; margin: 0; }
+  .day-head-hint { display: none; }
   .trip-side .detail-map, .trip-map .detail-map { height: 300px; }
   /* 일차별 지도: 큰 지도 대신 날마다 하나씩 (js/export.js buildPrintMaps) */
   #map-card { display: none !important; }
