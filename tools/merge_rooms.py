@@ -87,6 +87,26 @@ def stats_rooms(p, groups):
     return rooms
 
 
+def peak_ratios(all_places, raw):
+    """종류별 '성수기 ÷ 비수기' 요금 비율 중앙값 [주중, 주말] — TourAPI 실제 요금에서 계산
+    여기어때 검색 요금은 비수기(10월) 날짜만 있어 성수기 칸을 이 비율로 추정 (2026-10-10 이재훈 결정:
+    지난 블로그·후기 조사에 성수기 가격 숫자는 없었고, 여기어때는 내년 여름 날짜가 아직 열리지 않음)"""
+    groups = {}
+    for p in all_places:
+        if p.get('type') != '숙소':
+            continue
+        for r in from_tourapi(raw.get(str(p['id']), [])):
+            for i in (0, 1):
+                if r['off'][i] and r['peak'][i]:
+                    for key in (kind_of(p), '전체'):
+                        groups.setdefault(key, [[], []])[i].append(r['peak'][i] / r['off'][i])
+    out = {}
+    for key, (a, b) in groups.items():
+        if len(a) >= 10:
+            out[key] = [sorted(a)[len(a) // 2], sorted(b)[len(b) // 2] if len(b) >= 10 else sorted(a)[len(a) // 2]]
+    return out
+
+
 def main():
     raw = json.load(open(os.path.join(HERE, 'raw', 'rooms.json'), encoding='utf-8'))
     sp = os.path.join(HERE, 'rooms_search.json')
@@ -97,6 +117,7 @@ def main():
     for fn in sorted(os.listdir(FOLDER)):
         all_places += json.load(open(os.path.join(FOLDER, fn), encoding='utf-8'))
     groups = build_stats(all_places, raw)
+    ratios = peak_ratios(all_places, raw)
     for fn in sorted(os.listdir(FOLDER)):
         path = os.path.join(FOLDER, fn)
         places = json.load(open(path, encoding='utf-8'))
@@ -110,7 +131,14 @@ def main():
             if rooms:
                 with_api += 1
             elif str(p['id']) in search:
-                rooms = [dict(r, src='search') for r in search[str(p['id'])].get('rooms', [])]
+                ratio = ratios.get(kind_of(p)) or ratios.get('전체') or [1, 1]
+                rooms = []
+                for r in search[str(p['id'])].get('rooms', []):
+                    r = dict(r, src='search')
+                    if not any(r['peak']):   # 성수기 추정: 비수기 × 종류별 비율 (천 원 단위 반올림)
+                        r['peak'] = [round(r['off'][i] * ratio[i], -3) if r['off'][i] else 0 for i in (0, 1)]
+                        r['peakEst'] = True
+                    rooms.append(r)
                 src = '검색 추정'
                 if rooms:
                     with_search += 1

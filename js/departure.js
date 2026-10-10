@@ -6,6 +6,23 @@
 
 let departure = null;
 
+// 섬(제주·울릉)에서 출발하는지 (2026-10-10 이재훈 요청: 섬 출발은 받지 않음 — 배·비행기 이동을 계산하지 않으므로)
+// 입력: { address, lat, lng } / 출력: 섬 이름 또는 null
+// 주소 글자로 먼저 보고, 주소를 못 찾은 지점은 좌표 범위로 확인 (recommend.js의 departureIsland와 같은 기준)
+const DEPARTURE_ISLANDS = [
+  { name: '제주도', words: ['제주특별자치도', '제주도'], box: [33.0, 34.0, 126.0, 127.1] },
+  { name: '울릉도·독도', words: ['울릉군'], box: [37.2, 37.7, 130.7, 132.0] }
+];
+function islandOfDeparture(d) {
+  if (!d) return null;
+  for (const is of DEPARTURE_ISLANDS) {
+    if (is.words.some(function (w) { return (d.address || '').indexOf(w) !== -1; })) return is.name;
+    const b = is.box;
+    if (d.lat >= b[0] && d.lat <= b[1] && d.lng >= b[2] && d.lng <= b[3]) return is.name;
+  }
+  return null;
+}
+
 // 저장해 둔 출발 위치를 다시 채우기 (조건 수정하기 — js/condition-edit.js)
 // 지도가 아직 준비 전이면 값만 먼저 넣고, 준비되면 핀을 꽂음
 let departurePending = null, departureApply = null;
@@ -31,6 +48,8 @@ kakao.maps.load(function () {
   function setDeparture(lat, lng, address) {
     departure = { address: address, lat: lat, lng: lng };
     document.getElementById('departure-address').value = address;
+    const island = islandOfDeparture(departure);
+    if (island) setHint(island + '에서는 출발할 수 없어요. 배·비행기 이동은 아직 계산하지 못해서 육지의 출발 위치만 받아요.', true);
     const pos = new kakao.maps.LatLng(lat, lng);
 
     if (!departureMarker) {
@@ -46,6 +65,7 @@ kakao.maps.load(function () {
   }
 
   function setHint(text, isWarning) {
+    if (!isWarning && islandOfDeparture(departure)) return;   // 섬 출발 경고는 지우지 않음
     const hint = document.getElementById('departure-hint');
     hint.textContent = text;
     hint.classList.toggle('warning', !!isWarning);

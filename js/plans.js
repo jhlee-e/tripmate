@@ -8,6 +8,13 @@ async function start() {
   const status = document.getElementById('status');
   if (!trip || !region) { status.textContent = '여행 정보를 찾을 수 없어요.'; return; }
   document.getElementById('trip-summary').textContent = tripSummary(trip);
+  // 섬에서 출발한 여행은 추천하지 않음 (2026-10-10)
+  const island = departureIsland(trip);
+  if (island) {
+    status.textContent = island + '에서 출발하는 여행은 아직 추천할 수 없어요. 배·비행기 이동을 계산하지 않아서, 육지의 출발 위치로 조건을 고쳐 주세요.';
+    showEditConditionButton(status, editConditionUrl(trip.id, param('direct') ? region : null));
+    return;
+  }
   document.getElementById('title').textContent = region + ' 일정안 비교';
   document.getElementById('back-link').href = 'result.html?trip=' + trip.id + '&round=' + (Number(param('round')) || 0);   // 같은 회차 추천으로 돌아감
   if (param('direct')) document.getElementById('back-link').textContent = '← 다른 지역도 추천받기';   // 지역을 직접 골라서 온 경우

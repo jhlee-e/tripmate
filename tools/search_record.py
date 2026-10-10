@@ -6,6 +6,8 @@
   - wd = 2026-10-14(수) 1박, we = 2026-10-17(토) 1박 → 비수기 주중·주말 요금으로 사용
   - 같은 객실의 패키지([조식 2인 패키지] 등 대괄호)는 이름에서 떼고 가장 싼 값만 남김, 가격 '없음'(마감)은 빼기
   - wd·we가 모두 비어 있으면 '못 찾음'으로 기록 (다시 찾지 않게)
+  - "fill": true 이면 이미 기록된 숙소의 비어 있는 요금 칸만 채움 (매진이라 못 읽은 날짜를 더 먼 날짜로 다시 찾을 때 —
+    2026-10-10 이재훈 요청, 다시 찾는 날짜는 note에 적음)
 출력: tools/rooms_search.json — { 숙소id: { rooms: [{ name, base, max, off: [wd, we], peak: [0, 0] }], url, note, checked } }
       → python tools/merge_rooms.py 로 장소 파일에 넣음 (TourAPI 요금이 없는 숙소만, 표시는 '검색 추정')
 """
@@ -36,6 +38,17 @@ for it in items:
     parse(it.get('wd'), 0, rooms)
     parse(it.get('we'), 1, rooms)
     rooms = list(rooms.values())
+    old = data.get(str(it['id']))
+    if it.get('fill') and old:
+        by = {r['name']: r for r in old['rooms']}
+        for r in rooms:
+            o = by.get(r['name'])
+            if o:
+                o['off'] = [o['off'][i] or r['off'][i] for i in (0, 1)]
+            else:
+                old['rooms'].append(r)
+        old['note'] = (old.get('note', '') + ' / ' + it.get('note', '')).strip(' /')
+        continue
     data[str(it['id'])] = {'rooms': rooms, 'url': it.get('url', ''), 'note': it.get('note', ''),
                            'checked': datetime.date.today().isoformat()}
 json.dump(data, open(PATH, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)

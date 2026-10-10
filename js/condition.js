@@ -220,6 +220,8 @@ function validateCondition(c) {
   if (!Number.isInteger(c.rooms) || c.rooms < 1) return '숙소 방 수는 1 이상의 정수로 입력해 주세요.';
   if (c.rooms > p.total) return '방 수가 인원 수보다 많아요.';
   if (!c.departure) return '출발 위치를 주소 검색이나 지도로 정해 주세요.';
+  const island = islandOfDeparture(c.departure);   // departure.js
+  if (island) return island + '에서는 출발할 수 없어요. 육지의 출발 위치를 골라 주세요 (배·비행기 이동은 아직 계산하지 않아요).';
   if (!c.transport) return '주 이동 수단을 선택해 주세요.';
   if (c.tags.length === 0) return '여행 취향을 한 개 이상 선택해 주세요.';
   if (!c.tempo) return '여행 템포를 선택해 주세요.';

@@ -51,6 +51,13 @@ const CHAIN_BRANDS = ['스타벅스', '투썸플레이스', '이디야', '메가
 // 배·비행기를 타야만 갈 수 있는 지역: 육지 이동 시간·비용 계산이 맞지 않아 추천에서 제외 (이재훈 결정, 데이터는 그대로 둠)
 //   신안·완도·진도·거제·남해 등은 다리로 이어져 있어 포함
 const SEA_REGIONS = ['제주', '서귀포', '울릉'];
+// 섬에서 출발한 여행인지 (예전에 저장된 여행 대비 — 새 여행은 조건 입력에서 막음, departure.js의 islandOfDeparture와 같은 기준)
+function departureIsland(trip) {
+  const lat = trip.departure_lat, lng = trip.departure_lng, addr = trip.departure_address || '';
+  if (addr.indexOf('제주') !== -1 || (lat >= 33.0 && lat <= 34.0 && lng >= 126.0 && lng <= 127.1)) return '제주도';
+  if (addr.indexOf('울릉군') !== -1 || (lat >= 37.2 && lat <= 37.7 && lng >= 130.7 && lng <= 132.0)) return '울릉도·독도';
+  return null;
+}
 
 // ---------- 1. 작은 계산 도구 ----------
 

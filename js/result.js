@@ -10,6 +10,13 @@ async function start() {
   const status = document.getElementById('status');
   if (!trip) { status.textContent = '여행 정보를 찾을 수 없어요. 조건을 다시 입력해 주세요.'; return; }
   document.getElementById('trip-summary').textContent = tripSummary(trip);
+  // 섬에서 출발한 여행은 추천하지 않음 (2026-10-10)
+  const island = departureIsland(trip);
+  if (island) {
+    status.textContent = island + '에서 출발하는 여행은 아직 추천할 수 없어요. 배·비행기 이동을 계산하지 않아서, 육지의 출발 위치로 조건을 고쳐 주세요.';
+    showEditConditionButton(status, editConditionUrl(trip.id));
+    return;
+  }
   const navEdit = document.querySelector('.top-nav a[href="condition.html"]');   // '조건 다시 입력'도 지난 입력을 불러오게
   if (navEdit) { navEdit.href = editConditionUrl(trip.id); navEdit.textContent = '조건 수정하기'; }
 
