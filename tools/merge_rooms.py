@@ -136,7 +136,7 @@ def main():
                 for r in search[str(p['id'])].get('rooms', []):
                     r = dict(r, src='search')
                     if not any(r['peak']):   # 성수기 추정: 비수기 × 종류별 비율 (천 원 단위 반올림)
-                        r['peak'] = [round(r['off'][i] * ratio[i], -3) if r['off'][i] else 0 for i in (0, 1)]
+                        r['peak'] = [int(round(r['off'][i] * ratio[i], -3)) if r['off'][i] else 0 for i in (0, 1)]
                         r['peakEst'] = True
                     rooms.append(r)
                 src = '검색 추정'
