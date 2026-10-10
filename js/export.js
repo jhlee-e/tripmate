@@ -15,6 +15,7 @@ async function exportPdf(trip) {
   const btn = document.getElementById('pdf-btn');
   const label = btn ? btn.textContent : '';
   if (btn) { btn.disabled = true; btn.textContent = '🗺️ 일차별 지도 준비 중…'; }
+  document.body.classList.add('print-layout');   // 인쇄용 배치(style.css) — 인쇄 창을 닫으면 해제
   try {
     await buildPrintMaps(trip);
   } catch (e) {
@@ -26,6 +27,7 @@ async function exportPdf(trip) {
   document.title = exportFileName(trip);
   window.addEventListener('afterprint', function restore() {
     document.title = old;
+    document.body.classList.remove('print-layout');
     window.removeEventListener('afterprint', restore);
   });
   window.print();
@@ -42,7 +44,7 @@ async function exportPdf(trip) {
 //   2) 그 단계에서 장소·길이 실제로 차지하는 픽셀 범위 + 여백만 남기고 지도 칸을 잘라 냄
 //   3) 카카오 지도는 확대가 2배씩 단계라 잘라 낸 크기가 들쭉날쭉 → 넓이가 목표와 비슷해지도록 지도 그림을 살짝 확대(최대 1.6배)
 const PRINT_MAP_AREA = 330 * 300;          // 목표 넓이 (Claude 판단: 전 버전 크기)
-const PRINT_MAP_MAX_W = 400, PRINT_MAP_MAX_H = 420, PRINT_MAP_MIN = 150;
+const PRINT_MAP_MAX_W = 340, PRINT_MAP_MAX_H = 400, PRINT_MAP_MIN = 150;   // 폭은 절반을 넘지 않게 — 일정 칸 자리 확보
 const PRINT_MAP_PAD = 22;                  // 가장자리 핀이 잘리지 않을 만큼의 여백(px)
 
 function waitOrTimeout(promise, ms) {
@@ -142,6 +144,7 @@ async function buildPrintMaps(trip) {
     el.style.transform = 'scale(' + s.toFixed(3) + ')';
     frame.style.width = Math.round(cw * s) + 'px';
     frame.style.height = Math.round(ch * s) + 'px';
+    sec._fit = { m: m, el: el, frame: frame, scale: s, center: center };
 
     // 지도 그림(타일)이 다 불러와질 때까지 (최대 4초)
     await waitOrTimeout(new Promise(function (resolve) { kakao.maps.event.addListener(m, 'tilesloaded', resolve); }), 4000);
@@ -150,6 +153,25 @@ async function buildPrintMaps(trip) {
   // 다 그린 지도를 그 날짜 일정 칸 안으로 옮김
   const blocks = document.querySelectorAll('#schedule .day-block');
   sections.forEach(function (sec, di) { if (blocks[di] && sec.isConnected) blocks[di].appendChild(sec); });
+
+  // 4) 일정이 지도보다 길면 지도 칸을 일정 높이까지 늘림 — 빈칸 대신 주변 지도가 더 보임 (중심은 그대로)
+  //    (body.print-layout이 켜져 있어 인쇄할 때와 같은 폭·글씨로 잼)
+  const extra = [];
+  sections.forEach(function (sec, di) {
+    const f = sec._fit, block = blocks[di];
+    if (!f || !block || sec.parentElement !== block) return;
+    const list = block.querySelector('.mini-timeline');
+    const listH = Array.from(list.children).reduce(function (h, li) { return h + li.offsetHeight; }, 0);
+    const frameH = f.frame.offsetHeight;
+    if (listH <= frameH + 8) return;
+    const h = Math.min(listH, 560);   // 너무 길게는 안 늘림 (Claude 판단)
+    f.frame.style.height = h + 'px';
+    f.el.style.height = Math.ceil(h / f.scale) + 'px';
+    f.m.relayout();
+    f.m.setCenter(f.center);
+    extra.push(waitOrTimeout(new Promise(function (resolve) { kakao.maps.event.addListener(f.m, 'tilesloaded', resolve); }), 3000));
+  });
+  await Promise.all(extra);
 }
 
 function loadScriptOnce(url) {
