@@ -66,6 +66,29 @@ function runWalkQueue() {   // 서버 이용 규칙: 1초에 1번까지 → 하�
   });
 }
 
+// ---------- 자동차 출발지↔여행지 구간의 실제 통행료·도로 거리·시간 (8차시) ----------
+// 입력: 시간표(computeTimeline 결과), 여행 / 출력: Promise<새로 알게 된 구간 수> — carLegs(js/recommend.js)에 채움
+//   집이 지도에 그려지지 않아 경로선과 따로, 집 → 1일차 첫 장소 · 마지막 날 마지막 장소 → 집 구간만 /api/route로 받음
+function learnCarLegs(timeline, trip) {
+  if (trip.transport !== '자동차' || typeof carLegs === 'undefined') return Promise.resolve(0);
+  const pairs = [];
+  timeline.days.forEach(function (day) {
+    if (!day.items.length) return;
+    if (day.startPoint.isHome) pairs.push([day.startPoint, day.items[0].stop.p]);
+    if (day.endPoint.isHome) pairs.push([day.items[day.items.length - 1].stop.p, day.endPoint]);
+  });
+  return Promise.all(pairs.map(function (ab) {
+    const k = legKey(ab[0], ab[1]);
+    if (carLegs[k]) return 0;
+    // '?toll'을 붙여 예전에 이 창에 기억해 둔 결과(통행료 없음)와 따로 기억
+    return fetchRoadPath([ab[0], ab[1]], '/api/route?toll').then(function (j) {
+      if (j.toll == null || !j.distance) return 0;
+      carLegs[k] = { toll: j.toll, distance: j.distance, duration: j.duration };
+      return 1;
+    }).catch(function () { return 0; });
+  })).then(function (r) { return r.reduce(function (a, b) { return a + b; }, 0); });
+}
+
 // 반환: { remove() } — 화면을 다시 그릴 때 remove()로 지움
 function drawRoute(map, points, color, onResult, transport, modes) {
   const lines = [];

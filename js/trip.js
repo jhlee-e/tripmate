@@ -48,6 +48,13 @@ async function start() {
     current.plan = plan; current.timeline = timeline;
     renderCost(trip, plan, timeline);
     renderSchedule(trip, plan, timeline);
+    // 자동차: 출발지↔여행지 실제 통행료·도로 거리·시간을 받으면 비용·일정 다시 계산 (8차시)
+    learnCarLegs(timeline, trip).then(function (n) {
+      if (!n) return;
+      current.timeline = computeTimeline(trip, current.plan);
+      renderCost(trip, current.plan, current.timeline);
+      renderSchedule(trip, current.plan, current.timeline);
+    });
     document.getElementById('map-card').hidden = false;
     kakao.maps.load(function () { renderMap(timeline, trip); });
   } catch (e) { showError(e); }

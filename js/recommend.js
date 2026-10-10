@@ -20,9 +20,25 @@ const INTERCITY = {
 };
 // 예산 배분 (계획서): 숙박 40% · 식비 30% · 교통 20% · 입장료·기타 10%
 const BUDGET_SHARE = { lodging: 0.4, food: 0.3, transport: 0.2, etc: 0.1 };
-// 교통비 추정 (Claude 추정값)
-const CAR_WON_PER_KM = 140;       // 휘발유 약 1,700원/L ÷ 연비 약 12km/L, 차 1대 기준
-const TRANSIT_WON_PER_KM = 110;   // 출발지↔여행지 KTX·고속버스 요금 ÷ 도로거리 대략값, 1인 기준
+// ---------- 교통비 (8차시, 2026-10-10 이재훈 결정: 기름값 최신·실제 통행료·KTX 있으면 KTX, 없으면 고속버스 일반) ----------
+// 자동차 기름값: 전국 휘발유 평균 1,857.6원/L (오피넷, 2026-10 둘째 주 보도) ÷ 연비 12km/L (Claude 가정) → 1km당 약 155원, 차 1대 기준
+const FUEL_WON_PER_L = 1857.6;
+const CAR_KM_PER_L = 12;
+const CAR_WON_PER_KM = FUEL_WON_PER_L / CAR_KM_PER_L;
+// 고속도로 통행료 추정 (1종 승용, 폐쇄식): 900원 + 도로 km × 44.3원, 100원 단위 반올림
+//   카카오 길찾기로 실제 통행료를 받기 전까지만 씀. 도로 30km 미만은 고속도로를 안 탄다고 봄 (Claude 가정)
+const TOLL_BASE = 900, TOLL_PER_KM = 44.3, TOLL_MIN_KM = 30;
+// 출발지↔여행지 대중교통 1인 요금 = 직선거리 × 1km당 요금 (실제 요금을 직선거리로 나눠 맞춘 값)
+//   KTX 162원: 서울↔부산 54,400원(약 328km), 용산↔광주송정 42,000원(약 266km) — 2026-09-01 인하 요금
+//   고속버스 일반 87원: 광주↔서울 센트럴시티 22,700원(약 260km) — 2026-10-01 인상 후 요금
+const KTX_WON_PER_KM = 162, KTX_MIN_FARE = 8400;   // 최소 요금은 Claude 가정
+const BUS_WON_PER_KM = 87;
+// KTX 이동 시간: 45분(역까지 가는 시간·대기) + 직선거리 ÷ 120km/h (서울↔부산·광주·강릉 실제 시간에 맞춘 Claude 근사)
+const KTX_TIME = { baseMin: 45, kmh: 120 };
+// KTX역이 있는 시·군 (경부·호남·전라·경전·강릉·중앙·중부내륙·동해선 — 노선은 위키백과·나무위키로 확인, 시·군별 정차역은 Claude 정리)
+//   좌표는 data/regions.json의 시·군 중심. 출발지와 도착지가 모두 어느 KTX 시·군 중심에서 25km 안이면 KTX를 탄다고 봄 (Claude 기준)
+const KTX_POINTS = { '서울': [37.520, 126.983], '광명': [37.444, 126.876], '수원': [37.277, 127.018], '아산': [36.802, 126.991], '청주': [36.638, 127.478], '대전': [36.337, 127.376], '김천': [36.072, 128.075], '구미': [36.145, 128.356], '대구': [35.878, 128.598], '경주': [35.827, 129.258], '울산': [35.540, 129.298], '부산': [35.164, 129.098], '포항': [36.059, 129.399], '밀양': [35.422, 128.752], '창원': [35.197, 128.626], '진주': [35.184, 128.102], '익산': [36.003, 126.990], '김제': [35.791, 126.928], '정읍': [35.572, 126.883], '장성': [35.333, 126.789], '광주': [35.159, 126.878], '나주': [35.014, 126.731], '목포': [34.794, 126.396], '공주': [36.454, 127.139], '논산': [36.187, 127.137], '전주': [35.827, 127.138], '남원': [35.413, 127.448], '곡성': [35.246, 127.289], '구례': [35.239, 127.494], '순천': [34.940, 127.471], '여수': [34.708, 127.700], '남양주': [37.634, 127.221], '양평': [37.532, 127.515], '원주': [37.337, 127.942], '횡성': [37.503, 128.097], '평창': [37.586, 128.492], '강릉': [37.779, 128.893], '동해': [37.360, 128.998], '삼척': [37.254, 129.135], '울진': [36.907, 129.395], '영덕': [36.453, 129.394], '제천': [37.075, 128.160], '단양': [36.986, 128.380], '영주': [36.855, 128.585], '안동': [36.581, 128.726], '의성': [36.345, 128.639], '영천': [36.008, 128.926], '이천': [37.185, 127.386], '여주': [37.273, 127.619], '음성': [36.978, 127.607], '충주': [36.935, 127.867], '문경': [36.680, 128.121] };
+const KTX_NEAR_KM = 25;
 const LOCAL_FARE = 1500;          // 여행지 안 버스 1회 요금, 1인 기준 (걷는 구간은 0원)
 // 시간표
 const DAY_START = 9 * 60;         // 09:00 시작
@@ -82,24 +98,51 @@ function localMode(km, transport, intercity, stop) {
   return km < WALK_KM ? 'walk' : 'transit';
 }
 
+// 자동차 출발지↔여행지 구간의 실제 값 (카카오모빌리티 길찾기, 8차시)
+//   키: legKey(출발, 도착) → { toll(원), distance(미터), duration(초) }
+//   js/road-route.js의 learnCarLegs가 채우고, computeTimeline이 추정값 대신 이 값을 씀
+const carLegs = {};
+
+// 이 지점 25km 안에 KTX역이 있는 시·군이 있는지
+function nearKtx(p) {
+  if (!p || p.lat == null) return false;
+  return Object.keys(KTX_POINTS).some(function (k) {
+    return distanceKm(p, { lat: KTX_POINTS[k][0], lng: KTX_POINTS[k][1] }) <= KTX_NEAR_KM;
+  });
+}
+// 출발지↔여행지 대중교통이 KTX인지 (ends = [출발 지점, 도착 지점], 없으면 버스로 봄)
+function usesKtx(ends) { return !!(ends && nearKtx(ends[0]) && nearKtx(ends[1])); }
+// 고속도로 통행료 추정 (도로 km)
+function tollEstimate(roadKm) {
+  return roadKm < TOLL_MIN_KM ? 0 : Math.round((TOLL_BASE + roadKm * TOLL_PER_KM) / 100) * 100;
+}
+
 // 카카오 대중교통 경로에서 받아 온 실제 구간 정보 (이재훈 결정 2026-10-09: 대중교통 시간은 카카오가 알려 주는 대로)
 //   키: '출발위도,경도>도착위도,경도' → { time(초), fare(원, 1인), noTransit }
 //   js/road-route.js가 길찾기 결과를 받을 때 채우고, computeTimeline이 평균 속도 대신 이 값을 씀 (아직 없으면 평균 속도로 추정)
 const transitLegs = {};
 function legKey(a, b) { return a.lat.toFixed(5) + ',' + a.lng.toFixed(5) + '>' + b.lat.toFixed(5) + ',' + b.lng.toFixed(5); }
 
-function travelMin(km, transport, intercity, mode) {
+// ends = [출발 지점, 도착 지점] (출발지↔여행지 구간에서 KTX 여부를 판단할 때 씀, 없으면 고속버스로 봄)
+function travelMin(km, transport, intercity, mode, ends) {
   if ((mode || localMode(km, transport, intercity)) === 'walk') return Math.round(km / WALK_KMH * 60);
   const local = km / LOCAL_KMH[transport] * 60;
   if (!intercity) return Math.round(local);
+  if (transport === '대중교통' && usesKtx(ends)) return Math.round(Math.min(local, KTX_TIME.baseMin + km / KTX_TIME.kmh * 60));
   const c = INTERCITY[transport];
   return Math.round(Math.min(local, c.baseMin + km * c.road / c.kmh * 60));
 }
 
-// 한 구간 교통비(원)
-function legCost(km, transport, intercity, payers, mode) {
-  if (transport === '자동차') return Math.round(km * (intercity ? INTERCITY.자동차.road : 1) * CAR_WON_PER_KM);
-  if (intercity) return Math.round(km * 1.25 * TRANSIT_WON_PER_KM) * payers;
+// 한 구간 교통비(원) — 자동차는 차 1대 (기름값 + 출발지↔여행지는 통행료 추정), 대중교통은 1인 요금 × 돈 내는 인원
+function legCost(km, transport, intercity, payers, mode, ends) {
+  if (transport === '자동차') {
+    const roadKm = km * (intercity ? INTERCITY.자동차.road : 1);
+    return Math.round(roadKm * CAR_WON_PER_KM + (intercity ? tollEstimate(roadKm) : 0));
+  }
+  if (intercity) {
+    const fare = usesKtx(ends) ? Math.max(KTX_MIN_FARE, km * KTX_WON_PER_KM) : km * BUS_WON_PER_KM;
+    return Math.round(fare / 100) * 100 * payers;
+  }
   return (mode || localMode(km, transport, intercity)) === 'walk' ? 0 : LOCAL_FARE * payers;
 }
 
@@ -242,7 +285,7 @@ function estimateMinCost(trip, r, distKm) {
   const pay = payersOf(trip);
   const nights = trip.days - 1;
   const c = r.costMin || {};
-  const transport = 2 * legCost(distKm, trip.transport, true, pay) +
+  const transport = 2 * legCost(distKm, trip.transport, true, pay, null, [departureOf(trip), r]) +
     (trip.transport === '자동차' ? 30 * trip.days * CAR_WON_PER_KM               // 여행지 안 하루 약 30km (Claude 가정)
                                  : LOCAL_FARE * pay * (TEMPO[trip.tempo].count + 2) * trip.days);
   const lodging = nights > 0 ? (c.lodging || 0) * (trip.rooms || 1) * nights : 0;
@@ -273,7 +316,7 @@ function rankRegions(trip, regions, round) {
   regions.forEach(function (r) {
     if (!eligible(r)) return;
     const distKm = distanceKm(dep, r);
-    const oneWayMin = travelMin(distKm, trip.transport, true);
+    const oneWayMin = travelMin(distKm, trip.transport, true, null, [dep, r]);
     const ratio = 2 * oneWayMin / totalActive;
     const taste = regionTagScore(r.tagAvg, trip, best);          // 함께 정하기면 평균 + 최소 보장
     const base = withPopularity(taste.score, r.popTop10);
@@ -800,7 +843,7 @@ function buildPlan(type, trip, pool) {
       // 점심·저녁 시간이 되면 지금 위치 근처 식당을 먼저 넣음
       // 점심: 11:00이 지났고, 다음 장소까지 보면 13:00을 넘길 것 같으면 지금 먹음 (도착 시각이 14:00 이후인 첫날만 생략)
       if (!lunch && visited > 0 && clock >= 11 * 60 &&
-          clock + travelMin(distanceKm(pos, p), trip.transport, !!pos.isHome) + p.stayMin > 13 * 60) {
+          clock + travelMin(distanceKm(pos, p), trip.transport, !!pos.isHome, null, [pos, p]) + p.stayMin > 13 * 60) {
         lunch = true;
         clock = addMeal(stops, 'lunch', pos, clock);
       }
@@ -809,9 +852,9 @@ function buildPlan(type, trip, pool) {
         clock = addMeal(stops, 'dinner', pos, clock);
       }
       const intercity = !!pos.isHome;
-      const move = travelMin(distanceKm(pos, p), trip.transport, intercity);
+      const move = travelMin(distanceKm(pos, p), trip.transport, intercity, null, [pos, p]);
       // 그날 끝에 숙소(마지막 날은 집)로 돌아갈 시간도 활동 시간 안에 남겨 둠
-      const back = lastDay || !lodging ? travelMin(distanceKm(p, dep), trip.transport, true)
+      const back = lastDay || !lodging ? travelMin(distanceKm(p, dep), trip.transport, true, null, [p, dep])
                                        : travelMin(distanceKm(p, lodging), trip.transport, false);
       // 활동 시간을 넘으면 그날 마감, 남은 곳은 다음 날로 이월 (단, 하루 최소 1곳)
       // 밤 10시를 넘기는 곳도 다음 날로 (늦게 출발한 첫날은 0곳일 수 있음 — 2026-10-10 이재훈 결정)
@@ -881,7 +924,7 @@ function buildPlan(type, trip, pool) {
     const ms = makeStop(r, kind);
     if (signatureOf(r, sig)) { ms.sig = signatureOf(r, sig); sigFoodDone = true; }
     stops.push(ms);
-    const move = travelMin(distanceKm(pos.isHome ? anchor : pos, r), trip.transport, !!pos.isHome);
+    const move = travelMin(distanceKm(pos.isHome ? anchor : pos, r), trip.transport, !!pos.isHome, null, [pos.isHome ? anchor : pos, r]);
     mealMove += move;   // 식당까지 가는 시간은 활동 시간에 포함 (식사 시간은 제외)
     const at = Math.max(clock + move, kind === 'lunch' ? LUNCH.from : DINNER_FROM);
     return at + MEAL_STAY;
@@ -1082,14 +1125,21 @@ function computeTimeline(trip, plan) {
       const intercity = !!(pos.isHome || to.isHome);
       const km = distanceKm(pos, to);
       const mode = localMode(km, trip.transport, intercity, stop);   // 'walk' | 'transit' | null(자동차·지역 간 이동)
-      let min = travelMin(km, trip.transport, intercity, mode);
-      let fare = legCost(km, trip.transport, intercity, pay, mode);
+      let min = travelMin(km, trip.transport, intercity, mode, [pos, to]);
+      let fare = legCost(km, trip.transport, intercity, pay, mode, [pos, to]);
+      let roadKm = intercity && trip.transport === '자동차' ? km * INTERCITY.자동차.road : km;
       const real = mode === 'transit' ? transitLegs[legKey(pos, to)] : null;   // 카카오가 알려 준 실제 시간·요금
       if (real && !real.noTransit) {
         min = Math.round(real.time / 60);
         fare = (real.fare || LOCAL_FARE) * pay;
       }
-      distance += intercity && trip.transport === '자동차' ? km * INTERCITY.자동차.road : km;
+      const car = intercity && trip.transport === '자동차' ? carLegs[legKey(pos, to)] : null;   // 카카오 길찾기 실제 도로 거리·시간·통행료
+      if (car) {
+        roadKm = car.distance / 1000;
+        min = Math.round(car.duration / 60);
+        fare = Math.round(roadKm * CAR_WON_PER_KM + car.toll);
+      }
+      distance += roadKm;
       cost.transport += fare;
       dc.transport += fare;
       return { km: km, min: min, mode: mode, real: !!(real && !real.noTransit) };

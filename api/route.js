@@ -1,6 +1,6 @@
 // Vercel 서버 함수: 지도에 그릴 실제 도로 경로 (카카오모빌리티 다중 경유지 길찾기 API를 대신 불러 줌)
 // 입력: POST { points: [{ lat, lng }, ...] } — 2~32개, 방문 순서대로 (출발 → 경유지들 → 도착)
-// 출력: { path: [[lat, lng], ...], distance(미터), duration(초), legs: [{ distance, duration }] } 또는 { error }
+// 출력: { path: [[lat, lng], ...], distance(미터), duration(초), toll(고속도로 통행료, 원), legs: [{ distance, duration }] } 또는 { error }
 // 왜 서버 함수인가: 카카오 REST API 키는 화면 코드(브라우저)에 넣으면 누구나 보고 가져다 쓸 수 있어서,
 //                   Vercel 환경 변수 KAKAO_REST_KEY에 숨겨 두고 이 함수만 사용함
 
@@ -60,5 +60,6 @@ module.exports = async function (req, res) {
     });
   });
   res.setHeader('Cache-Control', 's-maxage=86400');
-  return res.status(200).json({ path: thin(path, 4000), distance: route.summary.distance, duration: route.summary.duration, legs: legs });
+  return res.status(200).json({ path: thin(path, 4000), distance: route.summary.distance, duration: route.summary.duration,
+                                toll: (route.summary.fare && route.summary.fare.toll) || 0, legs: legs });
 };

@@ -74,6 +74,8 @@ function refresh(changed) {
   renderDay();
   renderLodging();
   renderMap();
+  // 자동차: 출발지↔여행지 실제 통행료·도로 거리·시간을 새로 받았으면 다시 계산 (8차시, 이미 받은 구간은 다시 안 부름)
+  learnCarLegs(timeline, trip).then(function (n) { if (n) refresh(false); });
 }
 
 function renderSummary() {
