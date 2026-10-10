@@ -140,6 +140,35 @@ function setupPeopleInputs() {
   });
 }
 
+// ---------- 1-3. 예산 칸: 입력하는 동안 세 자리마다 쉼표 ----------
+// 입력: 예산 칸에 친 글자 / 출력: 숫자만 남겨 '1,200,000'처럼 쉼표를 넣어 다시 표시 (커서는 같은 숫자 뒤에 유지)
+// 칸이 type="number"면 쉼표를 넣을 수 없어 type="text" + inputmode="numeric"(휴대폰은 숫자 키패드)으로 바꿈
+function formatMoneyInput(input) {
+  const before = input.value;
+  const caret = input.selectionStart == null ? before.length : input.selectionStart;
+  const digitsBeforeCaret = before.slice(0, caret).replace(/\D/g, '').replace(/^0+(?=\d)/, '').length;
+  const digits = before.replace(/\D/g, '').replace(/^0+(?=\d)/, '').slice(0, 12);   // 12자리(1조 미만)까지
+  const formatted = digits.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  if (formatted === before) return;
+  input.value = formatted;
+  // 커서 위치 다시 맞추기: 커서 앞에 있던 숫자 개수만큼 지난 자리
+  let pos = 0, seen = 0;
+  while (pos < formatted.length && seen < digitsBeforeCaret) { if (/\d/.test(formatted[pos])) seen++; pos++; }
+  input.setSelectionRange(pos, pos);
+}
+
+function setupMoneyInputs() {
+  ['budget-min', 'budget-max'].forEach(function (id) {
+    const input = document.getElementById(id);
+    input.addEventListener('input', function () { formatMoneyInput(input); });
+  });
+}
+
+// 쉼표를 빼고 숫자로 (빈칸이면 0)
+function readMoney(id) {
+  return Number(document.getElementById(id).value.replace(/\D/g, '')) || 0;
+}
+
 // ---------- 2. 입력값 모으기 ----------
 
 function collectCondition() {
@@ -157,8 +186,8 @@ function collectCondition() {
     startDate: startDate,
     endDate: endDate,
     days: days,
-    budgetMin: Number(document.getElementById('budget-min').value),
-    budgetMax: Number(document.getElementById('budget-max').value),
+    budgetMin: readMoney('budget-min'),
+    budgetMax: readMoney('budget-max'),
     people: readPeople(),         // { infants, children, teens, adults, total }
     rooms: Number(document.getElementById('rooms').value),
     pet: document.getElementById('with-pet').checked,   // 반려동물 동반 (2026-10-10 추가)
@@ -284,4 +313,5 @@ setupRegionSearch();    // region-pick.js
 setupSingleSelect('tempo-group');
 setupTagSelect();
 setupPeopleInputs();
+setupMoneyInputs();
 document.getElementById('trip-form').addEventListener('submit', handleSubmit);
