@@ -37,7 +37,20 @@ async function exportPdf(trip) {
 //   화면에서는 날짜 칸 안의 인쇄용 지도를 숨김 (style.css)
 //   큰 지도 하나는 인쇄할 때 크기가 바뀌면서 깨져 보여서, 인쇄 폭에 맞춘 고정 크기 지도를 날마다 따로 만듦
 //   경로는 화면 지도에서 이미 받아 둔 것을 다시 씀(road-route.js가 기억) → 길찾기 서버를 또 부르지 않음
-const PRINT_MAP_W = 330, PRINT_MAP_H = 300;   // A4 세로 폭(여백 제외 약 700px)의 절반쯤 — 나머지 절반에 일정 (Claude 판단)
+// 지도 크기는 그날 장소·길이 퍼진 모양에 맞춰 자동으로 (2026-10-10 이재훈 요청)
+//   1) 장소·길의 가로세로 비율로 목표 칸(넓이 약 330×300)을 정해 그 안에 다 들어가게 확대 단계를 고름
+//   2) 그 단계에서 장소·길이 실제로 차지하는 픽셀 범위 + 여백만 남기고 지도 칸을 잘라 냄
+//   3) 카카오 지도는 확대가 2배씩 단계라 잘라 낸 크기가 들쭉날쭉 → 넓이가 목표와 비슷해지도록 지도 그림을 살짝 확대(최대 1.6배)
+const PRINT_MAP_AREA = 330 * 300;          // 목표 넓이 (Claude 판단: 전 버전 크기)
+const PRINT_MAP_MAX_W = 400, PRINT_MAP_MAX_H = 420, PRINT_MAP_MIN = 150;
+const PRINT_MAP_PAD = 22;                  // 가장자리 핀이 잘리지 않을 만큼의 여백(px)
+
+function waitOrTimeout(promise, ms) {
+  return Promise.race([promise, new Promise(function (r) { setTimeout(r, ms); })]);
+}
+
+// 위도·경도 → 메르카토르 좌표 (가로세로 비율 계산용)
+function mercY(lat) { return Math.log(Math.tan(Math.PI / 4 + lat * Math.PI / 360)); }
 
 async function buildPrintMaps(trip) {
   const box = document.getElementById('print-maps');
@@ -46,48 +59,94 @@ async function buildPrintMaps(trip) {
   box.innerHTML = '';
   document.querySelectorAll('#schedule .print-day-map').forEach(function (x) { x.remove(); });   // 지난번에 옮겨 둔 지도
   const sections = [];
-  const waits = t.days.map(function (day, di) {
+  const waits = t.days.map(async function (day, di) {
     const color = DAY_COLORS[di % DAY_COLORS.length];
-    const date = new Date(trip.start_date + 'T00:00:00');
-    date.setDate(date.getDate() + di);
     const sec = document.createElement('section');
     sec.className = 'print-day-map';
     sections.push(sec);
-    const el = document.createElement('div');
-    el.className = 'print-map';
-    el.style.width = PRINT_MAP_W + 'px';
-    el.style.height = PRINT_MAP_H + 'px';
-    sec.appendChild(el);
+    const frame = document.createElement('div');   // 인쇄에 보이는 칸 (확대 후 크기)
+    frame.className = 'print-map';
+    const el = document.createElement('div');      // 실제 카카오 지도 (잘라 낸 크기)
+    el.className = 'print-map-inner';
+    frame.appendChild(el);
+    sec.appendChild(frame);
     box.appendChild(sec);
 
-    const m = new kakao.maps.Map(el, { center: new kakao.maps.LatLng(36.3, 127.8), level: 7, draggable: false });
-    const bounds = new kakao.maps.LatLngBounds();
-    const pts = [], modes = [];
+    // 장소 핀과 경로 점 (화면 지도 renderMap과 같은 규칙: 숙소 '숙', 장소 '일차-번호', 식당 🍴)
+    const stops = [], pts = [], modes = [];
     let n = 0;
-    function pin(p, label, dark) {
-      const pos = new kakao.maps.LatLng(p.lat, p.lng);
-      bounds.extend(pos);
+    function addStop(p, label, dark) { stops.push({ p: p, label: label, dark: dark }); }
+    function pushPt(p, mode) { if (pts.length) modes.push(mode || null); pts.push({ lat: p.lat, lng: p.lng }); }
+    if (!day.startPoint.isHome) { addStop(day.startPoint, '숙', true); pushPt(day.startPoint); }
+    day.items.forEach(function (it) { addStop(it.stop.p, it.stop.meal ? '🍴' : (di + 1) + '-' + (++n), false); pushPt(it.stop.p, it.moveMode); });
+    if (!day.endPoint.isHome) { addStop(day.endPoint, '숙', true); pushPt(day.endPoint, day.backMode); }
+    if (!stops.length) { sec.remove(); return; }
+
+    // 1) 처음 칸: 장소들의 가로세로 비율에 맞춘 목표 크기
+    function sizeFor(latlngs) {
+      const xs = latlngs.map(function (q) { return q.getLng() * Math.PI / 180; });
+      const ys = latlngs.map(function (q) { return mercY(q.getLat()); });
+      const dx = Math.max(Math.max.apply(null, xs) - Math.min.apply(null, xs), 1e-5);
+      const dy = Math.max(Math.max.apply(null, ys) - Math.min.apply(null, ys), 1e-5);
+      const r = Math.min(3, Math.max(1 / 3, dx / dy));   // 너무 길쭉한 경우는 1:3까지만
+      let w = Math.sqrt(PRINT_MAP_AREA * r), h = Math.sqrt(PRINT_MAP_AREA / r);
+      if (w > PRINT_MAP_MAX_W) { h *= PRINT_MAP_MAX_W / w; w = PRINT_MAP_MAX_W; }
+      if (h > PRINT_MAP_MAX_H) { w *= PRINT_MAP_MAX_H / h; h = PRINT_MAP_MAX_H; }
+      return { w: Math.round(w), h: Math.round(h) };
+    }
+    const stopLL = stops.map(function (s) { return new kakao.maps.LatLng(s.p.lat, s.p.lng); });
+    let size = sizeFor(stopLL);
+    el.style.width = size.w + 'px'; el.style.height = size.h + 'px';
+    const m = new kakao.maps.Map(el, { center: stopLL[0], level: 7, draggable: false });
+    stops.forEach(function (s, i) {
       const pe = document.createElement('div');
       pe.className = 'map-pin';
-      pe.style.background = dark ? '#333' : color;
-      pe.textContent = label;
-      new kakao.maps.CustomOverlay({ position: pos, content: pe, yAnchor: 0.5 }).setMap(m);
-    }
-    function pushPt(p, mode) { if (pts.length) modes.push(mode || null); pts.push({ lat: p.lat, lng: p.lng }); }
-    // 화면 지도(renderMap)와 같은 규칙: 숙소에서 출발하면 '숙', 장소는 '일차-번호', 식당은 🍴
-    if (!day.startPoint.isHome) { pin(day.startPoint, '숙', true); pushPt(day.startPoint); }
-    day.items.forEach(function (it) { pin(it.stop.p, it.stop.meal ? '🍴' : (di + 1) + '-' + (++n), false); pushPt(it.stop.p, it.moveMode); });
-    if (!day.endPoint.isHome) { pin(day.endPoint, '숙', true); pushPt(day.endPoint, day.backMode); }
-    if (!pts.length) { sec.remove(); return Promise.resolve(); }
-    m.setBounds(bounds, 30, 30, 30, 30);
+      pe.style.background = s.dark ? '#333' : color;
+      pe.textContent = s.label;
+      new kakao.maps.CustomOverlay({ position: stopLL[i], content: pe, yAnchor: 0.5 }).setMap(m);
+    });
 
-    // 지도 그림(타일)과 경로선이 다 그려질 때까지 기다림 — 오래 걸리면 6초에서 끊고 그대로 인쇄
-    const tiles = new Promise(function (resolve) { kakao.maps.event.addListener(m, 'tilesloaded', resolve); });
-    const route = new Promise(function (resolve) { drawRoute(m, pts, color, function () { resolve(); }, trip.transport, modes); });
-    return Promise.race([Promise.all([tiles, route]), new Promise(function (r) { setTimeout(r, 6000); })]);
+    // 경로선을 다 그릴 때까지 기다림 (화면 지도에서 받아 둔 경로라 보통 바로 옴, 최대 5초)
+    let route = null;
+    await waitOrTimeout(new Promise(function (resolve) { route = drawRoute(m, pts, color, function () { resolve(); }, trip.transport, modes); }), 5000);
+    await new Promise(function (r) { setTimeout(r, 300); });   // 걷는 길처럼 조금 늦게 그려지는 선
+
+    // 장소 + 길 전부
+    const all = stopLL.concat(route && route.points ? route.points() : []);
+    const bounds = new kakao.maps.LatLngBounds();
+    all.forEach(function (q) { bounds.extend(q); });
+    size = sizeFor(all);
+    el.style.width = size.w + 'px'; el.style.height = size.h + 'px';
+    m.relayout();
+    m.setBounds(bounds, PRINT_MAP_PAD, PRINT_MAP_PAD, PRINT_MAP_PAD, PRINT_MAP_PAD);
+
+    // 2) 이 확대 단계에서 장소·길이 차지하는 픽셀 범위만큼만 남기고 잘라 냄
+    const proj = m.getProjection();
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    all.forEach(function (q) {
+      const pt = proj.containerPointFromCoords(q);
+      minX = Math.min(minX, pt.x); maxX = Math.max(maxX, pt.x);
+      minY = Math.min(minY, pt.y); maxY = Math.max(maxY, pt.y);
+    });
+    const cw = Math.max(PRINT_MAP_MIN, Math.ceil(maxX - minX) + 2 * PRINT_MAP_PAD);
+    const ch = Math.max(PRINT_MAP_MIN, Math.ceil(maxY - minY) + 2 * PRINT_MAP_PAD);
+    const center = proj.coordsFromContainerPoint(new kakao.maps.Point((minX + maxX) / 2, (minY + maxY) / 2));
+    el.style.width = cw + 'px'; el.style.height = ch + 'px';
+    m.relayout();
+    m.setCenter(center);
+
+    // 3) 넓이를 목표와 비슷하게: 지도 그림을 확대해서 보여 줌 (1~1.6배, 최대 폭·높이 안에서)
+    let s = Math.sqrt(PRINT_MAP_AREA / (cw * ch));
+    s = Math.min(s, 1.6, PRINT_MAP_MAX_W / cw, PRINT_MAP_MAX_H / ch);
+    s = Math.max(s, Math.min(1, PRINT_MAP_MAX_W / cw, PRINT_MAP_MAX_H / ch));
+    el.style.transform = 'scale(' + s.toFixed(3) + ')';
+    frame.style.width = Math.round(cw * s) + 'px';
+    frame.style.height = Math.round(ch * s) + 'px';
+
+    // 지도 그림(타일)이 다 불러와질 때까지 (최대 4초)
+    await waitOrTimeout(new Promise(function (resolve) { kakao.maps.event.addListener(m, 'tilesloaded', resolve); }), 4000);
   });
   await Promise.all(waits);
-  await new Promise(function (r) { setTimeout(r, 400); });   // 걷는 길 등 늦게 그려지는 선을 조금 더 기다림
   // 다 그린 지도를 그 날짜 일정 칸 안으로 옮김
   const blocks = document.querySelectorAll('#schedule .day-block');
   sections.forEach(function (sec, di) { if (blocks[di] && sec.isConnected) blocks[di].appendChild(sec); });

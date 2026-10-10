@@ -713,6 +713,8 @@ textarea:focus { outline: none; border-color: var(--accent); }
 /* PDF로 저장(인쇄): 버튼·입력칸·사진·후기 쓰기를 숨기고 한 줄로 */
 .print-maps { position: fixed; left: -10000px; top: 0; }   /* 화면에서는 안 보이게 (그려지기는 해야 해서 display:none은 안 씀) */
 .print-map .map-pin { cursor: default; }
+.print-map { position: relative; overflow: hidden; }
+.print-map-inner { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
 @media screen { #schedule .print-day-map { display: none; } }   /* 일정 칸 안으로 옮긴 인쇄용 지도는 화면에서 숨김 */
 @media print {
   body { background: #fff; padding: 0; display: block; }
@@ -733,7 +735,7 @@ textarea:focus { outline: none; border-color: var(--accent); }
   #map-card { display: none !important; }
   .print-maps { position: static !important; left: auto !important; }
   /* 날짜마다 '왼쪽 일정 | 오른쪽 그날 지도' (지도 330px, js/export.js) */
-  #schedule .day-block:has(> .print-day-map) { display: grid; grid-template-columns: minmax(0, 1fr) 332px; grid-template-areas: "head head" "list map"; gap: 4px 14px; align-items: start; }
+  #schedule .day-block:has(> .print-day-map) { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "head head" "list map"; gap: 4px 14px; align-items: start; }
   #schedule .day-block > h3 { grid-area: head; }
   #schedule .day-block > .mini-timeline { grid-area: list; font-size: 0.8rem; }
   #schedule .day-block > .print-day-map { grid-area: map; margin: 0; }

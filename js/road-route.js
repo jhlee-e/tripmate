@@ -78,7 +78,9 @@ function drawRoute(map, points, color, onResult, transport, modes) {
   // 숨기기·보이기 (여행 정보 화면에서 한 날짜만 보기 — 2026-10-10)
   const handle = { removed: false, hidden: false,
     remove: function () { this.removed = true; lines.forEach(function (l) { l.setMap(null); }); },
-    setVisible: function (v) { this.hidden = !v; lines.forEach(function (l) { l.setMap(v ? map : null); }); } };
+    setVisible: function (v) { this.hidden = !v; lines.forEach(function (l) { l.setMap(v ? map : null); }); },
+    // 지금 그려진 선들의 좌표 전부 (PDF 지도 크기를 길까지 포함해 맞출 때 사용)
+    points: function () { return lines.reduce(function (all, l) { return all.concat(l.getPath()); }, []); } };
   line(points.map(function (p) { return [p.lat, p.lng]; }), { strokeWeight: 3, strokeColor: color, strokeOpacity: 0.6, strokeStyle: 'shortdash' });
   if (points.length < 2) {   // 그릴 구간이 없어도 '끝났음'은 알려 줌 (여러 날을 기다리는 화면을 위해)
     if (onResult) setTimeout(function () { onResult(true, { distance: 0, legs: [] }); });
