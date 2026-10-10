@@ -1,6 +1,6 @@
 // 여행 정보 파일로 저장 (여행 정보 화면 trip.html에서 사용)
 // 입력: 여행(trips 행), 일정(plan), 시간표(computeTimeline 결과), 준비물(checklist 테이블)
-// 출력: PDF — 브라우저 인쇄 창의 'PDF로 저장' (인쇄용 CSS가 버튼·입력칸을 숨기고 한 줄로 배치)
+// 출력: PDF — 브라우저 인쇄 창의 'PDF로 저장' (인쇄용 CSS가 버튼·입력칸을 숨기고 한 줄로 배치, 지도는 일차별로 따로)
 //       엑셀 — 시트 4개(여행 정보·일정·일일 경비·준비물)가 든 .xlsx 파일 (SheetJS 라이브러리를 누를 때 불러옴)
 
 const SHEETJS_URL = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
@@ -10,7 +10,18 @@ function exportFileName(trip) {
 }
 
 // PDF: 인쇄 창의 기본 파일 이름이 문서 제목(document.title)이므로 잠시 바꿔 두었다가 되돌림
-function exportPdf(trip) {
+// 인쇄 전에 일차별 지도(buildPrintMaps)를 그려 두고, 지도 그림이 다 불러와지면 인쇄 창을 엶
+async function exportPdf(trip) {
+  const btn = document.getElementById('pdf-btn');
+  const label = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = '🗺️ 일차별 지도 준비 중…'; }
+  try {
+    await buildPrintMaps(trip);
+  } catch (e) {
+    console.warn('일차별 지도를 만들지 못했어요 (지도 없이 저장):', e);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = label; }
+  }
   const old = document.title;
   document.title = exportFileName(trip);
   window.addEventListener('afterprint', function restore() {
@@ -18,6 +29,62 @@ function exportPdf(trip) {
     window.removeEventListener('afterprint', restore);
   });
   window.print();
+}
+
+// ---------- PDF용 일차별 지도 (2026-10-10 이재훈 요청) ----------
+// 입력: 지금 일정의 시간표(current.timeline, trip.js) / 출력: #print-maps 칸에 '1일차', '2일차' … 지도를 하나씩 그림
+//   화면에서는 보이지 않는 곳(화면 왼쪽 밖)에 두었다가 인쇄할 때만 일정 바로 아래에 나옴 (style.css @media print)
+//   큰 지도 하나는 인쇄할 때 크기가 바뀌면서 깨져 보여서, 인쇄 폭에 맞춘 고정 크기 지도를 날마다 따로 만듦
+//   경로는 화면 지도에서 이미 받아 둔 것을 다시 씀(road-route.js가 기억) → 길찾기 서버를 또 부르지 않음
+const PRINT_MAP_W = 680, PRINT_MAP_H = 400;   // 인쇄 폭(A4 세로, 여백 제외 약 700px)에 맞춤 (Claude 판단)
+
+async function buildPrintMaps(trip) {
+  const box = document.getElementById('print-maps');
+  const t = current.timeline;
+  if (!box || !t || typeof kakao === 'undefined' || !kakao.maps || !kakao.maps.Map) return;
+  box.innerHTML = '';
+  const waits = t.days.map(function (day, di) {
+    const color = DAY_COLORS[di % DAY_COLORS.length];
+    const date = new Date(trip.start_date + 'T00:00:00');
+    date.setDate(date.getDate() + di);
+    const sec = document.createElement('section');
+    sec.className = 'print-day-map';
+    sec.innerHTML = '<h3>' + (di + 1) + '일차 지도 <small>' + (date.getMonth() + 1) + '/' + date.getDate() + ' (' + DOW[date.getDay()] + ')</small></h3>';
+    const el = document.createElement('div');
+    el.className = 'print-map';
+    el.style.width = PRINT_MAP_W + 'px';
+    el.style.height = PRINT_MAP_H + 'px';
+    sec.appendChild(el);
+    box.appendChild(sec);
+
+    const m = new kakao.maps.Map(el, { center: new kakao.maps.LatLng(36.3, 127.8), level: 7, draggable: false });
+    const bounds = new kakao.maps.LatLngBounds();
+    const pts = [], modes = [];
+    let n = 0;
+    function pin(p, label, dark) {
+      const pos = new kakao.maps.LatLng(p.lat, p.lng);
+      bounds.extend(pos);
+      const pe = document.createElement('div');
+      pe.className = 'map-pin';
+      pe.style.background = dark ? '#333' : color;
+      pe.textContent = label;
+      new kakao.maps.CustomOverlay({ position: pos, content: pe, yAnchor: 0.5 }).setMap(m);
+    }
+    function pushPt(p, mode) { if (pts.length) modes.push(mode || null); pts.push({ lat: p.lat, lng: p.lng }); }
+    // 화면 지도(renderMap)와 같은 규칙: 숙소에서 출발하면 '숙', 장소는 '일차-번호', 식당은 🍴
+    if (!day.startPoint.isHome) { pin(day.startPoint, '숙', true); pushPt(day.startPoint); }
+    day.items.forEach(function (it) { pin(it.stop.p, it.stop.meal ? '🍴' : (di + 1) + '-' + (++n), false); pushPt(it.stop.p, it.moveMode); });
+    if (!day.endPoint.isHome) { pin(day.endPoint, '숙', true); pushPt(day.endPoint, day.backMode); }
+    if (!pts.length) { sec.remove(); return Promise.resolve(); }
+    m.setBounds(bounds, 30, 30, 30, 30);
+
+    // 지도 그림(타일)과 경로선이 다 그려질 때까지 기다림 — 오래 걸리면 6초에서 끊고 그대로 인쇄
+    const tiles = new Promise(function (resolve) { kakao.maps.event.addListener(m, 'tilesloaded', resolve); });
+    const route = new Promise(function (resolve) { drawRoute(m, pts, color, function () { resolve(); }, trip.transport, modes); });
+    return Promise.race([Promise.all([tiles, route]), new Promise(function (r) { setTimeout(r, 6000); })]);
+  });
+  await Promise.all(waits);
+  await new Promise(function (r) { setTimeout(r, 400); });   // 걷는 길 등 늦게 그려지는 선을 조금 더 기다림
 }
 
 function loadScriptOnce(url) {
