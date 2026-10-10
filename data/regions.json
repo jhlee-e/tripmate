@@ -20,7 +20,7 @@
   },
   "popTop10": 4.31,
   "costMin": {
-   "lodging": 60000,
+   "lodging": 55000,
    "meal": 12000
   }
  },
@@ -70,7 +70,7 @@
   },
   "popTop10": 4.58,
   "costMin": {
-   "lodging": 120000,
+   "lodging": 60000,
    "meal": 12000
   }
  },
@@ -120,7 +120,7 @@
   },
   "popTop10": 4.08,
   "costMin": {
-   "lodging": 60000,
+   "lodging": 50000,
    "meal": 12000
   }
  },
@@ -170,7 +170,7 @@
   },
   "popTop10": 4.96,
   "costMin": {
-   "lodging": 35000,
+   "lodging": 29000,
    "meal": 12000
   }
  },
@@ -220,7 +220,7 @@
   },
   "popTop10": 3.71,
   "costMin": {
-   "lodging": 120000,
+   "lodging": 50000,
    "meal": 12000
   }
  },
@@ -245,7 +245,7 @@
   },
   "popTop10": 4.95,
   "costMin": {
-   "lodging": 120000,
+   "lodging": 40000,
    "meal": 12000
   }
  },
@@ -270,7 +270,7 @@
   },
   "popTop10": 4.17,
   "costMin": {
-   "lodging": 60000,
+   "lodging": 45000,
    "meal": 12000
   }
  },
@@ -295,7 +295,7 @@
   },
   "popTop10": 4.22,
   "costMin": {
-   "lodging": 40000,
+   "lodging": 60000,
    "meal": 12000
   }
  },
@@ -345,7 +345,7 @@
   },
   "popTop10": 4.91,
   "costMin": {
-   "lodging": 60000,
+   "lodging": 40000,
    "meal": 12000
   }
  },
@@ -370,7 +370,7 @@
   },
   "popTop10": 3.72,
   "costMin": {
-   "lodging": 120000,
+   "lodging": 80000,
    "meal": 12000
   }
  },
@@ -395,7 +395,7 @@
   },
   "popTop10": 4.61,
   "costMin": {
-   "lodging": 60000,
+   "lodging": 40000,
    "meal": 12000
   }
  },
@@ -445,7 +445,7 @@
   },
   "popTop10": 3.7,
   "costMin": {
-   "lodging": 120000,
+   "lodging": 88000,
    "meal": 12000
   }
  },
@@ -495,7 +495,7 @@
   },
   "popTop10": 4.53,
   "costMin": {
-   "lodging": 35000,
+   "lodging": 25000,
    "meal": 12000
   }
  },
@@ -520,7 +520,7 @@
   },
   "popTop10": 4.0,
   "costMin": {
-   "lodging": 130000,
+   "lodging": 120000,
    "meal": 12000
   }
  },
@@ -545,7 +545,7 @@
   },
   "popTop10": 4.37,
   "costMin": {
-   "lodging": 120000,
+   "lodging": 130000,
    "meal": 12000
   }
  },
@@ -570,7 +570,7 @@
   },
   "popTop10": 4.03,
   "costMin": {
-   "lodging": 60000,
+   "lodging": 50000,
    "meal": 12000
   }
  },
@@ -595,7 +595,7 @@
   },
   "popTop10": 3.03,
   "costMin": {
-   "lodging": 60000,
+   "lodging": 53000,
    "meal": 12000
   }
  },
@@ -620,7 +620,7 @@
   },
   "popTop10": 4.21,
   "costMin": {
-   "lodging": 120000,
+   "lodging": 70000,
    "meal": 12000
   }
  },
@@ -645,7 +645,7 @@
   },
   "popTop10": 4.7,
   "costMin": {
-   "lodging": 35000,
+   "lodging": 25000,
    "meal": 12000
   }
  },
@@ -770,7 +770,7 @@
   },
   "popTop10": 3.98,
   "costMin": {
-   "lodging": 60000,
+   "lodging": 15000,
    "meal": 12000
   }
  },
@@ -795,7 +795,7 @@
   },
   "popTop10": 4.42,
   "costMin": {
-   "lodging": 60000,
+   "lodging": 44000,
    "meal": 12000
   }
  },
@@ -920,7 +920,7 @@
   },
   "popTop10": 4.85,
   "costMin": {
-   "lodging": 120000,
+   "lodging": 80000,
    "meal": 12000
   }
  },
@@ -945,7 +945,7 @@
   },
   "popTop10": 4.33,
   "costMin": {
-   "lodging": 120000,
+   "lodging": 69000,
    "meal": 12000
   }
  },
@@ -970,7 +970,7 @@
   },
   "popTop10": 4.44,
   "costMin": {
-   "lodging": 60000,
+   "lodging": 130000,
    "meal": 12000
   }
  },
@@ -1020,7 +1020,7 @@
   },
   "popTop10": 4.84,
   "costMin": {
-   "lodging": 35000,
+   "lodging": 20000,
    "meal": 12000
   }
  },
@@ -1070,7 +1070,7 @@
   },
   "popTop10": 3.79,
   "costMin": {
-   "lodging": 120000,
+   "lodging": 52000,
    "meal": 12000
   }
  },
@@ -1095,7 +1095,7 @@
   },
   "popTop10": 4.76,
   "costMin": {
-   "lodging": 60000,
+   "lodging": 50000,
    "meal": 12000
   }
  },
@@ -1120,7 +1120,7 @@
   },
   "popTop10": 4.96,
   "costMin": {
-   "lodging": 35000,
+   "lodging": 22000,
    "meal": 12000
   }
  },
@@ -1145,7 +1145,7 @@
   },
   "popTop10": 4.07,
   "costMin": {
-   "lodging": 60000,
+   "lodging": 70000,
    "meal": 12000
   }
  },
@@ -1220,7 +1220,7 @@
   },
   "popTop10": 4.44,
   "costMin": {
-   "lodging": 120000,
+   "lodging": 100000,
    "meal": 12000
   }
  },
@@ -1245,7 +1245,7 @@
   },
   "popTop10": 4.96,
   "costMin": {
-   "lodging": 60000,
+   "lodging": 40800,
    "meal": 12000
   }
  },
@@ -1270,7 +1270,7 @@
   },
   "popTop10": 4.07,
   "costMin": {
-   "lodging": 35000,
+   "lodging": 30000,
    "meal": 12000
   }
  },
@@ -1320,7 +1320,7 @@
   },
   "popTop10": 2.96,
   "costMin": {
-   "lodging": 120000,
+   "lodging": 50000,
    "meal": 12000
   }
  },
@@ -1345,7 +1345,7 @@
   },
   "popTop10": 5.0,
   "costMin": {
-   "lodging": 35000,
+   "lodging": 12000,
    "meal": 12000
   }
  },
@@ -2320,7 +2320,7 @@
   },
   "popTop10": 4.65,
   "costMin": {
-   "lodging": 60000,
+   "lodging": 120000,
    "meal": 12000
   }
  },
@@ -2495,7 +2495,7 @@
   },
   "popTop10": 4.73,
   "costMin": {
-   "lodging": 60000,
+   "lodging": 120000,
    "meal": 12000
   }
  },
@@ -2945,7 +2945,7 @@
   },
   "popTop10": 3.07,
   "costMin": {
-   "lodging": 40000,
+   "lodging": null,
    "meal": 12000
   }
  },
@@ -3395,7 +3395,7 @@
   },
   "popTop10": 3.42,
   "costMin": {
-   "lodging": 60000,
+   "lodging": null,
    "meal": 12000
   }
  },
@@ -3820,7 +3820,7 @@
   },
   "popTop10": 3.6,
   "costMin": {
-   "lodging": 60000,
+   "lodging": 120000,
    "meal": 12000
   }
  },

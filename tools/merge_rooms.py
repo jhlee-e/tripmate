@@ -68,12 +68,12 @@ def main():
             else:
                 if 'rooms' in p:
                     del p['rooms']; changed = True
-                missing.append([p['id'], p['region'], p['name'], p.get('categoryName', ''), p.get('address', ''), p.get('recommend')])
+                missing.append([p['id'], p['region'], p['name'], p.get('categoryName', ''), p.get('address', ''), p.get('recommend'), str(p['id']) in raw])
         if changed:
             json.dump(places, open(path, 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))
     with open(os.path.join(HERE, 'rooms_missing.csv'), 'w', encoding='utf-8-sig', newline='') as f:
         w = csv.writer(f)
-        w.writerow(['id', 'region', 'name', 'category', 'address', 'recommend'])
+        w.writerow(['id', 'region', 'name', 'category', 'address', 'recommend', 'tourapi_fetched'])
         w.writerows(missing)
     print(f'숙소 {total}곳: TourAPI 객실 요금 {with_api}곳, 검색 보충 {with_search}곳, 요금 없음 {len(missing)}곳 (tools/rooms_missing.csv)')
 

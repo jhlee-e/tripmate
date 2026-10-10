@@ -323,6 +323,7 @@ function roomFor(p, trip) {
     if ((r.max || r.base || 2) < need) return;
     let c = 0;
     for (let n = 0; n < nights; n++) c += roomFee(r, nightInfo(trip, n));
+    if (isPerBed(r)) c *= need;   // 침대당 요금
     if (c < bestCost) { bestCost = c; best = r; }
   });
   if (!best && priced.length) best = priced.slice().sort(function (a, b) { return (b.max || 0) - (a.max || 0); })[0];
@@ -330,11 +331,14 @@ function roomFor(p, trip) {
   return best;
 }
 
+// 도미토리·다인실은 요금이 '침대 1개(1명)' 기준 → 방 하나 인원만큼 곱함 (시험 중 부산 도미토리 8인 21,000원이 방값으로 잡혀 발견)
+function isPerBed(r) { return /도미토리|dorm|다인실/i.test(r.name || ''); }
+
 // n번째 밤 숙박비 (방 수 포함)
 function lodgingNightCost(p, trip, n) {
   if (!p) return 0;
   const r = roomFor(p, trip);
-  const one = r ? roomFee(r, nightInfo(trip, n)) : (p.cost || 0);
+  const one = r ? roomFee(r, nightInfo(trip, n)) * (isPerBed(r) ? perRoomPeople(trip) : 1) : (p.cost || 0);
   return one * (trip.rooms || 1);
 }
 
@@ -356,7 +360,7 @@ function lodgingAvgRoomNight(p, trip) {
 function lodgingLabel(p, trip) {
   const r = roomFor(p, trip);
   const avg = lodgingAvgRoomNight(p, trip);
-  return (r ? r.name + (r.max ? '(최대 ' + r.max + '명)' : '') + ' · ' : '') + '1박 ' +
+  return (r ? r.name + (isPerBed(r) ? '(침대 ' + perRoomPeople(trip) + '개)' : r.max ? '(최대 ' + r.max + '명)' : '') + ' · ' : '') + '1박 ' +
          (trip.days > 2 ? '평균 ' : '') + Math.round(avg).toLocaleString('ko-KR') + '원' +
          (r ? (r.src === 'search' ? ' (검색 추정)' : '') : (p.costCheck === '추정' ? ' (추정)' : ''));
 }
