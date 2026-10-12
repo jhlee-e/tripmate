@@ -33,6 +33,16 @@ BAR_CATS = {'FD040100', 'FD040200', 'FD040300', 'FD040400'}
 DESSERT_WORDS = re.compile('카페|커피|베이커리|제과|빵|디저트|케이크|도넛|젤라또|아이스크림|빙수|티하우스|찻집|다방|로스터')
 
 
+# 배를 타야만 갈 수 있는 섬 (2026-10-12 이재훈 결정: 옹진군은 배 타는 곳만 빼고 추천)
+#   다리로 이어진 곳은 추천: 영흥면(영흥도·선재도), 북도면 신도·시도·모도(신도평화대교 2026-07-14 개통)
+#   장봉도는 다리가 없음(Claude 판단) — 주소에 '장봉'
+FERRY_WORDS = ['자월면', '덕적면', '백령면', '대청면', '연평면', '장봉']
+
+
+def needs_ferry(p):
+    return p.get('district') == '옹진군' and any(w in (p.get('address') or '') for w in FERRY_WORDS)
+
+
 def district_of(addr, names):
     """주소 두 번째 낱말로 구·군 찾기. '부산광역시 해운대구광역시'처럼 덧붙은 글자가 있어도 앞부분으로 맞춤"""
     parts = (addr or '').split()
@@ -85,6 +95,10 @@ def main():
             else:
                 p.pop('district', None)
                 unknown += 1
+            if needs_ferry(p):
+                p['ferry'] = True
+            else:
+                p.pop('ferry', None)
         json.dump(places, open(f, 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))
 
         rows = []
@@ -92,7 +106,7 @@ def main():
             if not groups[d]:
                 print('장소가 없는 구·군:', metro, d)
                 continue
-            s = summary(groups[d])
+            s = summary([p for p in groups[d] if not p.get('ferry')] or groups[d])   # 배 타는 섬 장소는 점수에서 뺌
             for k in ('lodging', 'meal'):                 # 숙소·식당이 없는 구는 광역시 값으로 (이웃 구에서 보태므로)
                 if s['costMin'][k] is None:
                     s['costMin'][k] = (parent.get('costMin') or {}).get(k)

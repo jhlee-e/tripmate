@@ -272,7 +272,7 @@ function openSwap(i, li) {
   const stop = plan.days[curDay].stops[i];
   const used = usedIds();
   const candidates = places.filter(function (p) {
-    return p.type === stop.p.type && p.recommend && !used.has(p.id) && !isChain(p.name) && (p.type !== '명소' || p.stayMin > 0);
+    return p.type === stop.p.type && p.recommend && !p.ferry && !used.has(p.id) && !isChain(p.name) && (p.type !== '명소' || p.stayMin > 0);
   }).map(function (p) { return { p: p, km: distanceKm(stop.p, p) }; })
     .sort(function (a, b) { return a.km - b.km; }).slice(0, 15);
   const select = document.createElement('select');
@@ -295,7 +295,7 @@ function openSwap(i, li) {
 
 // 아침 식당 후보: 추천 후보 식사 식당 (체인 제외)
 function mealRestaurants() {
-  return places.filter(function (p) { return p.type === '식당' && p.recommend && !isChain(p.name) && foodKind(p) === 'meal'; });
+  return places.filter(function (p) { return p.type === '식당' && p.recommend && !p.ferry && !isChain(p.name) && foodKind(p) === 'meal'; });
 }
 
 // 식당이 디저트·카페면 '디저트', 아니면 원래 끼니 이름(디저트였으면 '식사')
@@ -317,7 +317,7 @@ function remeal(i) {
   const prev = i > 0 ? day.stops[i - 1].p : timeline.days[curDay].startPoint;
   const from = prev.isHome ? stop.p : prev;
   const list = places.filter(function (p) {
-    return p.type === '식당' && p.recommend && !isChain(p.name) && foodKind(p) === 'meal' && cuisineOf(p) !== current;
+    return p.type === '식당' && p.recommend && !p.ferry && !isChain(p.name) && foodKind(p) === 'meal' && cuisineOf(p) !== current;
   });
   const pick = pickRestaurant(plan.type, list, from, usedIds(), eaten, current);
   if (!pick) { showError(new Error('근처에 다른 종류의 식당이 없어요.')); return false; }
@@ -404,7 +404,7 @@ document.getElementById('add-input').addEventListener('input', function (e) {
   if (q.length < 1) return;
   const used = usedIds();
   places.filter(function (p) {
-    return (p.type === '명소' || p.type === '식당') && !used.has(p.id) && p.name.indexOf(q) !== -1;
+    return (p.type === '명소' || p.type === '식당') && !p.ferry && !used.has(p.id) && p.name.indexOf(q) !== -1;
   }).sort(function (a, b) { return (b._s || 0) - (a._s || 0); }).slice(0, 10).forEach(function (p) {
     const li = document.createElement('li');
     li.innerHTML = '<span></span><button type="button" class="small-btn">' + (curDay + 1) + '일차에 추가</button>';
@@ -430,7 +430,7 @@ function renderLodging() {
   plan.days.forEach(function (d) { d.stops.forEach(function (s) { all.push(s.p); }); });
   const center = all.length ? { lat: all.reduce(function (s, p) { return s + p.lat; }, 0) / all.length,
                                 lng: all.reduce(function (s, p) { return s + p.lng; }, 0) / all.length } : plan.lodging;
-  const list = places.filter(function (p) { return p.type === '숙소' && (p.cost > 0 || roomFor(p, trip)) && p.recommend; })
+  const list = places.filter(function (p) { return p.type === '숙소' && (p.cost > 0 || roomFor(p, trip)) && p.recommend && !p.ferry; })
     .map(function (p) { return { p: p, km: distanceKm(center, p) }; })
     .sort(function (a, b) { return a.km - b.km; }).slice(0, 30);
   if (plan.lodging && !list.some(function (x) { return x.p.id === plan.lodging.id; })) {

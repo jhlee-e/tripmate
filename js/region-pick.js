@@ -3,7 +3,7 @@
 // 출력: 전역 변수 pickedRegion에 고른 지역 이름 (예: '강릉'), 아직 안 골랐거나 추천받기 방식이면 null
 
 let pickedRegion = null;
-const ISLAND_REGIONS = ['제주', '서귀포', '울릉', '인천 옹진군'];   // recommend.js의 SEA_REGIONS와 같은 목록 (추천에서 제외한 섬)
+const ISLAND_REGIONS = ['제주', '서귀포', '울릉'];   // recommend.js의 SEA_REGIONS와 같은 목록 (추천에서 제외한 섬)
 let allRegions = [];
 
 // 방식 버튼: 직접 선택이면 지역 검색칸을 보이고, 버튼 문구도 바꿈

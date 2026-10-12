@@ -66,8 +66,8 @@ const CHAIN_BRANDS = ['스타벅스', '투썸플레이스', '이디야', '메가
 
 // 배·비행기를 타야만 갈 수 있는 지역: 육지 이동 시간·비용 계산이 맞지 않아 추천에서 제외 (이재훈 결정, 데이터는 그대로 둠)
 //   신안·완도·진도·거제·남해 등은 다리로 이어져 있어 포함
-//   인천 옹진군(구·군 단위 지역)도 대부분 배로 가는 섬이라 제외 (2026-10-12 이재훈 결정)
-const SEA_REGIONS = ['제주', '서귀포', '울릉', '인천 옹진군'];
+//   인천 옹진군은 지역은 추천하되 배 타는 섬의 장소(p.ferry, tools/add_districts.py)만 뺌 (2026-10-12 이재훈 결정)
+const SEA_REGIONS = ['제주', '서귀포', '울릉'];
 // 섬에서 출발한 여행인지 (예전에 저장된 여행 대비 — 새 여행은 조건 입력에서 막음, departure.js의 islandOfDeparture와 같은 기준)
 function departureIsland(trip) {
   const lat = trip.departure_lat, lng = trip.departure_lng, addr = trip.departure_address || '';
@@ -622,7 +622,7 @@ const SIG_FOOD_KM = 12;   // 대표 먹거리 식당이 지금 위치에서 이 
 
 // 여행에 넣을 수 있는 장소인지 (예산과 상관없는 조건)
 function usable(p, trip) {
-  if (!p.recommend || isChain(p.name)) return false;
+  if (!p.recommend || isChain(p.name) || p.ferry) return false;   // ferry = 배를 타야 가는 섬
   if (needsAddressCheck(p)) return false;
   if (p.info && p.info.minPeople && trip.people < p.info.minPeople) return false;   // 2인분부터인 곳은 1명 여행에서 제외
   if (p.info && p.info.solo === false && trip.people === 1) return false;
@@ -634,26 +634,22 @@ function usable(p, trip) {
 }
 
 // ---------- 광역시 구·군 지역 (2026-10-12 이재훈 결정) ----------
-// '서울 종로구'처럼 구·군으로 고른 여행은 그 구 장소만 쓰고, 모자랄 때만 가까운 구 장소를 보탬 (이재훈 결정)
+// '서울 종로구'처럼 구·군으로 고른 여행은 그 구 장소만 쓰고, 모자랄 때만 가까운 구에서 모자란 종류만 보탬 (이재훈 결정)
 // '모자람' 기준(Claude 판단): 명소가 (하루 방문 수 × 일수)의 2배, 식사 식당이 (2끼 × 일수)의 2배, 숙박하면 숙소 3곳
 //   → 2배 여유를 둬야 A·B·C 일정안이 서로 다르게 나오고 예산 맞추기에서 바꿀 후보가 남음
 // 입력: 쓸 수 있는 장소 전체(광역시), 장소 배열(district = 고른 구, near = 가까운 구 순서), trip / 출력: 쓸 장소 배열
 function districtBase(usableAll, places, trip) {
   const need = { 명소: TEMPO[trip.tempo].count * trip.days * 2, 식사: 2 * trip.days * 2, 숙소: trip.days > 1 ? 3 : 0 };
-  function enough(list) {
-    let a = 0, m = 0, l = 0;
-    list.forEach(function (p) {
-      if (p.type === '명소') a++;
-      else if (p.type === '식당' && foodKind(p) === 'meal') m++;
-      else if (p.type === '숙소') l++;
-    });
-    return a >= need['명소'] && m >= need['식사'] && l >= need['숙소'];
-  }
+  function kind(p) { return p.type === '식당' ? (foodKind(p) === 'meal' ? '식사' : null) : p.type; }
+  function count(list, k) { return list.filter(function (p) { return kind(p) === k; }).length; }
   let list = usableAll.filter(function (p) { return p.district === places.district; });
-  const near = places.near || [];
-  for (let i = 0; i < near.length && !enough(list); i++) {
-    list = list.concat(usableAll.filter(function (p) { return p.district === near[i]; }));
-  }
+  // 모자란 종류만 가까운 구부터 보탬 (예: 식당만 모자라면 이웃 구 식당만) — 이웃 구 명소가 일정을 차지하지 않게
+  Object.keys(need).forEach(function (k) {
+    const near = places.near || [];
+    for (let i = 0; i < near.length && count(list, k) < need[k]; i++) {
+      list = list.concat(usableAll.filter(function (p) { return p.district === near[i] && kind(p) === k; }));
+    }
+  });
   return list;
 }
 
