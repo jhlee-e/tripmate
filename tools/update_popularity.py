@@ -66,3 +66,7 @@ json.dump(regions, open(rp, 'w', encoding='utf-8'), ensure_ascii=False, indent=1
 
 print(f'인기도가 바뀐 장소 {changed}곳 (0점 → 점수 {up_from_zero}곳), 이름 자동 맞춤 {fuzzy}곳, 카카오 확인으로 취소 {rejected}곳')
 print('\n'.join(examples))
+
+# 구·군 지역(서울 종로구 등)의 popTop10도 다시 계산 (2026-10-12)
+import add_districts
+add_districts.main()

@@ -3,7 +3,7 @@
 // 출력: 전역 변수 pickedRegion에 고른 지역 이름 (예: '강릉'), 아직 안 골랐거나 추천받기 방식이면 null
 
 let pickedRegion = null;
-const ISLAND_REGIONS = ['제주', '서귀포', '울릉'];   // recommend.js의 SEA_REGIONS와 같은 목록 (추천에서 제외한 섬)
+const ISLAND_REGIONS = ['제주', '서귀포', '울릉', '인천 옹진군'];   // recommend.js의 SEA_REGIONS와 같은 목록 (추천에서 제외한 섬)
 let allRegions = [];
 
 // 방식 버튼: 직접 선택이면 지역 검색칸을 보이고, 버튼 문구도 바꿈
@@ -26,10 +26,11 @@ function searchRegions(query) {
   const q = query.replace(/\s/g, '');
   if (!q) return [];
   return allRegions.filter(function (r) {
-    return r.region.indexOf(q) !== -1 || r.sido.replace(/\s/g, '').indexOf(q) !== -1;
+    return r.region.replace(/\s/g, '').indexOf(q) !== -1 || r.sido.replace(/\s/g, '').indexOf(q) !== -1;
   }).sort(function (a, b) {
-    // 지역 이름이 검색어로 시작하는 곳을 먼저
-    return (b.region.indexOf(q) === 0) - (a.region.indexOf(q) === 0) || a.region.localeCompare(b.region, 'ko');
+    // 지역 이름이 검색어로 시작하는 곳을 먼저 ('서울 종로구'는 공백을 빼고 비교)
+    const sa = a.region.replace(/\s/g, '').indexOf(q) === 0, sb = b.region.replace(/\s/g, '').indexOf(q) === 0;
+    return (sb - sa) || a.region.localeCompare(b.region, 'ko');
   });
 }
 
@@ -39,7 +40,9 @@ function renderResults(list) {
   list.forEach(function (r) {
     const li = document.createElement('li');
     const island = ISLAND_REGIONS.indexOf(r.region) !== -1;
-    li.innerHTML = esc(r.region) + '<small>' + esc(r.sido) + (island ? ' · 섬 지역은 아직 지원하지 않아요' : '') + '</small>';
+    // 광역시는 '시 전체'와 '구·군' 두 단위로 고를 수 있음 (2026-10-12)
+    const unit = r.parent ? ' · 구·군 단위' : allRegions.some(function (x) { return x.parent === r.region; }) ? ' · 시 전체' : '';
+    li.innerHTML = esc(r.region) + '<small>' + esc(r.sido) + unit + (island ? ' · 섬 지역은 아직 지원하지 않아요' : '') + '</small>';
     if (island) li.className = 'disabled';
     else li.addEventListener('click', function () { choose(r); });
     ul.appendChild(li);

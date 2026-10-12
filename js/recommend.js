@@ -66,7 +66,8 @@ const CHAIN_BRANDS = ['스타벅스', '투썸플레이스', '이디야', '메가
 
 // 배·비행기를 타야만 갈 수 있는 지역: 육지 이동 시간·비용 계산이 맞지 않아 추천에서 제외 (이재훈 결정, 데이터는 그대로 둠)
 //   신안·완도·진도·거제·남해 등은 다리로 이어져 있어 포함
-const SEA_REGIONS = ['제주', '서귀포', '울릉'];
+//   인천 옹진군(구·군 단위 지역)도 대부분 배로 가는 섬이라 제외 (2026-10-12 이재훈 결정)
+const SEA_REGIONS = ['제주', '서귀포', '울릉', '인천 옹진군'];
 // 섬에서 출발한 여행인지 (예전에 저장된 여행 대비 — 새 여행은 조건 입력에서 막음, departure.js의 islandOfDeparture와 같은 기준)
 function departureIsland(trip) {
   const lat = trip.departure_lat, lng = trip.departure_lng, addr = trip.departure_address || '';
@@ -310,7 +311,8 @@ function rankRegions(trip, regions, round) {
   const out = [];
   function eligible(r) {
     if (SEA_REGIONS.indexOf(r.region) !== -1) return false;     // 배·비행기로 가야 하는 섬 제외
-    if (trip.days > 1 && (r.counts['숙소'] || 0) === 0) return false;   // 숙소 없는 지역은 당일치기만 (이재훈 결정)
+    // 숙소 없는 지역은 당일치기만 (이재훈 결정) — 광역시의 구·군은 이웃 구 숙소를 쓰므로 예외 (2026-10-12 이재훈 결정)
+    if (trip.days > 1 && !r.parent && (r.counts['숙소'] || 0) === 0) return false;
     return (r.counts['명소'] || 0) >= tempo.count;
   }
   // 함께 정하기: 사람마다 갈 수 있는 지역 중 취향 점수 최고값 (만족도의 기준)
@@ -631,6 +633,30 @@ function usable(p, trip) {
   return true;
 }
 
+// ---------- 광역시 구·군 지역 (2026-10-12 이재훈 결정) ----------
+// '서울 종로구'처럼 구·군으로 고른 여행은 그 구 장소만 쓰고, 모자랄 때만 가까운 구 장소를 보탬 (이재훈 결정)
+// '모자람' 기준(Claude 판단): 명소가 (하루 방문 수 × 일수)의 2배, 식사 식당이 (2끼 × 일수)의 2배, 숙박하면 숙소 3곳
+//   → 2배 여유를 둬야 A·B·C 일정안이 서로 다르게 나오고 예산 맞추기에서 바꿀 후보가 남음
+// 입력: 쓸 수 있는 장소 전체(광역시), 장소 배열(district = 고른 구, near = 가까운 구 순서), trip / 출력: 쓸 장소 배열
+function districtBase(usableAll, places, trip) {
+  const need = { 명소: TEMPO[trip.tempo].count * trip.days * 2, 식사: 2 * trip.days * 2, 숙소: trip.days > 1 ? 3 : 0 };
+  function enough(list) {
+    let a = 0, m = 0, l = 0;
+    list.forEach(function (p) {
+      if (p.type === '명소') a++;
+      else if (p.type === '식당' && foodKind(p) === 'meal') m++;
+      else if (p.type === '숙소') l++;
+    });
+    return a >= need['명소'] && m >= need['식사'] && l >= need['숙소'];
+  }
+  let list = usableAll.filter(function (p) { return p.district === places.district; });
+  const near = places.near || [];
+  for (let i = 0; i < near.length && !enough(list); i++) {
+    list = list.concat(usableAll.filter(function (p) { return p.district === near[i]; }));
+  }
+  return list;
+}
+
 // 예산 상한 이하 후보만 고름. 부족하면 상한을 10%씩 올려 다시 (최대 3배까지 — 2026-10-07 변경, 예산이 빠듯해도 여행지 5곳을 보여 주기 위함)
 // relax가 1보다 크면 화면에 '예산 상한을 올려서 찾음'을 표시하고, 총비용이 최대 예산을 넘으면 빨간색으로 경고
 // 출력: { attractions, restaurants, lodgings, relax } 또는 null(예산 조정 필요)
@@ -638,7 +664,8 @@ function preparePool(trip, places) {
   const caps = budgetCaps(trip);
   const tempo = TEMPO[trip.tempo];
   const nights = trip.days - 1;
-  const base = places.filter(function (p) { return usable(p, trip); });
+  const usableAll = places.filter(function (p) { return usable(p, trip); });
+  const base = places.district ? districtBase(usableAll, places, trip) : usableAll;
   const month = tripMonth(trip);
   base.forEach(function (p) { p._s = withPopularity(placeTagScore(p.tags, trip), p.popularity, trip) * infoMultiplier(p, trip) * seasonMultiplier(p, month); });
 
@@ -1217,7 +1244,23 @@ async function loadJSON(path) {
 }
 function loadRegions() { return loadJSON('data/regions.json'); }
 // 장소 배열에 그 지역 대표 먹거리·할거리(places.signature)를 붙여서 돌려줌 (파일이 없어도 일정은 만들어짐)
+// 구·군 지역('서울 종로구')은 광역시 파일 전체를 주되 district(고른 구)·near(가까운 구 순서)를 붙여 줌
+//   → 일정 만들기(preparePool)는 그 구 위주로 고르고, 일정 상세의 교체·추가·숙소 변경은 가까운 순서라 그대로 동작
+const _districtCache = {};
 async function loadPlaces(region) {
+  const info = (await loadRegions()).find(function (r) { return r.region === region; });
+  if (info && info.parent) {
+    if (!_districtCache[region]) {
+      _districtCache[region] = loadPlaces(info.parent).then(function (all) {
+        const list = all.slice();
+        list.district = info.district;
+        list.near = info.near || [];
+        list.signature = all.signature;     // 대표 먹거리·할거리는 광역시 것을 같이 씀
+        return list;
+      });
+    }
+    return _districtCache[region];
+  }
   const places = await loadJSON('data/places/' + encodeURIComponent(region) + '.json');
   if (places.signature === undefined) {
     let all = null;

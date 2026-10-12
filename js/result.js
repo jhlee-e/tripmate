@@ -3,6 +3,8 @@
 // 출력: 점수 상위 여행지 5곳 카드(사진·추천 이유·예상 비용) → 누르면 일정안 비교(plans.html)로 이동
 
 const RECOMMEND_COUNT = 5;   // 추천할 여행지 수 (계획서 3곳 → 5곳으로 변경, 2026-10-07)
+// 같은 광역시(시 단위 + 구·군)는 추천 목록에 최대 2곳 (2026-10-12 이재훈 결정)
+const SAME_CITY_MAX = 2;
 const MAX_TRY = 20;   // 예산(최대 +20%) 안에서 일정을 못 만드는 지역을 건너뛰며 최대 몇 곳까지 확인할지 (12 → 20, 2026-10-10)
 
 async function start() {
@@ -27,8 +29,12 @@ async function start() {
     const picked = [];
     // 점수 상위부터 확인: 가장 싼 일정안이 최대 예산 +20%를 넘는 지역은 버림 (2026-10-10 이재훈 결정)
     //   예산 안에 드는 곳이 RECOMMEND_COUNT곳 모이거나 MAX_TRY곳을 확인하면 멈춤
-    let fitCount = 0;
-    for (let i = 0; i < ranked.length && i < MAX_TRY && fitCount < RECOMMEND_COUNT; i++) {
+    let fitCount = 0, tried = 0;
+    const perCity = {};   // 광역시별로 뽑힌 수 ('서울'과 '서울 종로구'는 같은 '서울')
+    for (let i = 0; i < ranked.length && tried < MAX_TRY && fitCount < RECOMMEND_COUNT; i++) {
+      const city = ranked[i].info.parent || ranked[i].region;
+      if ((perCity[city] || 0) >= SAME_CITY_MAX) continue;   // 건너뛴 곳은 확인 횟수에 안 셈
+      tried++;
       status.textContent = '여행지를 고르는 중… (' + ranked[i].region + ' 확인)';
       const places = await loadPlaces(ranked[i].region);
       const plans = buildPlans(trip, ranked[i].region, places);
@@ -36,6 +42,7 @@ async function start() {
         const cheapest = Math.min.apply(null, ['A', 'B', 'C'].map(function (k) { return computeTimeline(trip, plans[k]).cost.total; }));
         if (!withinBudgetLimit(trip, cheapest)) continue;
         picked.push({ rank: ranked[i], plans: plans, places: places, fits: cheapest <= trip.budget_max });
+        perCity[city] = (perCity[city] || 0) + 1;
         if (cheapest <= trip.budget_max) fitCount++;
       }
     }

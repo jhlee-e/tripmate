@@ -365,3 +365,4 @@ if __name__ == '__main__':
     main()
 
 # 6번 실내/실외: 장소 파일을 다시 만든 뒤에는 python tools/indoor.py 를 실행해 indoor 값을 다시 붙일 것
+# 광역시 구·군 지역: 장소 파일을 다시 만든 뒤에는 python tools/add_region_costs.py 를 실행 (끝에서 add_districts.py가 자동으로 돎)

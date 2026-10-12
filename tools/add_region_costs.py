@@ -19,6 +19,8 @@ def is_meal(p):
 
 regions = json.load(open(os.path.join(BASE, 'regions.json'), encoding='utf-8'))
 for r in regions:
+    if r.get('parent'):      # 구·군 지역은 tools/add_districts.py가 계산
+        continue
     places = json.load(open(os.path.join(BASE, 'places', r['region'] + '.json'), encoding='utf-8'))
     ok = [p for p in places if p['recommend'] and not any(b in p['name'] for b in CHAIN)]
     lodg = sorted(p['cost'] for p in ok if p['type'] == '숙소' and p['cost'] > 0)
@@ -29,3 +31,6 @@ for r in regions:
     }
 json.dump(regions, open(os.path.join(BASE, 'regions.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
 print('done', len(regions))
+# 광역시 값이 바뀌었으니 구·군 지역도 다시 계산
+import add_districts
+add_districts.main()
