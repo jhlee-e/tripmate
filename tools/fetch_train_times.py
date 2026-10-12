@@ -9,7 +9,7 @@ API: https://apis.data.go.kr/1613000/TrainInfo  (GetCtyCodeList → GetCtyAcctoT
      요청·응답 이름은 예전 TrainInfoService 기준(depPlaceId·arrPlaceId·depPlandTime / depplandtime·arrplandtime·adultcharge·traingradename) [추론]
      — SRT는 이 API에 없음, 약 30일 안의 날짜만 조회됨 (GitHub 사용 기록)
 기준 날짜: 실행일로부터 7일 뒤 이후의 첫 수요일 (평일 대표 시간표, Claude 판단)
-순서: 서울권 역(서울·용산·청량리·광명·행신·상봉·수원) ↔ 모든 역 → 큰 역끼리 → 나머지. 한 번에 최대 950회, 며칠에 나눠 실행
+순서: 서울권 역(서울·용산·청량리·광명·행신·상봉·수원) ↔ 모든 역 → 큰 역끼리 → 나머지. 한 번에 최대 950회(하루 한도가 그보다 커서 같은 날 여러 번 실행해도 됨), 받은 쌍은 건너뛰고 이어 받음
 실행: PowerShell에서  python tools/fetch_train_times.py      (호출 수를 바꾸려면 python tools/fetch_train_times.py 500)
 """
 import datetime, json, os, re, statistics, sys, time, urllib.parse, urllib.request
@@ -24,6 +24,8 @@ SEOUL = ['서울역', '용산역', '청량리역', '광명역', '행신역', '�
 HUBS = ['대전역', '동대구역', '부산역', '광주송정역', '오송역', '천안아산역', '익산역', '울산역', '강릉역', '전주역', '서대전역',
         '경주역', '포항역', '마산역', '창원중앙역', '진주역', '순천역', '여수엑스포역', '목포역', '안동역', '원주역', '서원주역', '김천구미역']
 calls = 0
+# TAGO에 다른 이름으로 등록된 역 (Claude 추정)
+ALIAS = {'여수엑스포역': ['여수EXPO', '여수엑스포', '여수'], '김천구미역': ['김천(구미)'], '진부역': ['진부(오대산)'], '울산역': ['울산(통도사)']}
 
 
 def api(key, op, **params):
@@ -60,17 +62,21 @@ def main():
     raw = json.load(open(RAW, encoding='utf-8')) if os.path.exists(RAW) else {}
     raw.setdefault('pairs', {})
 
-    # 1) TAGO 역 번호 (처음 한 번만)
+    # 1) TAGO 역 번호 (처음 한 번 + 못 찾은 역이 있으면 그 역만 다시)
     ours = [s['name'] for s in json.load(open(os.path.join(ROOT, 'data', 'stations.json'), encoding='utf-8')) if s['kind'] == 'KTX']
-    if not raw.get('ids'):
+    ids = raw.get('ids') or {}
+    if [n for n in ours if n not in ids]:
         tago = {}
         for c in api(key, 'GetCtyCodeList'):
             for st in api(key, 'GetCtyAcctoTrainSttnList', cityCode=c['citycode'], numOfRows=300):
-                tago[norm(st['nodename'])] = st['nodeid']
-        ids, missing = {}, []
+                tago[norm(st['nodename']).upper()] = st['nodeid']
+        missing = []
         for n in ours:
-            k = norm(n)
-            hit = tago.get(k) or next((v for t, v in tago.items() if t.startswith(k) or k.startswith(t)), None)
+            if n in ids:
+                continue
+            keys = [norm(n).upper()] + [norm(a).upper() for a in ALIAS.get(n, [])]
+            hit = next((tago[k] for k in keys if k in tago), None) or \
+                next((v for t, v in tago.items() for k in keys if t.startswith(k) or k.startswith(t)), None)
             if hit:
                 ids[n] = hit
             else:
@@ -78,6 +84,8 @@ def main():
         raw['ids'] = ids
         if missing:
             print('TAGO에서 역 번호를 못 찾은 역:', ', '.join(missing))
+            near = [t for t in tago if any(norm(m)[:2].upper() in t for m in missing)]
+            print('  이름이 비슷한 TAGO 역:', ', '.join(near))
         json.dump(raw, open(RAW, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
     ids = raw['ids']
 
@@ -124,7 +132,7 @@ def main():
     left = len(todo) - got
     print(f'완료: 이번 호출 {calls}회, 받은 역 쌍 {len(raw["pairs"])}개 (바로 가는 KTX 있음 {len(table)}개) → data/train_times.json')
     if left > 0:
-        print(f'아직 {left}개 남음 — 내일 다시 실행해 주세요.')
+        print(f'아직 {left}개 남음 — 다시 실행하면 이어서 받아요.')
 
 
 if __name__ == '__main__':
