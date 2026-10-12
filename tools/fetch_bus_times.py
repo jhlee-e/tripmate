@@ -13,6 +13,7 @@ API [확인: GitHub team-offway/core PR #448]: https://apis.data.go.kr/1613000/E
 이어 받기: 받은 쌍은 남겨 두고, 남은 쌍만 그날 기준 '내일' 시간표로 조회
 실행: PowerShell에서  python tools/fetch_bus_times.py   (끝까지 한 번에, 받은 쌍은 건너뛰고 이어 받음)
       터미널 다시 맞추기:  python tools/fetch_bus_times.py --rematch   (TAGO 목록을 tools/raw/tago_terminals.json에 저장)
+      조회 없이 다시 맞추고 표만:  python tools/fetch_bus_times.py --offline
       주말 시간표(금·토요일에):  python tools/fetch_bus_times.py --weekend
 """
 import datetime, json, math, os, re, statistics, sys, time, urllib.parse, urllib.request
@@ -23,7 +24,8 @@ BASE = 'https://apis.data.go.kr/1613000/'
 # --weekend: 가장 가까운 토·일요일 시간표를 따로 받아 data/bus_times_weekend.json으로 (2026-10-12 이재훈 결정)
 #   버스 API는 가까운 날짜만 조회되므로 금요일(→토요일)이나 토요일(→일요일)에 실행
 WEEKEND = '--weekend' in sys.argv
-REMATCH = '--rematch' in sys.argv   # TAGO 터미널 목록을 새로 받아 다시 맞추기 (목록은 tools/raw/tago_terminals.json에 저장)
+REMATCH = '--rematch' in sys.argv
+OFFLINE = '--offline' in sys.argv   # 조회 없이: 저장된 TAGO 목록(tools/raw/tago_terminals.json)으로 다시 맞추고 표만 다시 만듦   # TAGO 터미널 목록을 새로 받아 다시 맞추기 (목록은 tools/raw/tago_terminals.json에 저장)
 ARGS = [a for a in sys.argv[1:] if not a.startswith('--')]
 RAW = os.path.join(HERE, 'raw', 'bus_times_weekend_raw.json' if WEEKEND else 'bus_times_raw.json')
 MATCH = os.path.join(HERE, 'raw', 'bus_match.json')
@@ -114,6 +116,27 @@ def tago_terminals(key):
     return out
 
 
+def addr_tokens(addr):
+    """주소 앞 두 낱말에서 도시 이름 ('광주 서구 …' → ['광주', '서'] 중 2글자 이상만, '전남 여수시 …' → ['전남', '여수'])"""
+    out = []
+    for w in (addr or '').split()[:2]:
+        w = re.sub(r'(특별시|광역시|특별자치시|특별자치도|시|군|구|도)$', '', w)
+        if w.endswith('통합'):   # '전남광주통합특별시'(2026 통합) → '전남', '광주'
+            w = w[:-2]
+            out += [w[i:i + 2] for i in range(0, len(w), 2)]
+        elif len(w) >= 2:
+            out.append(w)
+    return out
+
+
+def strip_tok(n, tok):
+    if n.startswith(tok):
+        return n[len(tok):]
+    if n.endswith(tok):
+        return n[:-len(tok)]
+    return n
+
+
 def match(ours, tago):
     """우리 터미널마다 TAGO 번호 찾기 — 같은 도시(주소에 도시 이름 앞 2글자)에서 핵심 이름이 같거나 한쪽이 다른 쪽으로 시작"""
     res = {}
@@ -130,6 +153,13 @@ def match(ours, tago):
                 if keys and not any(k in addr or k in s['name'] for k in keys):
                     continue
                 a, b = core(s['name'], city), core(tname, city)
+                # TAGO가 도시 이름을 안 주는 경우(고속버스 목록) 우리 주소의 도시 이름을 앞·뒤에서 떼고 비교
+                #   ('유스퀘어광주' ↔ '광주(유·스퀘어)' → 둘 다 '유스퀘어', 2026-10-12)
+                for tok in addr_tokens(addr):
+                    a2, b2 = strip_tok(a, tok), strip_tok(b, tok)
+                    if a2 and a2 == b2:
+                        a, b = a2, b2
+                        break
                 if a == b:
                     sc = 3
                 elif min(len(a), len(b)) >= 2 and (a.startswith(b) or b.startswith(a)):
@@ -160,7 +190,11 @@ def main():
                 if s['kind'] in ('고속버스', '시외버스') and not any(b in s['name'] for b in bad)]
 
     # 1) 터미널 맞추기 (처음 한 번)
-    if REMATCH or not os.path.exists(MATCH):
+    if OFFLINE:
+        saved = json.load(open(os.path.join(HERE, 'raw', 'tago_terminals.json'), encoding='utf-8'))
+        m = match(stations, {t: [tuple(x) for x in v] for t, v in saved.items()})
+        json.dump(m, open(MATCH, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+    elif REMATCH or not os.path.exists(MATCH):
         m = match(stations, tago_terminals(key))
         json.dump(m, open(MATCH, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
     m = json.load(open(MATCH, encoding='utf-8'))
@@ -219,6 +253,8 @@ def main():
     #   그 밖의 오류가 30번 연속이면 저장하고 멈춤. 다시 실행하면 이어서 받음
     ops = raw.setdefault('ops', {})
     got, fails, stopped = 0, 0, set()
+    if OFFLINE:
+        todo_left, todo = len(todo), []
     try:
         for dep, arr, t, k in todo:
             if calls >= MAX_CALLS or len(stopped) == 2:
@@ -279,7 +315,7 @@ def main():
                     if v and v[3] > 0:
                         table.setdefault(a + '|' + b, {})[t] = v
     json.dump(table, open(OUT, 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))
-    left = len(todo) - got
+    left = todo_left if OFFLINE else len(todo) - got
     print(f'완료: 이번 조회 {got}회, 버스가 있는 터미널 쌍 {len(table)}개 → {os.path.relpath(OUT, ROOT)}')
     if left > 0:
         print(f'아직 {left}회 남음 — 다시 실행하면 이어서 받아요.')
