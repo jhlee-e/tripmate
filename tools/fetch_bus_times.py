@@ -12,6 +12,7 @@ API [확인: GitHub team-offway/core PR #448]: https://apis.data.go.kr/1613000/E
 기준 날짜: 실행 다음 날 (버스 API는 가까운 날짜만 조회됨 — 9일 뒤는 0편, 2026-10-12 진단). 심야 등급 제외. 한 방향만 받아 반대 방향도 같다고 봄
 이어 받기: 받은 쌍은 남겨 두고, 남은 쌍만 그날 기준 '내일' 시간표로 조회
 실행: PowerShell에서  python tools/fetch_bus_times.py   (끝까지 한 번에, 받은 쌍은 건너뛰고 이어 받음)
+      터미널 다시 맞추기:  python tools/fetch_bus_times.py --rematch   (TAGO 목록을 tools/raw/tago_terminals.json에 저장)
       주말 시간표(금·토요일에):  python tools/fetch_bus_times.py --weekend
 """
 import datetime, json, math, os, re, statistics, sys, time, urllib.parse, urllib.request
@@ -22,6 +23,7 @@ BASE = 'https://apis.data.go.kr/1613000/'
 # --weekend: 가장 가까운 토·일요일 시간표를 따로 받아 data/bus_times_weekend.json으로 (2026-10-12 이재훈 결정)
 #   버스 API는 가까운 날짜만 조회되므로 금요일(→토요일)이나 토요일(→일요일)에 실행
 WEEKEND = '--weekend' in sys.argv
+REMATCH = '--rematch' in sys.argv   # TAGO 터미널 목록을 새로 받아 다시 맞추기 (목록은 tools/raw/tago_terminals.json에 저장)
 ARGS = [a for a in sys.argv[1:] if not a.startswith('--')]
 RAW = os.path.join(HERE, 'raw', 'bus_times_weekend_raw.json' if WEEKEND else 'bus_times_raw.json')
 MATCH = os.path.join(HERE, 'raw', 'bus_match.json')
@@ -106,6 +108,7 @@ def tago_terminals(key):
             seen[x['terminalid']] = (x['terminalid'], x['terminalnm'], x.get('cityname', ''))
         out[t] = list(seen.values())
         print(f'TAGO {"고속" if t == "E" else "시외"}버스 터미널 {len(out[t])}곳')
+    json.dump(out, open(os.path.join(HERE, 'raw', 'tago_terminals.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
     return out
 
 
@@ -148,11 +151,11 @@ def main():
                 if s['kind'] in ('고속버스', '시외버스') and not any(b in s['name'] for b in bad)]
 
     # 1) 터미널 맞추기 (처음 한 번)
-    if not os.path.exists(MATCH):
+    if REMATCH or not os.path.exists(MATCH):
         m = match(stations, tago_terminals(key))
         json.dump(m, open(MATCH, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
     m = json.load(open(MATCH, encoding='utf-8'))
-    print(f'우리 터미널 {len(stations)}곳 중 TAGO와 맞춘 곳 {len(m)}곳 (확인: tools/raw/bus_match.json)')
+    print(f'우리 터미널 {len(stations)}곳 중 TAGO와 맞춘 곳 {len(m)}곳 (고속 {sum(1 for v in m.values() if "E" in v)}·시외 {sum(1 for v in m.values() if "S" in v)}, 확인: tools/raw/bus_match.json)')
     by = {s['name']: s for s in stations if s['name'] in m}
 
     # 2) 받을 쌍: 큰 도시 터미널 → 지역마다 가까운 터미널
@@ -202,23 +205,35 @@ def main():
     raw['busDate'] = date
     print(f'출발 쪽 터미널 {len(origins)}곳(큰 도시 {len(hubs)}곳), 도착 쪽 {len(dests)}곳 → 남은 조회 {len(todo)}회 (기준 날짜 {date})')
 
-    # 3) 시간표 조회 — 끝까지 한 번에, 응답이 늦으면 한 번 더, 오류가 30번 연속이면(하루 한도로 보고) 저장하고 멈춤
+    # 3) 시간표 조회 — 끝까지 한 번에. 응답이 늦으면 한 번 더.
+    #   HTTP 429(조회가 너무 많음)면 30초 쉬고 한 번 더 → 그래도 429면 그 종류(고속/시외)만 오늘은 멈추고 다른 종류는 계속 (2026-10-12)
+    #   그 밖의 오류가 30번 연속이면 저장하고 멈춤. 다시 실행하면 이어서 받음
     ops = raw.setdefault('ops', {})
-    got, fails = 0, 0
+    got, fails, stopped = 0, 0, set()
     try:
         for dep, arr, t, k in todo:
-            if calls >= MAX_CALLS:
+            if calls >= MAX_CALLS or len(stopped) == 2:
                 break
+            if t in stopped:
+                continue
             params = dict(depTerminalId=dep, arrTerminalId=arr, depPlandTime=date, numOfRows=200)
             op = ops.get(t, TIME_OPS[t][0])
             items, err = api(key, SVC[t], op, **params)
-            if items is None:
+            if items is None and '429' in err:
+                print(f'  {"고속" if t == "E" else "시외"}버스 조회가 너무 많다는 응답(429) — 30초 쉬고 다시 해 볼게요')
+                time.sleep(30)
+                items, err = api(key, SVC[t], op, **params)
+                if items is None and '429' in err:
+                    stopped.add(t)
+                    print(f'  {"고속" if t == "E" else "시외"}버스는 오늘 한도에 걸린 것 같아요 — 이 종류만 멈추고 나머지는 계속 받아요')
+                    continue
+            elif items is None:
                 items, err = api(key, SVC[t], op, **params)
             if items is None:
                 fails += 1
                 print('  건너뜀:', k, err[:120])
                 if fails >= 30:
-                    print('오류가 30번 연속 났어요 (하루 조회 한도일 수 있음). 지금까지 저장했으니 나중에 다시 실행하면 이어서 받아요.')
+                    print('오류가 30번 연속 났어요. 지금까지 저장했으니 나중에 다시 실행하면 이어서 받아요.')
                     break
                 continue
             fails = 0
