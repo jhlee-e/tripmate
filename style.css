@@ -770,3 +770,15 @@ body.print-layout .print-map { border: 1px solid #ccc; border-radius: 8px; }
 #together-body .card .chip-row { margin: 10px 0; }
 #proxy-name { width: 100%; margin-top: 8px; }
 #pref-list .mb-role { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; text-align: right; }
+
+/* 통계 추정 숙소 요금 주의 문구 */
+.lodging-warn {
+  margin: 6px 0;
+  padding: 8px 10px;
+  border-left: 3px solid #e0a020;
+  background: #fff7e6;
+  color: #7a5200;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+.lodging-warn a { margin-left: 4px; color: #7a5200; text-decoration: underline; }

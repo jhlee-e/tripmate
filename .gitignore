@@ -2,3 +2,9 @@
 tools/tourapi_key.txt
 tools/raw/
 tools/related_key.txt
+
+# 카카오 REST API 키 (인기도 이름 확인용, 2026-10-12) — 절대 커밋 금지
+tools/kakao_key.txt
+
+# 파이썬 실행 캐시
+tools/__pycache__/

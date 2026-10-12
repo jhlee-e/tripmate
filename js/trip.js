@@ -66,7 +66,7 @@ function renderInfo(trip, role) {
     ['인원', peopleText(trip) + (trip.days > 1 ? ' · 방 ' + (trip.rooms || 1) + '개' : '') + (trip.pet ? ' · 반려동물 동반' : '')],
     ['출발지', trip.departure_address || '-'],
     ['이동 수단', trip.transport],
-    ['템포', trip.tempo],
+    ['템포', trip.tempo + (trip.hidden_gem ? ' · 숨은 명소 위주' : '')],
     ['취향', trip.tags.map(function (t, i) { return (i === 0 ? '①' : '') + '#' + t; }).join(' ')],
     ['예산', won(trip.budget_min) + ' ~ ' + won(trip.budget_max)],
     ['여행지', trip.region ? trip.region + ' · ' + trip.plan_type + '안 ' + PLAN_INFO[trip.plan_type].name : '아직 안 고름']

@@ -207,9 +207,14 @@ function groupFirstTags(trip) {
   return out;
 }
 
-// 인기도 반영: 최종 점수 = 점수 × (1 + 인기도/5) → 인기도 5점이면 2배 (이재훈 결정)
-function withPopularity(score, popularity) {
-  return score * (1 + (popularity || 0) / 5);
+// 인기도 반영 (인기도 0~5점, 0 = 이동 데이터에 안 나옴)
+//   기본: 점수 × (1 + 인기도/10) → 인기도 5점이면 1.5배
+//     (처음엔 /5로 최대 2배였으나 유명한 곳만 뽑혀 2026-10-11 이재훈 결정으로 최대 1.5배로 낮춤)
+//   숨은 명소 위주(trip.hidden_gem): 점수 × (1.5 − 인기도/10) → 인기도 0점 1.5배, 5점 1배 (반대로 적용)
+//     (2026-10-11 이재훈 결정으로 선택지 추가, 뒤집는 식은 Claude 제안)
+function withPopularity(score, popularity, trip) {
+  const pop = popularity || 0;
+  return score * (trip && trip.hidden_gem ? 1.5 - pop / 10 : 1 + pop / 10);
 }
 
 function isChain(name) {
@@ -295,7 +300,7 @@ function estimateMinCost(trip, r, distKm) {
 
 // ---------- 2. 여행지(지역) 순위 ----------
 // 입력: trip, regions.json 배열 / 출력: 점수 높은 순 [{ region, score, oneWayMin, distKm, info }]
-// 지역 점수 = 취향 점수(지역 명소 태그 평균) × (1 + 인기 상위 10곳 평균/5) × (1 − 왕복 이동 시간 ÷ 전체 활동 시간) × 예산 보정
+// 지역 점수 = 취향 점수(지역 명소 태그 평균) × 인기도 배수(withPopularity, 인기 상위 10곳 평균) × (1 − 왕복 이동 시간 ÷ 전체 활동 시간) × 예산 보정
 //   → 오가는 데 여행 시간의 큰 몫을 쓰는 곳일수록, 여행이 짧을수록 많이 깎임 (감점 방식은 Claude 제안)
 //   마지막에 × 랜덤 배수(0.9~1.1, round = 다시 추천 회차)
 function rankRegions(trip, regions, round) {
@@ -319,7 +324,7 @@ function rankRegions(trip, regions, round) {
     const oneWayMin = travelMin(distKm, trip.transport, true, null, [dep, r]);
     const ratio = 2 * oneWayMin / totalActive;
     const taste = regionTagScore(r.tagAvg, trip, best);          // 함께 정하기면 평균 + 최소 보장
-    const base = withPopularity(taste.score, r.popTop10);
+    const base = withPopularity(taste.score, r.popTop10, trip);
     const jitter = regionJitter(trip.id, round || 0, r.region);
     // 예산: 이 지역에 가면 최소 얼마 드는지 추정해, 최대 예산을 넘으면 (예산 ÷ 최소 비용)² 만큼 깎음 (Claude 설계)
     //   → 예산이 빠듯하면 가깝고 싼 지역이 위로 올라옴. 예산 안이면 깎지 않음
@@ -413,7 +418,22 @@ function lodgingLabel(p, trip) {
   const avg = lodgingAvgRoomNight(p, trip);
   return (r ? r.name + (isPerBed(r) ? '(침대 ' + perRoomPeople(trip) + '개)' : r.max ? '(최대 ' + r.max + '명)' : '') + ' · ' : '') + '1박 ' +
          (trip.days > 2 ? '평균 ' : '') + Math.round(avg).toLocaleString('ko-KR') + '원' +
-         (r ? (r.src === 'search' ? ' (여기어때 검색)' : r.src === 'stats' ? ' (통계 추정)' : '') : (p.costCheck === '추정' ? ' (추정)' : ''));
+         (r ? (r.src === 'search' ? ' (여기어때 검색)' : r.src === 'stats' ? ' (통계 추정 · 직접 확인 필요)' : '') : (p.costCheck === '추정' ? ' (추정)' : ''));
+}
+
+// 통계 추정 요금 숙소인지 (실제 요금을 못 구해 같은 시·도·종류·객실 크기 숙소들의 중앙값을 쓴 곳)
+function lodgingIsStats(p, trip) {
+  const r = roomFor(p, trip);
+  return !!(r && r.src === 'stats');
+}
+
+// 통계 추정 숙소에 붙이는 주의 문구 (2026-10-11 이재훈 결정: 추정값은 그대로 쓰되 직접 확인하라고 안내)
+function lodgingWarnHtml(p, trip) {
+  if (!p || p.type !== '숙소' || !trip || !lodgingIsStats(p, trip)) return '';
+  const url = 'https://www.yeogi.com/domestic-accommodations?keyword=' + encodeURIComponent(p.name);
+  return '<p class="lodging-warn">⚠ 이 숙소는 실제 요금을 찾지 못해, 같은 지역·같은 종류 숙소들의 보통 요금(통계 추정)으로 계산했어요. ' +
+    '실제 요금과 다를 수 있으니 예약 전에 숙소나 예약 사이트에서 직접 확인해 주세요. ' +
+    '<a href="' + url + '" target="_blank" rel="noopener">여기어때에서 찾아보기</a></p>';
 }
 
 // ---------- 3. 예산 상한과 후보 거르기 ----------
@@ -620,7 +640,7 @@ function preparePool(trip, places) {
   const nights = trip.days - 1;
   const base = places.filter(function (p) { return usable(p, trip); });
   const month = tripMonth(trip);
-  base.forEach(function (p) { p._s = withPopularity(placeTagScore(p.tags, trip), p.popularity) * infoMultiplier(p, trip) * seasonMultiplier(p, month); });
+  base.forEach(function (p) { p._s = withPopularity(placeTagScore(p.tags, trip), p.popularity, trip) * infoMultiplier(p, trip) * seasonMultiplier(p, month); });
 
   for (let step = 0; step <= 20; step++) {
     const relax = 1 + step * 0.1;
@@ -1180,7 +1200,7 @@ function computeTimeline(trip, plan) {
 // 장소 점수가 아직 없으면 계산해 붙임 (저장된 일정을 불러온 경우 등)
 function ensureScores(places, trip) {
   places.forEach(function (p) {
-    if (p._s == null) p._s = withPopularity(placeTagScore(p.tags || {}, trip), p.popularity) * infoMultiplier(p, trip) * seasonMultiplier(p, tripMonth(trip));
+    if (p._s == null) p._s = withPopularity(placeTagScore(p.tags || {}, trip), p.popularity, trip) * infoMultiplier(p, trip) * seasonMultiplier(p, tripMonth(trip));
   });
 }
 

@@ -556,6 +556,7 @@ function showPlace(p) {
     '<p class="helper-text muted">' + esc(p.categoryName || p.type) + (p.address ? ' · ' + esc(p.address) : '') + '</p>' +
     '<p class="helper-text">' + (p.type === '숙소' && typeof trip !== 'undefined' && trip ? esc(lodgingLabel(p, trip)) :
       (p.type === '숙소' ? '1박 ' : '1인 ') + (p.cost ? won(p.cost) : '무료') + (p.costCheck === '추정' ? ' (추정)' : '')) + (p.stayMin && p.type !== '숙소' ? ' · 기본 체류 ' + p.stayMin + '분' : '') + '</p>' +
+    (typeof trip !== 'undefined' ? lodgingWarnHtml(p, trip) : '') +
     (p.basis && p.scoredBy && p.scoredBy.indexOf('세부분류') === -1 ? '<p class="helper-text">' + esc(p.basis) + '</p>' : '') +
     legInfoHtml(p) +
     '<p class="place-links">' +

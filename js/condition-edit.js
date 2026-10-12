@@ -39,6 +39,7 @@ async function setupEditMode() {
   document.getElementById('people-total').textContent = '총 ' + readPeople().total + '명';
   document.getElementById('rooms').value = data.rooms || 1;
   document.getElementById('with-pet').checked = !!data.pet;
+  document.getElementById('hidden-gem').checked = !!data.hidden_gem;
   document.getElementById('together').checked = !!data.together;
   // 출발 위치
   if (data.departure_lat != null) {

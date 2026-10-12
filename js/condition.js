@@ -191,6 +191,7 @@ function collectCondition() {
     people: readPeople(),         // { infants, children, teens, adults, total }
     rooms: Number(document.getElementById('rooms').value),
     pet: document.getElementById('with-pet').checked,   // 반려동물 동반 (2026-10-10 추가)
+    hiddenGem: document.getElementById('hidden-gem').checked,   // 숨은 명소 위주 (2026-10-11 추가)
     together: document.getElementById('together').checked,   // 친구와 함께 정하기 (7차시)
     departure: departure,         // { address, lat, lng } — departure.js에서 만든 값
     transport: getSelectedValue('transport-group'),
@@ -271,6 +272,7 @@ async function handleSubmit(event) {
     tags: condition.tags,
     tempo: condition.tempo
   }, condition.pet || (editId && 'pet' in editTrip) ? { pet: condition.pet } : {},
+     condition.hiddenGem || (editId && 'hidden_gem' in editTrip) ? { hidden_gem: condition.hiddenGem } : {},
      (condition.together && !copyCourse) || (editId && 'together' in editTrip) ? { together: !!condition.together && !copyCourse } : {},
      copyTripFields());
   const { data, error } = editId
@@ -280,7 +282,9 @@ async function handleSubmit(event) {
 
   if (error) {
     errorText.textContent = '저장 실패: ' + (error.message.indexOf('together') !== -1
-      ? '\'함께 정하기\'를 쓰려면 Supabase에서 sql/add_together.sql을 먼저 실행해 주세요.' : error.message);
+      ? '\'함께 정하기\'를 쓰려면 Supabase에서 sql/add_together.sql을 먼저 실행해 주세요.'
+      : error.message.indexOf('hidden_gem') !== -1
+        ? '\'숨은 명소 위주\'를 쓰려면 Supabase에서 sql/add_hidden_gem.sql을 먼저 실행해 주세요.' : error.message);
     console.error(error);
     return;
   }
