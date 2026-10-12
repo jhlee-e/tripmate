@@ -39,6 +39,8 @@ async function start() {
       const plans = buildPlans(trip, region, places);
       if (!plans) { status.textContent = '이 예산으로는 일정을 만들 수 없어요.'; return; }
       plan = plans[key];
+      // 다른 여행지를 고르면 예전 여행지에 맞춰 넣은 열차·버스 시각은 맞지 않으므로 비움 (저장할 때 반영)
+      if (trip.transit_times && trip.region && trip.region !== region) trip.transit_times = null;
       if (trip.region) document.getElementById('save-msg').textContent = '저장하면 이 여행에 저장된 기존 일정(' + trip.region + ' ' + trip.plan_type + '안)을 덮어써요.';
     } else {                                   // 저장된 일정 불러오기
       plan = await loadSavedPlan(trip, places);
@@ -117,7 +119,11 @@ function renderTabs() {
 function renderDay() {
   const day = timeline.days[curDay];
   const limit = TEMPO[trip.tempo].hours * 60;
-  document.getElementById('day-start').value = hhmm(plan.days[curDay].start);
+  // 1일차에 열차·버스 시각을 넣었으면 집 출발 시각은 그 시각에서 거꾸로 계산 (직접 못 바꿈)
+  const startInput = document.getElementById('day-start');
+  startInput.value = hhmm(day.start);
+  startInput.disabled = !!(day.go && day.go.userSet);
+  startInput.title = startInput.disabled ? '입력한 열차·버스 출발 시각에 맞춰 계산했어요' : '';
   document.getElementById('day-active').textContent = '활동 ' + durationText(day.activeMin) + ' / ' + durationText(limit) + ' (이동+관람, 식사 제외)';
   document.getElementById('day-warning').textContent = day.over ? '이 날은 ' + trip.tempo + ' 템포의 하루 활동 시간을 넘었어요.' : '';
 
@@ -125,6 +131,7 @@ function renderDay() {
   list.innerHTML = '';
   const lastDay = curDay === timeline.days.length - 1;
   list.appendChild(pointItem(hhmm(day.start), curDay === 0 || !plan.lodging ? '🏠 출발지에서 출발 <small>(아침은 집에서 먹고 출발)</small>' : '🏨 숙소에서 출발'));
+  if (day.go) list.appendChild(transferItem(day.go, 'go'));   // 대중교통: 집 → 출발역 → 열차·버스 → 도착역
 
   let visitNo = 0;   // 식사를 빼고 센 방문 번호 (지도 번호와 같음)
   day.items.forEach(function (it, i) {
@@ -172,13 +179,14 @@ function renderDay() {
     list.appendChild(li);
   });
 
-  // 숙소로 가는 날: 자유 시간 → 숙소 도착 시각(바꿀 수 있음, 모든 날 공통)
+  // 숙소로 가는 날: 자유 시간 → 숙소 도착 시각(바꿀 수 있음, 모든 날 공통) / 마지막 날 열차·버스 시각을 넣었으면 그 전까지 자유 시간
   if (!day.endPoint.isHome && day.freeMin > 0) {
-    list.appendChild(pointItem(hhmm(day.departMin), '☕ 자유 시간 ' + durationText(day.freeMin) + ' 뒤 숙소로'));
+    list.appendChild(pointItem(hhmm(day.departMin), '☕ 자유 시간 ' + durationText(day.freeMin) + (day.ret ? ' 뒤 역으로' : ' 뒤 숙소로')));
   }
-  const endText = day.endPoint.isHome ? '🏠 집 도착' : '🏨 숙소 도착 <label class="return-field">도착 시각 ' +
+  const endText = day.endPoint.isHome ? '🏠 집 도착' : day.ret ? stationIcon(day.ret.kind) + ' ' + esc(day.ret.from.name) + ' 도착' :
+    '🏨 숙소 도착 <label class="return-field">도착 시각 ' +
     '<input type="time" step="600" class="return-input" value="' + hhmm(plan.lodgingArrive || LODGING_ARRIVE) + '"> 이후</label>';
-  const end = pointItem(hhmm(day.endMin), endText);
+  const end = pointItem(hhmm(day.ret ? day.ret.stationArrive : day.endMin), endText);
   const arriveInput = end.querySelector('.return-input');
   if (arriveInput) arriveInput.addEventListener('change', function (e) {
     const [h, m] = e.target.value.split(':').map(Number);
@@ -188,6 +196,63 @@ function renderDay() {
   end.insertAdjacentHTML('afterbegin', moveLine(day.backMode, day.backMin, day.backKm, day.endPoint, '', plan.days[curDay].backStop));
   bindModeButtons(end, plan.days[curDay].backStop);
   list.appendChild(end);
+  if (day.ret) {   // 마지막 날: 도착역 → 열차·버스 → 출발역 → 집
+    list.appendChild(transferItem(day.ret, 'back'));
+    list.appendChild(pointItem(hhmm(day.ret.homeArrive), '🏠 집 도착'));
+  }
+}
+
+// ---------- 역·터미널 (2026-10-12 피드백 2차) ----------
+function stationIcon(kind) { return kind === 'KTX' ? '🚄' : '🚌'; }
+// 입력: computeTimeline의 day.go(가는 편) 또는 day.ret(오는 편), 'go' | 'back'
+// 출력: 목록 한 칸 — 역 이름, 출발·도착 시각(입력 칸), 요금, 예매 사이트 링크. 시각을 바꾸면 trip.transit_times에 넣고 다시 계산
+function transferItem(t, which) {
+  const date = which === 'go' ? trip.start_date : trip.end_date;
+  const li = document.createElement('li');
+  li.className = 'tl-transfer' + (t.late ? ' late' : '');
+  const access = which === 'go'
+    ? '↓ 🚌 집 → ' + esc(t.from.name) + ' ' + durationText(t.accessMin) + ' · ' + STATION_WAIT + '분 전 도착'
+    : '↓ 🚌 ' + esc(t.to.name) + ' → 집 ' + durationText(t.accessMin);
+  const booking = t.booking.map(function (b) {
+    return '<a href="' + b.url + '" target="_blank" rel="noopener">' + esc(b.name) + '</a>';
+  }).join('');
+  li.innerHTML =
+    (which === 'go' ? '<p class="tl-move">' + access + '</p>' : '') +
+    '<div class="transfer-box">' +
+      '<p class="transfer-title">' + stationIcon(t.kind) + ' ' + esc(t.kind) + ' ' + esc(t.from.name) + ' → ' + esc(t.to.name) +
+        ' <small>' + esc(date.slice(5).replace('-', '/')) + ' · ' + durationText(t.rideMin) + ' · ' + won(t.fare) + '</small></p>' +
+      '<p class="transfer-times">' +
+        '<label>출발 <input type="time" step="60" class="tt-dep" value="' + hhmm(t.departMin) + '"></label> → ' +
+        '<label>도착 <input type="time" step="60" class="tt-arr" value="' + hhmm(t.arriveMin) + '"></label>' +
+        (t.userSet ? ' <button type="button" class="link-btn tt-clear">추정 시각으로</button>' : '') + '</p>' +
+      '<p class="helper-text ' + (t.userSet ? '' : 'muted') + '">' + (t.userSet ? '✔ 예매한 시각으로 계산했어요.'
+        : '추정 시각이에요. 아래 사이트에서 ' + esc(date) + ' 표를 예매한 뒤 출발·도착 시각을 넣어 주세요.') + '</p>' +
+      (t.late ? '<p class="field-warning">⚠ 이 ' + (t.kind === 'KTX' ? '열차' : '버스') + '를 타려면 일정이 늦어요 (역에 ' +
+        STATION_WAIT + '분 전까지 도착 못 함) — 장소를 빼거나 체류 시간을 줄여 주세요.</p>' : '') +
+      '<p class="place-links">' + booking + '</p>' +
+    '</div>' +
+    (which === 'back' ? '<p class="tl-move">' + access + '</p>' : '');
+  function save(dep, arr) {
+    const all = Object.assign({}, trip.transit_times || {});
+    if (dep == null) delete all[which]; else all[which] = { dep: dep, arr: arr };
+    trip.transit_times = Object.keys(all).length ? all : null;
+    refresh(true);
+  }
+  li.querySelector('.tt-dep').addEventListener('change', function (e) {
+    if (!e.target.value) return;
+    // 출발 시각만 바꾸면 도착은 타는 시간만큼 뒤로 (도착 칸도 직접 고칠 수 있음)
+    const dep = toMin(e.target.value);
+    save(e.target.value, hhmm(dep + t.rideMin));
+  });
+  li.querySelector('.tt-arr').addEventListener('change', function (e) {
+    if (!e.target.value) return;
+    if (toMin(e.target.value) <= t.departMin) { showError(new Error('도착 시각은 출발 시각보다 늦어야 해요.')); return; }
+    showError(null);
+    save(hhmm(t.departMin), e.target.value);
+  });
+  const clear = li.querySelector('.tt-clear');
+  if (clear) clear.addEventListener('click', function () { save(null); });
+  return li;
 }
 
 // 이동 한 줄: '↓ 🚶 걷기 5분 · 0.3km' + (대중교통 여행이면) [🚶 걷기 | 🚌 대중교통] 버튼과 받아 온 노선 안내
@@ -466,7 +531,7 @@ function renderMap() {
     const el = document.createElement('button');
     el.type = 'button';
     el.className = 'map-pin ' + cls;
-    el.style.background = cls === 'lodging' ? '#333' : color;
+    el.style.background = cls === 'lodging' ? '#333' : cls === 'station' ? '#1f5fa8' : color;
     el.textContent = label;
     el.addEventListener('click', function () { showPlace(p); });
     const ov = new kakao.maps.CustomOverlay({ position: pos, content: el, yAnchor: 0.5, zIndex: cls === 'lodging' ? 1 : 2 });
@@ -481,14 +546,16 @@ function renderMap() {
   }
 
   // 출발지(집)는 멀리 있어 지도에서 빼고, 숙소·장소만 표시
-  if (!day.startPoint.isHome) { addPoint(day.startPoint, '숙', 'lodging'); pushPt(day.startPoint); }
+  if (day.startPoint.isStation) { addPoint(day.startPoint, '역', 'station'); pushPt(day.startPoint); }   // 대중교통 도착역
+  else if (!day.startPoint.isHome) { addPoint(day.startPoint, '숙', 'lodging'); pushPt(day.startPoint); }
   let n = 0;
   day.items.forEach(function (it) {
     addPoint(it.stop.p, it.stop.meal ? '🍴' : String(++n), it.stop.meal ? 'meal' : 'visit');
     pushPt(it.stop.p, it.moveMode, it.stop);
   });
   if (!day.endPoint.isHome) {
-    if (day.startPoint.isHome) addPoint(day.endPoint, '숙', 'lodging');
+    if (day.endPoint.isStation) { if (!day.startPoint.isStation) addPoint(day.endPoint, '역', 'station'); }
+    else if (day.startPoint.isHome || day.startPoint.isStation) addPoint(day.endPoint, '숙', 'lodging');
     const dayPlan = plan.days[curDay];
     if (!dayPlan.backStop) dayPlan.backStop = {};
     pushPt(day.endPoint, day.backMode, dayPlan.backStop);
@@ -549,6 +616,12 @@ function panTo(p) { if (map) map.panTo(new kakao.maps.LatLng(p.lat, p.lng)); }
 
 function showPlace(p) {
   const card = document.getElementById('place-card');
+  if (p.isStation) {   // 역·터미널: 이름·종류와 길찾기만
+    card.innerHTML = '<h3>' + esc(p.name) + '</h3><p class="helper-text muted">' + esc(p.kind) + (p.kind === 'KTX' || p.kind === 'SRT' ? '역' : ' 터미널') + '</p>' +
+      legInfoHtml(p) + '<p class="place-links"><a href="https://map.kakao.com/link/to/' + encodeURIComponent(p.name) + ',' + p.lat + ',' + p.lng +
+      '" target="_blank" rel="noopener">카카오맵 길찾기</a></p>';
+    return;
+  }
   const route = 'https://map.kakao.com/link/to/' + encodeURIComponent(p.name) + ',' + p.lat + ',' + p.lng;
   card.innerHTML =
     (p.photo ? '<img class="place-photo" src="' + esc(p.photo) + '" alt=""><small class="photo-credit">사진: 한국관광공사</small>' : '') +
@@ -595,7 +668,8 @@ document.getElementById('save-btn').addEventListener('click', async function () 
       region: plan.region, plan_type: plan.type, total_cost: Math.round(timeline.cost.total),
       // 날짜별 시작 시각 + 맨 끝에 숙소 도착 시각 (예: 3일 여행이면 [1일차, 2일차, 3일차, 숙소 도착])
       day_starts: plan.days.map(function (d) { return d.start; }).concat([plan.lodgingArrive || LODGING_ARRIVE])
-    }, plan.days.some(function (d) { return d.backStop && d.backStop.legMode; }) || trip.back_modes
+    }, trip.transit_times !== undefined ? { transit_times: trip.transit_times } : {},   // 예매한 열차·버스 시각 (sql/add_transit_times.sql)
+    plan.days.some(function (d) { return d.backStop && d.backStop.legMode; }) || trip.back_modes
       ? { back_modes: plan.days.map(function (d) { return (d.backStop && d.backStop.legMode) || null; }) } : {})).eq('id', trip.id).select().single();
     if (up.error) throw up.error;
     trip.updated_at = up.data.updated_at;
@@ -623,7 +697,9 @@ document.getElementById('save-btn').addEventListener('click', async function () 
     msg.innerHTML = '저장했어요! <a href="trip.html?trip=' + trip.id + '">여행 정보·준비물 보러 가기 →</a>';
   } catch (e) {
     msg.textContent = '';
-    showError(/leg_mode|back_modes/.test(e.message || '')
+    showError(/transit_times/.test(e.message || '')
+      ? { message: '열차·버스 시각을 저장하려면 Supabase에서 sql/add_transit_times.sql을 먼저 실행해 주세요.' }
+      : /leg_mode|back_modes/.test(e.message || '')
       ? { message: '걷기/대중교통 선택을 저장하려면 Supabase에서 sql/add_leg_mode.sql을 먼저 실행해 주세요.' } : e);
   }
   btn.disabled = false;

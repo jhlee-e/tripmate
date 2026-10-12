@@ -124,6 +124,13 @@ function renderCost(trip, plan, t) {
   document.getElementById('cost-card').hidden = false;
 }
 
+// 열차·버스 한 줄: '🚄 10:00 서울역 → 11:54 강릉역 (KTX, 추정)'
+function transferMini(t) {
+  return '<li class="mini-point' + (t.late ? ' over-text' : '') + '">' + (t.kind === 'KTX' ? '🚄 ' : '🚌 ') + hhmm(t.departMin) + ' ' + esc(t.from.name) +
+    ' → ' + hhmm(t.arriveMin) + ' ' + esc(t.to.name) + ' <small class="muted">(' + esc(t.kind) + (t.userSet ? ', 예매한 시각' : ', 추정 시각') + ')</small>' +
+    (t.late ? ' ⚠ 시간이 빠듯해요' : '') + '</li>';
+}
+
 function renderSchedule(trip, plan, t) {
   const box = document.getElementById('schedule');
   box.innerHTML = '';
@@ -136,6 +143,7 @@ function renderSchedule(trip, plan, t) {
       (di + 1) + '일차 <small>' + (date.getMonth() + 1) + '/' + date.getDate() + '</small>' +
       '<span class="day-head-hint">지도에서 이 날만 보기</span></h3><ol class="mini-timeline">';
     html += '<li class="mini-point">' + hhmm(day.start) + ' ' + (di === 0 || !plan.lodging ? '🏠 출발 (아침은 집에서)' : '🏨 숙소에서 출발') + '</li>';
+    if (day.go) html += transferMini(day.go);   // 대중교통: 열차·버스 (2026-10-12)
     let n = 0;
     day.items.forEach(function (it, i) {
       const p = it.stop.p;
@@ -148,7 +156,10 @@ function renderSchedule(trip, plan, t) {
           (it.queue ? ' <small class="muted">줄 약 ' + it.queue + '분</small>' : '') + '</span>' +
         '<span class="mini-cost">' + (it.cost ? won(it.cost) : '') + '</span></li>';
     });
-    if (day.endPoint.isHome) {
+    if (day.ret) {
+      if (day.freeMin > 0) html += '<li class="mini-point">☕ 자유 시간 ' + durationText(day.freeMin) + '</li>';
+      html += transferMini(day.ret) + '<li class="mini-point">' + hhmm(day.ret.homeArrive) + ' 🏠 집 도착</li>';
+    } else if (day.endPoint.isHome) {
       html += '<li class="mini-point">' + hhmm(day.endMin) + ' 🏠 집 도착</li>';
     } else {
       if (day.freeMin > 0) html += '<li class="mini-point">☕ 자유 시간 ' + durationText(day.freeMin) + '</li>';
@@ -205,8 +216,10 @@ function renderMap(t, trip) {
       ov.setMap(map);
       layer.overlays.push(ov);
     }
-    if (!day.startPoint.isHome) { pin(day.startPoint, '숙', true); pushPt(day.startPoint); }
+    if (day.startPoint.isStation) { pin(day.startPoint, '역', true); pushPt(day.startPoint); }
+    else if (!day.startPoint.isHome) { pin(day.startPoint, '숙', true); pushPt(day.startPoint); }
     day.items.forEach(function (it) { pin(it.stop.p, it.stop.meal ? '🍴' : (di + 1) + '-' + (++n), false); pushPt(it.stop.p, it.moveMode, it.stop); });
+    if (day.endPoint.isStation && !day.startPoint.isStation) pin(day.endPoint, '역', true);
     if (!day.endPoint.isHome) {
       const dayPlan = current.plan.days[di];
       if (!dayPlan.backStop) dayPlan.backStop = {};

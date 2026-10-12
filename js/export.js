@@ -79,9 +79,12 @@ async function buildPrintMaps(trip) {
     let n = 0;
     function addStop(p, label, dark) { stops.push({ p: p, label: label, dark: dark }); }
     function pushPt(p, mode) { if (pts.length) modes.push(mode || null); pts.push({ lat: p.lat, lng: p.lng }); }
-    if (!day.startPoint.isHome) { addStop(day.startPoint, '숙', true); pushPt(day.startPoint); }
+    if (!day.startPoint.isHome) { addStop(day.startPoint, day.startPoint.isStation ? '역' : '숙', true); pushPt(day.startPoint); }
     day.items.forEach(function (it) { addStop(it.stop.p, it.stop.meal ? '🍴' : (di + 1) + '-' + (++n), false); pushPt(it.stop.p, it.moveMode); });
-    if (!day.endPoint.isHome) { addStop(day.endPoint, '숙', true); pushPt(day.endPoint, day.backMode); }
+    if (!day.endPoint.isHome) {
+      if (!(day.endPoint.isStation && day.startPoint.isStation)) addStop(day.endPoint, day.endPoint.isStation ? '역' : '숙', true);
+      pushPt(day.endPoint, day.backMode);
+    }
     if (!stops.length) { sec.remove(); return; }
 
     // 1) 처음 칸: 장소들의 가로세로 비율에 맞춘 목표 크기
@@ -224,12 +227,22 @@ async function exportXlsx(trip, plan, timeline) {
       date.setDate(date.getDate() + di);
       const ds = (date.getMonth() + 1) + '/' + date.getDate();
       rows.push([di + 1, ds, hhmm(day.start), '출발', di === 0 || !plan.lodging ? '집 (' + (trip.departure_address || '출발지') + ')' : plan.lodging.name, '', '', '', '', '']);
+      // 대중교통 열차·버스 (역·터미널, 2026-10-12): 출발 시각 · 종류 · '출발역 → 도착역 (도착 시각)' · 타는 시간 · 요금
+      function transferRow(t) {
+        return [di + 1, ds, hhmm(t.departMin), t.kind + (t.userSet ? '' : '(추정)'), t.from.name + ' → ' + t.to.name + ' (' + hhmm(t.arriveMin) + ' 도착)',
+                '', Math.round(t.rideMin), Math.round(t.fare), '', ''];
+      }
+      if (day.go) rows.push(transferRow(day.go));
       day.items.forEach(function (it) {
         const p = it.stop.p;
         rows.push([di + 1, ds, hhmm(it.begin), it.stop.meal || p.type, p.name, it.stop.stay, Math.round(it.moveMin),
                    Math.round(it.cost), p.address || '', p.link || '']);
       });
-      rows.push([di + 1, ds, hhmm(day.endMin), day.endPoint.isHome ? '집 도착' : '숙소 도착',
+      if (day.ret) {
+        rows.push([di + 1, ds, hhmm(day.ret.stationArrive), '역 도착', day.ret.from.name, '', Math.round(day.backMin), '', '', '']);
+        rows.push(transferRow(day.ret));
+        rows.push([di + 1, ds, hhmm(day.ret.homeArrive), '집 도착', '집', '', Math.round(day.ret.accessMin), '', '', '']);
+      } else rows.push([di + 1, ds, hhmm(day.endMin), day.endPoint.isHome ? '집 도착' : '숙소 도착',
                  day.endPoint.isHome ? '집' : plan.lodging.name, '', Math.round(day.backMin), '', '', '']);
     });
     addSheet('일정', rows, [6, 7, 7, 8, 28, 9, 9, 10, 36, 30]);
