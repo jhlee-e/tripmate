@@ -1,6 +1,6 @@
 """
 KTX 역 사이 실제 소요시간·요금 받기 (2026-10-12, 이재훈 결정: 주요 역 쌍의 실제 소요시간 표를 만들어 쓰기)
-입력: tools/tourapi_key.txt (공공데이터포털 인증키 — '국토교통부_(TAGO)_열차정보' 활용신청 필요),
+입력: tools/tago_key.txt (공공데이터포털 '국토교통부_(TAGO)_열차정보' 일반 인증키, gitignore),
       data/stations.json (tools/fetch_stations.py가 만든 KTX역 목록)
 출력: tools/raw/train_times_raw.json (받은 기록, 이어 받기용)
       data/train_times.json — { "서울역|강릉역": [보통 소요시간(분, 중앙값), 가장 빠른 시간(분), 어른 요금(원, 중앙값), 그날 KTX 편수] }
@@ -55,7 +55,8 @@ def minutes(a, b):
 
 
 def main():
-    key = open(os.path.join(HERE, 'tourapi_key.txt'), encoding='utf-8-sig').read().strip()
+    kp = os.path.join(HERE, 'tago_key.txt')   # TAGO 열차정보용 일반 인증키 (없으면 TourAPI 키)
+    key = open(kp if os.path.exists(kp) else os.path.join(HERE, 'tourapi_key.txt'), encoding='utf-8-sig').read().strip()
     raw = json.load(open(RAW, encoding='utf-8')) if os.path.exists(RAW) else {}
     raw.setdefault('pairs', {})
 
