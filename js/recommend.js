@@ -1169,10 +1169,37 @@ const BOOKING = {
   시외버스: { name: '시외버스 예매(티머니)', url: 'https://txbus.t-money.co.kr/' }
 };
 let STATIONS = [];
+// KTX 역 사이 실제 소요시간·요금 (tools/fetch_train_times.py — 국토교통부 TAGO 열차정보, 평일 하루 시간표 기준)
+//   { '서울역|강릉역': [보통 소요시간(분, 중앙값), 가장 빠른 시간, 어른 요금(원), 편수] } — 한 방향만 있으면 반대도 같다고 봄
+let TRAIN_TIMES = {};
+const TRANSFER_MIN = 20;   // 바로 가는 KTX가 없을 때 갈아타는 데 드는 시간 (Claude 가정)
 async function loadStations() {
   try { STATIONS = await loadJSON('data/stations.json'); } catch (e) { STATIONS = []; }   // 파일이 없으면 예전 방식
+  try { TRAIN_TIMES = await loadJSON('data/train_times.json'); } catch (e) { TRAIN_TIMES = {}; }
   return STATIONS;
 }
+function trainDirect(a, b) { return TRAIN_TIMES[a + '|' + b] || TRAIN_TIMES[b + '|' + a] || null; }
+// 역 a → b KTX: 실제 시간표 → 없으면 한 번 갈아타기(표의 두 구간 + 20분) → 그래도 없으면 null
+// 출력: { min, fare, via(갈아타는 역 이름 또는 null) }
+function trainRide(a, b) {
+  const d = trainDirect(a, b);
+  if (d) return { min: d[0], fare: d[2] || null, via: null };
+  let best = null;
+  STATIONS.forEach(function (h) {
+    if (h.kind !== 'KTX' || h.name === a || h.name === b) return;
+    const x = trainDirect(a, h.name), y = trainDirect(h.name, b);
+    if (!x || !y) return;
+    const min = x[0] + TRANSFER_MIN + y[0];
+    if (!best || min < best.min) best = { min: min, fare: x[2] && y[2] ? x[2] + y[2] : null, via: h.name };
+  });
+  return best;
+}
+// 이 지점에서 maxKm 안의 역들 (가까운 순, 최대 n곳)
+function nearStations(pt, kinds, maxKm, n) {
+  return STATIONS.filter(function (s) { return kinds.indexOf(s.kind) !== -1 && distanceKm(pt, s) <= maxKm; })
+    .sort(function (a, b) { return distanceKm(pt, a) - distanceKm(pt, b); }).slice(0, n);
+}
+function stationObj(s) { return { id: 'st-' + s.id, name: s.name, kind: s.kind, lat: s.lat, lng: s.lng, isStation: true, type: '역' }; }
 function nearestStation(pt, kinds, maxKm) {
   let best = null, bestKm = maxKm;
   STATIONS.forEach(function (s) {
@@ -1200,8 +1227,20 @@ function transferFor(trip, center) {
   if (trip.transport !== '대중교통' || !STATIONS.length || !center) return null;
   const home = departureOf(trip);
   if (distanceKm(home, center) < TRANSFER_MIN_KM) return null;
-  let from = nearestStation(home, ['KTX'], KTX_NEAR_KM), to = nearestStation(center, ['KTX'], KTX_NEAR_KM);
-  let rail = !!(from && to && from.id !== to.id);
+  // KTX: 집·여행지 근처(25km 안) 역 몇 곳씩을 짝지어 '역까지 + 타는 시간 + 역에서 여행지까지'가 가장 짧은 쌍 (Claude 설계)
+  //   → 서울에서 강릉은 청량리역, 광주는 용산역처럼 노선에 맞는 역이 골라짐
+  let from = null, to = null, ride = null, bestTotal = Infinity;
+  const homeSt = nearStations(home, ['KTX'], KTX_NEAR_KM, 4), destSt = nearStations(center, ['KTX'], KTX_NEAR_KM, 3);
+  homeSt.forEach(function (a) {
+    destSt.forEach(function (b) {
+      if (a.id === b.id) return;
+      const r = trainRide(a.name, b.name);
+      const rm = r ? r.min : RIDE.rail.base + distanceKm(a, b) * RIDE.rail.road / RIDE.rail.kmh * 60;
+      const total = stationAccess(home, a).min + rm + stationAccess(center, b).min + (r ? 0 : 30);   // 시간표에 없는 쌍은 30분 불리하게
+      if (total < bestTotal) { bestTotal = total; from = stationObj(a); to = stationObj(b); ride = r; }
+    });
+  });
+  let rail = !!(from && to);
   if (!rail) {
     from = nearestStation(home, ['고속버스'], BUS_NEAR_KM) || nearestStation(home, ['고속버스', '시외버스'], BUS_FAR_KM);
     to = nearestStation(center, ['고속버스'], BUS_NEAR_KM) || nearestStation(center, ['고속버스', '시외버스'], BUS_FAR_KM);
@@ -1209,12 +1248,15 @@ function transferFor(trip, center) {
   }
   const km = distanceKm(from, to);
   const r = rail ? RIDE.rail : RIDE.bus;
-  const fare = rail ? Math.max(KTX_MIN_FARE, km * KTX_WON_PER_KM) : km * BUS_WON_PER_KM;
+  // 시간·요금: KTX는 실제 시간표(ride)가 있으면 그 값, 없으면 근사식
+  const fare = rail && ride && ride.fare ? ride.fare : rail ? Math.max(KTX_MIN_FARE, km * KTX_WON_PER_KM) : km * BUS_WON_PER_KM;
+  const rideMin = rail && ride ? ride.min : Math.round(r.base + km * r.road / r.kmh * 60);
   const kind = rail ? 'KTX' : (from.kind === '고속버스' && to.kind === '고속버스' ? '고속버스' : '시외버스');
   const booking = [BOOKING[kind]];
   const srt = rail ? nearestStation(home, ['SRT'], KTX_NEAR_KM) : null;   // 집 근처에 SRT역이 있으면 SRT 예매도 안내
   if (srt) booking.push(BOOKING.SRT);
-  return { kind: kind, from: from, to: to, km: km, rideMin: Math.round(r.base + km * r.road / r.kmh * 60),
+  return { kind: kind, from: from, to: to, km: km, rideMin: rideMin, via: rail && ride ? ride.via : null,
+           timetable: !!(rail && ride),   // true = 실제 시간표 기준, false = 근사식
            fare: Math.round(fare / 100) * 100, booking: booking, srt: srt };
 }
 // 집 ↔ 역 시내 이동 (분, 1인 요금) — 400m 안이면 걷기
@@ -1265,7 +1307,7 @@ function computeTimeline(trip, plan) {
       const departMin = userDep != null ? userDep : ceil10(day.start + acc.min + STATION_WAIT);
       const arriveMin = userArr != null && userArr > departMin ? userArr : departMin + tf.rideMin;
       dayStart = userDep != null ? departMin - STATION_WAIT - acc.min : day.start;
-      go = { kind: tf.kind, from: tf.from, to: tf.to, booking: tf.booking, leaveHome: dayStart, accessMin: acc.min, accessKm: acc.km,
+      go = { kind: tf.kind, from: tf.from, to: tf.to, booking: tf.booking, via: tf.via, timetable: tf.timetable, leaveHome: dayStart, accessMin: acc.min, accessKm: acc.km,
              departMin: departMin, arriveMin: arriveMin, rideMin: arriveMin - departMin, userSet: userDep != null,
              fare: tf.fare * pay, accessFare: acc.fare * pay, km: tf.km };
       addFare(go.fare + go.accessFare);
@@ -1333,7 +1375,7 @@ function computeTimeline(trip, plan) {
       } else trainDep = ceil10(clock + back.min + STATION_WAIT);
       const atStation = departMin + back.min;
       const arriveMin = userArr != null && userArr > trainDep ? userArr : trainDep + tf.rideMin;
-      ret = { kind: tf.kind, from: tf.to, to: tf.from, booking: tf.booking, stationArrive: atStation, departMin: trainDep,
+      ret = { kind: tf.kind, from: tf.to, to: tf.from, booking: tf.booking, via: tf.via, timetable: tf.timetable, stationArrive: atStation, departMin: trainDep,
               arriveMin: arriveMin, rideMin: arriveMin - trainDep, accessMin: acc.min, accessKm: acc.km, homeArrive: arriveMin + acc.min,
               userSet: userDep != null, late: atStation + STATION_WAIT > trainDep,
               fare: tf.fare * pay, accessFare: acc.fare * pay, km: tf.km };

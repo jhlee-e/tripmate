@@ -220,7 +220,9 @@ function transferItem(t, which) {
     (which === 'go' ? '<p class="tl-move">' + access + '</p>' : '') +
     '<div class="transfer-box">' +
       '<p class="transfer-title">' + stationIcon(t.kind) + ' ' + esc(t.kind) + ' ' + esc(t.from.name) + ' → ' + esc(t.to.name) +
-        ' <small>' + esc(date.slice(5).replace('-', '/')) + ' · ' + durationText(t.rideMin) + ' · ' + won(t.fare) + '</small></p>' +
+        (t.via ? ' <small>(' + esc(t.via) + ' 환승)</small>' : '') +
+        ' <small>' + esc(date.slice(5).replace('-', '/')) + ' · ' + durationText(t.rideMin) + ' · 1인 ' + won(t.fare / payersOf(trip)) +
+        ' · ' + (t.userSet ? '입력한 시각' : t.timetable ? '실제 시간표의 보통 소요시간' : '거리로 추정한 시간') + '</small></p>' +
       '<p class="transfer-times">' +
         '<label>출발 <input type="time" step="60" class="tt-dep" value="' + hhmm(t.departMin) + '"></label> → ' +
         '<label>도착 <input type="time" step="60" class="tt-arr" value="' + hhmm(t.arriveMin) + '"></label>' +

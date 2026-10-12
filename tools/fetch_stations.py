@@ -9,7 +9,7 @@
      분류나 이름에 '고속'이 있으면 고속버스, 아니면 시외버스
 실행: PowerShell에서  python tools/fetch_stations.py   (카카오 호출 약 330회, 1~2분)
 """
-import json, os, time, urllib.parse, urllib.request
+import json, os, re, time, urllib.parse, urllib.request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
@@ -40,6 +40,10 @@ def search(key, query, lat=None, lng=None, radius=None):
         return json.loads(r.read().decode('utf-8')).get('documents', [])
 
 
+def norm(n):
+    return re.sub(r'[\s()]', '', n)
+
+
 def row(d, kind):
     return {'id': d['id'], 'name': d['place_name'], 'kind': kind, 'lat': round(float(d['y']), 6), 'lng': round(float(d['x']), 6),
             'address': d.get('road_address_name') or d.get('address_name', '')}
@@ -55,11 +59,13 @@ def main():
             if not docs:
                 missing.append(name)
                 continue
-            exact = [d for d in docs if d['place_name'].replace(' ', '').startswith(name)]
+            exact = [d for d in docs if norm(d['place_name']).startswith(norm(name)[:-1])]
             d = (exact or docs)[0]
             if d['id'] not in seen:
                 seen.add(d['id'])
-                out.append(row(d, kind))
+                r = row(d, kind)
+                r['kakaoName'], r['name'] = r['name'], name   # 이름은 목록 이름으로 ('진부역 1번출구' → '진부역')
+                out.append(r)
             time.sleep(0.1)
 
     regions = json.load(open(os.path.join(ROOT, 'data', 'regions.json'), encoding='utf-8'))
@@ -69,7 +75,8 @@ def main():
             if '버스터미널' not in cat or d['id'] in seen:
                 continue
             seen.add(d['id'])
-            out.append(row(d, '고속버스' if ('고속' in cat or '고속' in d['place_name']) else '시외버스'))
+            # 카카오 분류에는 고속·시외 구분이 없어 이름으로 나눔 (이름에 '고속'이 있으면 고속버스, 2026-10-12 수정)
+            out.append(row(d, '고속버스' if '고속' in d['place_name'] else '시외버스'))
         if i % 20 == 0:
             print(f'버스터미널 검색 {i + 1}/{len(regions)}')
         time.sleep(0.1)
