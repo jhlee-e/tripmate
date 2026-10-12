@@ -1,0 +1,237 @@
+"""
+고속·시외버스 터미널 사이 실제 소요시간·요금 받기 (2026-10-12, 이재훈 결정: 버스도 실제 시간표로, KTX와 비교해 A·B안은 빠른 쪽·C안은 싼 쪽)
+입력: tools/tago_key.txt (공공데이터포털 일반 인증키 — TAGO 고속버스정보·시외버스정보 활용신청),
+      data/stations.json (카카오에서 모은 버스터미널 좌표), data/regions.json (지역 중심 좌표)
+출력: tools/raw/bus_match.json — 우리 터미널 ↔ TAGO 터미널 번호 맞춘 결과 (확인용)
+      tools/raw/bus_times_raw.json — 받은 기록 (이어 받기용)
+      data/bus_times.json — { "출발터미널|도착터미널": { "E": [보통 분, 최단 분, 요금(원), 편수], "S": [...] } }  E=고속, S=시외
+API [확인: GitHub team-offway/core PR #448]: https://apis.data.go.kr/1613000/ExpBusInfo/GetExpBusTrminlList (cityCode)
+                                            https://apis.data.go.kr/1613000/SuburbsBusInfo/GetSuberbsBusTrminlList
+    시간표 조회 기능 이름·변수는 열차 API와 같은 규칙으로 추정 [추론] — 안 맞으면 응답 앞부분을 출력하고 멈춤
+받는 쌍 (Claude 설계): 큰 도시 20곳의 터미널(서울 4곳, 나머지 2곳) → 지역 237곳마다 중심 30km 안 가까운 터미널 2곳, 직선 40km 이상만
+기준 날짜: 실행 7일 뒤 이후 첫 수요일 (열차와 같음). 한 방향만 받아 반대 방향도 같다고 봄
+실행: PowerShell에서  python tools/fetch_bus_times.py   (한 번에 최대 3000회, 받은 쌍은 건너뛰고 이어 받음)
+"""
+import datetime, json, math, os, re, statistics, sys, time, urllib.parse, urllib.request
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(HERE)
+BASE = 'https://apis.data.go.kr/1613000/'
+RAW = os.path.join(HERE, 'raw', 'bus_times_raw.json')
+MATCH = os.path.join(HERE, 'raw', 'bus_match.json')
+OUT = os.path.join(ROOT, 'data', 'bus_times.json')
+MAX_CALLS = int(sys.argv[1]) if len(sys.argv) > 1 else 3000
+SVC = {'E': 'ExpBusInfo', 'S': 'SuburbsBusInfo'}
+LIST_OP = {'E': 'GetExpBusTrminlList', 'S': 'GetSuberbsBusTrminlList'}
+TIME_OPS = {'E': ['GetStrtpntAlocFndExpbusInfo', 'getStrtpntAlocFndExpbusInfo'],
+            'S': ['GetStrtpntAlocFndSuberbsBusInfo', 'getStrtpntAlocFndSuberbsBusInfo']}
+# 큰 도시 중심 (출발 쪽 터미널을 고를 곳) — Claude가 고른 20곳
+HUB_CITIES = {'서울': (37.5665, 126.978, 4), '인천': (37.456, 126.705, 2), '수원': (37.263, 127.028, 2), '대전': (36.350, 127.385, 2),
+              '청주': (36.642, 127.489, 2), '천안': (36.815, 127.114, 2), '대구': (35.871, 128.601, 2), '부산': (35.180, 129.075, 2),
+              '울산': (35.538, 129.311, 2), '창원': (35.228, 128.681, 2), '광주': (35.160, 126.851, 2), '전주': (35.824, 127.148, 2),
+              '강릉': (37.751, 128.876, 2), '원주': (37.342, 127.920, 2), '춘천': (37.881, 127.730, 2), '포항': (36.019, 129.343, 2),
+              '진주': (35.180, 128.108, 2), '목포': (34.812, 126.392, 2), '순천': (34.950, 127.487, 2), '안동': (36.568, 128.729, 2)}
+HUB_KM = {'서울': 20}
+WORDS = sorted(['종합버스터미널', '여객자동차터미널', '공용버스터미널', '시외버스공용터미널', '시외버스터미널', '고속버스터미널', '버스터미널',
+                '종합터미널', '복합터미널', '공영버스정류장', '시외버스정류장', '버스정류장', '정류장', '정류소', '터미널',
+                '고속', '시외', '종합', '공용', '공영', '복합', '여객', '버스', '서관', '동관'], key=len, reverse=True)
+calls = 0
+
+
+def api(key, svc, op, **params):
+    """출력: (items, 오류 글자 또는 None)"""
+    global calls
+    calls += 1
+    q = urllib.parse.urlencode(dict(params, serviceKey=key, _type='json', numOfRows=params.get('numOfRows', 300), pageNo=1))
+    try:
+        with urllib.request.urlopen(BASE + svc + '/' + op + '?' + q, timeout=20) as r:
+            text = r.read().decode('utf-8')
+    except Exception as e:
+        return None, str(e)
+    try:
+        data = json.loads(text)
+    except ValueError:
+        return None, text[:400]
+    head = data.get('response', {}).get('header', {})
+    if str(head.get('resultCode', '00')) not in ('00', '0000'):
+        return None, json.dumps(head, ensure_ascii=False)
+    items = data['response']['body'].get('items') or {}
+    items = items.get('item', []) if isinstance(items, dict) else []
+    items = [items] if isinstance(items, dict) else items
+    return [{k.lower(): v for k, v in it.items()} for it in items], None
+
+
+def must(res, what):
+    items, err = res
+    if items is None:
+        raise SystemExit(what + ' 실패 — 이 문장을 Claude에게 보내 주세요:\n' + err)
+    return items
+
+
+def km(a, b):
+    r = math.pi / 180
+    return 6371 * math.hypot((b[1] - a[1]) * r * math.cos((a[0] + b[0]) / 2 * r), (b[0] - a[0]) * r)
+
+
+def core(name, city=''):
+    n = re.sub(r'\(.*?예정\)', '', name)
+    n = re.sub(r'[^0-9A-Za-z가-힣]', '', n)
+    for w in WORDS:
+        n = n.replace(w, '')
+    c = re.sub(r'(특별시|광역시|특별자치시|특별자치도|시|군|도)$', '', city or '')
+    if c and n.startswith(c):
+        n = n[len(c):]
+    return n
+
+
+def minutes(a, b):
+    ta = datetime.datetime.strptime(str(a)[:12], '%Y%m%d%H%M')
+    tb = datetime.datetime.strptime(str(b)[:12], '%Y%m%d%H%M')
+    return int((tb - ta).total_seconds() // 60)
+
+
+def tago_terminals(key):
+    """출력: { 'E': [(id, 이름, 도시)], 'S': [...] }"""
+    out = {'E': [], 'S': []}
+    for t in ('E', 'S'):
+        cities, err = api(key, SVC[t], 'GetCtyCodeList')
+        if cities:
+            for c in cities:
+                cname = c.get('cityname', '')
+                lst = must(api(key, SVC[t], LIST_OP[t], cityCode=c['citycode'], numOfRows=500), SVC[t] + ' 터미널 목록')
+                out[t] += [(x['terminalid'], x['terminalnm'], x.get('cityname') or cname) for x in lst]
+        else:   # 도시 목록이 없으면 한 번에 전부
+            lst = must(api(key, SVC[t], LIST_OP[t], numOfRows=5000), SVC[t] + ' 터미널 목록 (도시 목록 오류: ' + str(err)[:100] + ')')
+            out[t] += [(x['terminalid'], x['terminalnm'], x.get('cityname', '')) for x in lst]
+        print(f'TAGO {"고속" if t == "E" else "시외"}버스 터미널 {len(out[t])}곳')
+    return out
+
+
+def match(ours, tago):
+    """우리 터미널마다 TAGO 번호 찾기 — 같은 도시(주소에 도시 이름 앞 2글자)에서 핵심 이름이 같거나 한쪽이 다른 쪽으로 시작"""
+    res = {}
+    for s in ours:
+        addr = s.get('address', '')
+        got = {}
+        for t, lst in tago.items():
+            best, score = None, 0
+            for tid, tname, city in lst:
+                c2 = re.sub(r'(특별시|광역시|특별자치시|특별자치도|시|군|도)$', '', city or '')[:2]
+                if c2 and c2 not in addr and c2 not in s['name']:
+                    continue
+                a, b = core(s['name'], city), core(tname, city)
+                if a == b:
+                    sc = 3
+                elif min(len(a), len(b)) >= 2 and (a.startswith(b) or b.startswith(a)):
+                    sc = 2
+                elif len(os.path.commonprefix([a, b])) >= 4:   # '센트럴시티호남' ↔ '센트럴시티서울'
+                    sc = 1
+                else:
+                    continue
+                if sc > score:
+                    best, score = (tid, tname), sc
+            if best:
+                got[t] = best
+        if got:
+            res[s['name']] = got
+    return res
+
+
+def main():
+    key = open(os.path.join(HERE, 'tago_key.txt'), encoding='utf-8-sig').read().strip()
+    raw = json.load(open(RAW, encoding='utf-8')) if os.path.exists(RAW) else {}
+    raw.setdefault('pairs', {})
+    stations = [s for s in json.load(open(os.path.join(ROOT, 'data', 'stations.json'), encoding='utf-8'))
+                if s['kind'] in ('고속버스', '시외버스') and '예정' not in s['name'] and '방면' not in s['name']]
+
+    # 1) 터미널 맞추기 (처음 한 번)
+    if not os.path.exists(MATCH):
+        m = match(stations, tago_terminals(key))
+        json.dump(m, open(MATCH, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+    m = json.load(open(MATCH, encoding='utf-8'))
+    print(f'우리 터미널 {len(stations)}곳 중 TAGO와 맞춘 곳 {len(m)}곳 (확인: tools/raw/bus_match.json)')
+    by = {s['name']: s for s in stations if s['name'] in m}
+
+    # 2) 받을 쌍: 큰 도시 터미널 → 지역마다 가까운 터미널
+    def near(pt, maxkm, n):
+        lst = sorted((km(pt, (s['lat'], s['lng'])), s['name']) for s in by.values())
+        return [nm for d, nm in lst if d <= maxkm][:n]
+    hubs = []
+    for city, (lat, lng, n) in HUB_CITIES.items():
+        hubs += [h for h in near((lat, lng), HUB_KM.get(city, 12), n) if h not in hubs]
+    dests = []
+    for r in json.load(open(os.path.join(ROOT, 'data', 'regions.json'), encoding='utf-8')):
+        dests += [d for d in near((r['lat'], r['lng']), 30, 2) if d not in dests]
+    todo = []
+    for a in hubs:
+        for b in dests:
+            if a == b or km((by[a]['lat'], by[a]['lng']), (by[b]['lat'], by[b]['lng'])) < 40:
+                continue
+            for t in ('E', 'S'):
+                if t in m[a] and t in m[b]:
+                    k = a + '|' + b + '|' + t
+                    if k not in raw['pairs'] and (b + '|' + a + '|' + t) not in raw['pairs']:
+                        todo.append((a, b, t))
+    day = datetime.date.today() + datetime.timedelta(days=7)
+    while day.weekday() != 2:
+        day += datetime.timedelta(days=1)
+    date = raw.setdefault('date', day.strftime('%Y%m%d'))
+    print(f'출발 쪽 터미널 {len(hubs)}곳, 도착 쪽 {len(dests)}곳 → 남은 조회 {len(todo)}회, 이번에 최대 {MAX_CALLS}회 (기준 날짜 {date})')
+
+    # 3) 시간표 조회
+    ops = raw.setdefault('ops', {})
+    got = 0
+    try:
+        for a, b, t in todo:
+            if calls >= MAX_CALLS:
+                break
+            params = dict(depTerminalId=m[a][t][0], arrTerminalId=m[b][t][0], depPlandTime=date, numOfRows=200)
+            if t not in ops:   # 기능 이름 확인 (처음 한 번)
+                for op in TIME_OPS[t]:
+                    items, err = api(key, SVC[t], op, **params)
+                    if items is not None:
+                        ops[t] = op
+                        if items:
+                            print(f'  {"고속" if t == "E" else "시외"}버스 응답 항목 예:', list(items[0].keys()))
+                        break
+                if t not in ops:
+                    raise SystemExit(f'{SVC[t]} 시간표 조회 실패 — 이 문장을 Claude에게 보내 주세요:\n{err}')
+            else:
+                items, err = api(key, SVC[t], ops[t], **params)
+                if items is None:
+                    print('  건너뜀:', a, '→', b, t, err[:120])
+                    continue
+            durs, fares = [], []
+            for it in items:
+                try:
+                    durs.append(minutes(it['depplandtime'], it['arrplandtime']))
+                except (KeyError, ValueError):
+                    continue
+                f = str(it.get('charge', '')).split('.')[0]
+                if f.isdigit() and int(f) > 0:
+                    fares.append(int(f))
+            durs = [d for d in durs if d > 0]
+            raw['pairs'][a + '|' + b + '|' + t] = [int(statistics.median(durs)), min(durs),
+                                                   int(statistics.median(fares)) if fares else 0, len(durs)] if durs else [0, 0, 0, 0]
+            got += 1
+            if got % 100 == 0:
+                print(f'  {got}회 …')
+                json.dump(raw, open(RAW, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+            time.sleep(0.03)
+    finally:
+        json.dump(raw, open(RAW, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+
+    table = {}
+    for k, v in raw['pairs'].items():
+        if v[3] > 0:
+            a, b, t = k.split('|')
+            table.setdefault(a + '|' + b, {})[t] = v
+    json.dump(table, open(OUT, 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))
+    left = len(todo) - got
+    print(f'완료: 이번 조회 {got}회, 버스가 있는 터미널 쌍 {len(table)}개 → data/bus_times.json')
+    if left > 0:
+        print(f'아직 {left}회 남음 — 다시 실행하면 이어서 받아요.')
+
+
+if __name__ == '__main__':
+    main()
