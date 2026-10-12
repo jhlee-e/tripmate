@@ -1235,7 +1235,8 @@ function toMin(t) {
 // 입력: trip, 여행지 중심, prefer('fast' = 집에서 여행지까지 더 빨리 | 'cheap' = 1인 요금이 더 싼 쪽)
 // 출력: { kind, from(출발지 쪽 역), to(여행지 쪽 역), km, rideMin, fare(1인), via, timetable, booking } 또는 null
 // KTX와 버스를 둘 다 계산해 고름 (2026-10-12 이재훈 결정: A·B안은 빠른 쪽, C안은 싼 쪽)
-//   단, 시간표로 확인되지 않은 버스(근사식)는 KTX가 없을 때만 씀 — 노선이 실제로 있는지 모르기 때문 (Claude 판단)
+//   단, 시간표로 확인되지 않은 수단(근사식 KTX·버스)은 확인된 수단이 없을 때만 씀 — 노선이 실제로 있는지 모르기 때문 (Claude 판단)
+//   (예: 광주→대구는 KTX 노선이 없는데 거리로 추정한 KTX가 실제 고속버스를 이기던 문제, 2026-10-12)
 function transferFor(trip, center, prefer) {
   if (trip.transport !== '대중교통' || !STATIONS.length || !center) return null;
   const home = departureOf(trip);
@@ -1243,7 +1244,7 @@ function transferFor(trip, center, prefer) {
   const weGo = isWeekendDay(trip, 1), weBack = isWeekendDay(trip, trip.days);
   const options = [railOption(home, center, weGo), busOption(home, center, prefer, weGo)].filter(Boolean);
   if (!options.length) return null;
-  const real = options.filter(function (o) { return o.kind === 'KTX' || o.timetable; });
+  const real = options.filter(function (o) { return o.timetable; });
   const pool = real.length ? real : options;
   pool.sort(prefer === 'cheap' ? function (a, b) { return (a.fare - b.fare) || (a.total - b.total); }
                                : function (a, b) { return (a.total - b.total) || (a.fare - b.fare); });
@@ -1296,8 +1297,13 @@ function busRide(a, b, prefer, we) {
 function busOption(home, center, prefer, we) {
   const kinds = ['고속버스', '시외버스'];
   let best = null;
-  nearStations(home, kinds, BUS_FAR_KM, 5).forEach(function (a) {
-    nearStations(center, kinds, BUS_FAR_KM, 4).forEach(function (b) {
+  // 터미널은 15km 안에 있으면 그 안에서만, 없을 때만 30km까지 (속초 C안이 20km 넘는 양양 터미널로 가던 문제, Claude 판단)
+  function terms(pt, n) {
+    const near = nearStations(pt, kinds, BUS_NEAR_KM, n);
+    return near.length ? near : nearStations(pt, kinds, BUS_FAR_KM, n);
+  }
+  terms(home, 5).forEach(function (a) {
+    terms(center, 4).forEach(function (b) {
       if (a.id === b.id) return;
       const r = busRide(a.name, b.name, prefer, we);
       if (!r) return;
