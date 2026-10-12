@@ -9,7 +9,8 @@ API [확인: GitHub team-offway/core PR #448]: https://apis.data.go.kr/1613000/E
                                             https://apis.data.go.kr/1613000/SuburbsBusInfo/GetSuberbsBusTrminlList
     시간표 조회 기능 이름·변수는 열차 API와 같은 규칙으로 추정 [추론] — 안 맞으면 응답 앞부분을 출력하고 멈춤
 받는 쌍 (Claude 설계): 큰 도시 20곳의 터미널(서울 4곳, 나머지 2곳) → 지역 237곳마다 중심 30km 안 가까운 터미널 2곳, 직선 40km 이상만
-기준 날짜: 실행 7일 뒤 이후 첫 수요일 (열차와 같음). 한 방향만 받아 반대 방향도 같다고 봄
+기준 날짜: 실행 다음 날 (버스 API는 가까운 날짜만 조회됨 — 9일 뒤는 0편, 2026-10-12 진단). 심야 등급 제외. 한 방향만 받아 반대 방향도 같다고 봄
+이어 받기: 첫 실행이 끝나면 busDateFixed가 켜져, 다음부터는 받은 기록을 두고 남은 쌍만 그날 기준 '내일'로 조회
 실행: PowerShell에서  python tools/fetch_bus_times.py   (한 번에 최대 3000회, 받은 쌍은 건너뛰고 이어 받음)
 """
 import datetime, json, math, os, re, statistics, sys, time, urllib.parse, urllib.request
@@ -91,18 +92,14 @@ def minutes(a, b):
 
 
 def tago_terminals(key):
-    """출력: { 'E': [(id, 이름, 도시)], 'S': [...] }"""
-    out = {'E': [], 'S': []}
+    """출력: { 'E': [(id, 이름, 도시)], 'S': [...] } — 목록 API는 도시 조건(cityCode)을 무시하므로 한 번에 전부 받음 (2026-10-12 진단)"""
+    out = {}
     for t in ('E', 'S'):
-        cities, err = api(key, SVC[t], 'GetCtyCodeList')
-        if cities:
-            for c in cities:
-                cname = c.get('cityname', '')
-                lst = must(api(key, SVC[t], LIST_OP[t], cityCode=c['citycode'], numOfRows=500), SVC[t] + ' 터미널 목록')
-                out[t] += [(x['terminalid'], x['terminalnm'], x.get('cityname') or cname) for x in lst]
-        else:   # 도시 목록이 없으면 한 번에 전부
-            lst = must(api(key, SVC[t], LIST_OP[t], numOfRows=5000), SVC[t] + ' 터미널 목록 (도시 목록 오류: ' + str(err)[:100] + ')')
-            out[t] += [(x['terminalid'], x['terminalnm'], x.get('cityname', '')) for x in lst]
+        lst = must(api(key, SVC[t], LIST_OP[t], numOfRows=5000), SVC[t] + ' 터미널 목록')
+        seen = {}
+        for x in lst:
+            seen[x['terminalid']] = (x['terminalid'], x['terminalnm'], x.get('cityname', ''))
+        out[t] = list(seen.values())
         print(f'TAGO {"고속" if t == "E" else "시외"}버스 터미널 {len(out[t])}곳')
     return out
 
@@ -172,10 +169,16 @@ def main():
                     k = a + '|' + b + '|' + t
                     if k not in raw['pairs'] and (b + '|' + a + '|' + t) not in raw['pairs']:
                         todo.append((a, b, t))
-    day = datetime.date.today() + datetime.timedelta(days=7)
-    while day.weekday() != 2:
-        day += datetime.timedelta(days=1)
-    date = raw.setdefault('date', day.strftime('%Y%m%d'))
+    # 버스 API는 가까운 날짜만 조회됨 (2026-10-12 진단: 오늘·내일은 나오고 9일 뒤는 0편) → 내일 시간표로
+    #   예전 기록(9일 뒤 날짜로 받아 전부 0편)이나 날짜가 바뀐 기록은 지우고 새로 받음
+    #   이어 받을 때(busDateFixed)는 기록을 지우지 않고, 남은 쌍만 그날 기준 '내일'로 조회
+    date = (datetime.date.today() + datetime.timedelta(days=1)).strftime('%Y%m%d')
+    if not raw.get('busDateFixed'):
+        if raw['pairs']:
+            print(f'예전 기록 {len(raw["pairs"])}개(먼 날짜로 받아 전부 0편)를 지우고 {date} 시간표로 새로 받아요.')
+        raw['pairs'] = {}
+    raw['busDate'] = date
+    raw.pop('date', None)
     print(f'출발 쪽 터미널 {len(hubs)}곳, 도착 쪽 {len(dests)}곳 → 남은 조회 {len(todo)}회, 이번에 최대 {MAX_CALLS}회 (기준 날짜 {date})')
 
     # 3) 시간표 조회
@@ -203,6 +206,8 @@ def main():
                     continue
             durs, fares = [], []
             for it in items:
+                if '심야' in str(it.get('gradenm', '')):   # 심야버스는 낮보다 빨라 보통 소요시간에서 뺌 (Claude 판단)
+                    continue
                 try:
                     durs.append(minutes(it['depplandtime'], it['arrplandtime']))
                 except (KeyError, ValueError):
@@ -221,6 +226,8 @@ def main():
     finally:
         json.dump(raw, open(RAW, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
 
+    raw['busDateFixed'] = True   # 다음에 이어 받을 때 날짜가 달라도 지우지 않음
+    json.dump(raw, open(RAW, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
     table = {}
     for k, v in raw['pairs'].items():
         if v[3] > 0:
