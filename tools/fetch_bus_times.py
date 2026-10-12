@@ -44,6 +44,8 @@ WORDS = sorted(['종합버스터미널', '여객자동차터미널', '공용버�
                 '종합터미널', '복합터미널', '공영버스정류장', '시외버스정류장', '버스정류장', '정류장', '정류소', '터미널',
                 '고속', '시외', '종합', '공용', '공영', '복합', '여객', '버스', '서관', '동관'], key=len, reverse=True)
 calls = 0
+PROV_SHORT = {'전라남도': '전남', '전라북도': '전북', '전북특별자치도': '전북', '경상남도': '경남', '경상북도': '경북',
+              '충청남도': '충남', '충청북도': '충북', '강원도': '강원', '강원특별자치도': '강원', '경기도': '경기', '제주특별자치도': '제주'}
 
 
 def api(key, svc, op, **params):
@@ -121,13 +123,20 @@ def match(ours, tago):
         for t, lst in tago.items():
             best, score = None, 0
             for tid, tname, city in lst:
+                # 같은 도시·도인지: TAGO 도시 이름 앞 2글자 또는 줄인 도 이름('전라남도'→'전남')이 우리 주소·이름에 있어야 함
+                #   (카카오 주소는 '전남 여수시'처럼 줄여 써서, 예전엔 '전라'로만 찾다가 경남·전남 등 시외버스 대부분을 놓침 — 2026-10-12 수정)
                 c2 = re.sub(r'(특별시|광역시|특별자치시|특별자치도|시|군|도)$', '', city or '')[:2]
-                if c2 and c2 not in addr and c2 not in s['name']:
+                keys = [k for k in (c2, PROV_SHORT.get(city, '')) if k]
+                if keys and not any(k in addr or k in s['name'] for k in keys):
                     continue
                 a, b = core(s['name'], city), core(tname, city)
                 if a == b:
                     sc = 3
                 elif min(len(a), len(b)) >= 2 and (a.startswith(b) or b.startswith(a)):
+                    # 남는 부분이 방향 이름이면 다른 터미널 ('부산서부' ≠ 고속 '부산'(노포), 2026-10-12)
+                    rest = a[len(b):] if len(a) > len(b) else b[len(a):]
+                    if re.match(r'^[동서남북]+부?$', rest):   # 동·서부·서남부 등
+                        continue
                     sc = 2
                 elif len(os.path.commonprefix([a, b])) >= 4:   # '센트럴시티호남' ↔ '센트럴시티서울'
                     sc = 1
