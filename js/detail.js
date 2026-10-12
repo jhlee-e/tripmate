@@ -222,7 +222,7 @@ function transferItem(t, which) {
       '<p class="transfer-title">' + stationIcon(t.kind) + ' ' + esc(t.kind) + ' ' + esc(t.from.name) + ' → ' + esc(t.to.name) +
         (t.via ? ' <small>(' + esc(t.via) + ' 환승)</small>' : '') +
         ' <small>' + esc(date.slice(5).replace('-', '/')) + ' · ' + durationText(t.rideMin) + ' · 1인 ' + won(t.fare / payersOf(trip)) +
-        ' · ' + (t.userSet ? '입력한 시각' : t.timetable ? '실제 시간표의 보통 소요시간' : t.kind === 'KTX' ? '거리로 추정한 시간' : '거리로 추정한 시간, 노선 확인 안 됨') + '</small></p>' +
+        ' · ' + (t.userSet ? '입력한 시각' : t.timetable ? '실제 시간표의 보통 소요시간' + (t.weekend ? '(주말)' : '(평일)') : t.kind === 'KTX' ? '거리로 추정한 시간' : '거리로 추정한 시간, 노선 확인 안 됨') + '</small></p>' +
       '<p class="transfer-times">' +
         '<label>출발 <input type="time" step="60" class="tt-dep" value="' + hhmm(t.departMin) + '"></label> → ' +
         '<label>도착 <input type="time" step="60" class="tt-arr" value="' + hhmm(t.arriveMin) + '"></label>' +

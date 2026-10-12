@@ -12,16 +12,21 @@ API [확인: GitHub team-offway/core PR #448]: https://apis.data.go.kr/1613000/E
 기준 날짜: 실행 다음 날 (버스 API는 가까운 날짜만 조회됨 — 9일 뒤는 0편, 2026-10-12 진단). 심야 등급 제외. 한 방향만 받아 반대 방향도 같다고 봄
 이어 받기: 첫 실행이 끝나면 busDateFixed가 켜져, 다음부터는 받은 기록을 두고 남은 쌍만 그날 기준 '내일'로 조회
 실행: PowerShell에서  python tools/fetch_bus_times.py   (한 번에 최대 3000회, 받은 쌍은 건너뛰고 이어 받음)
+      주말 시간표(금·토요일에):  python tools/fetch_bus_times.py --weekend
 """
 import datetime, json, math, os, re, statistics, sys, time, urllib.parse, urllib.request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 BASE = 'https://apis.data.go.kr/1613000/'
-RAW = os.path.join(HERE, 'raw', 'bus_times_raw.json')
+# --weekend: 가장 가까운 토·일요일 시간표를 따로 받아 data/bus_times_weekend.json으로 (2026-10-12 이재훈 결정)
+#   버스 API는 가까운 날짜만 조회되므로 금요일(→토요일)이나 토요일(→일요일)에 실행
+WEEKEND = '--weekend' in sys.argv
+ARGS = [a for a in sys.argv[1:] if not a.startswith('--')]
+RAW = os.path.join(HERE, 'raw', 'bus_times_weekend_raw.json' if WEEKEND else 'bus_times_raw.json')
 MATCH = os.path.join(HERE, 'raw', 'bus_match.json')
-OUT = os.path.join(ROOT, 'data', 'bus_times.json')
-MAX_CALLS = int(sys.argv[1]) if len(sys.argv) > 1 else 3000
+OUT = os.path.join(ROOT, 'data', 'bus_times_weekend.json' if WEEKEND else 'bus_times.json')
+MAX_CALLS = int(ARGS[0]) if ARGS else 3000
 SVC = {'E': 'ExpBusInfo', 'S': 'SuburbsBusInfo'}
 LIST_OP = {'E': 'GetExpBusTrminlList', 'S': 'GetSuberbsBusTrminlList'}
 TIME_OPS = {'E': ['GetStrtpntAlocFndExpbusInfo', 'getStrtpntAlocFndExpbusInfo'],
@@ -173,6 +178,16 @@ def main():
     #   예전 기록(9일 뒤 날짜로 받아 전부 0편)이나 날짜가 바뀐 기록은 지우고 새로 받음
     #   이어 받을 때(busDateFixed)는 기록을 지우지 않고, 남은 쌍만 그날 기준 '내일'로 조회
     date = (datetime.date.today() + datetime.timedelta(days=1)).strftime('%Y%m%d')
+    if WEEKEND:
+        # 내일부터 가장 가까운 토·일요일 → 서울경부→부산(늘 있는 노선)으로 그 날짜가 조회되는지 먼저 확인
+        d = datetime.date.today() + datetime.timedelta(days=1)
+        while d.weekday() < 5:
+            d += datetime.timedelta(days=1)
+        date = d.strftime('%Y%m%d')
+        test, err = api(key, SVC['E'], TIME_OPS['E'][0], depTerminalId='NAEK010', arrTerminalId='NAEK700', depPlandTime=date, numOfRows=5)
+        if not test:
+            raise SystemExit(f'{date}({"토" if d.weekday() == 5 else "일"}) 시간표가 아직 조회되지 않아요. 금요일이나 토요일에 다시 실행해 주세요.' +
+                             (('\n' + err) if err else ''))
     if not raw.get('busDateFixed'):
         if raw['pairs']:
             print(f'예전 기록 {len(raw["pairs"])}개(먼 날짜로 받아 전부 0편)를 지우고 {date} 시간표로 새로 받아요.')

@@ -1172,24 +1172,31 @@ const BOOKING = {
 let STATIONS = [];
 // KTX 역 사이 실제 소요시간·요금 (tools/fetch_train_times.py — 국토교통부 TAGO 열차정보, 평일 하루 시간표 기준)
 //   { '서울역|강릉역': [보통 소요시간(분, 중앙값), 가장 빠른 시간, 어른 요금(원), 편수] } — 한 방향만 있으면 반대도 같다고 봄
-let TRAIN_TIMES = {};
+let TRAIN_TIMES = {}, TRAIN_TIMES_WE = {};   // 평일(수요일)·주말(토요일) 시간표 — 2026-10-12 이재훈 결정: 주말 시간표도 따로
 const TRANSFER_MIN = 20;   // 바로 가는 KTX가 없을 때 갈아타는 데 드는 시간 (Claude 가정)
 async function loadStations() {
   try { STATIONS = await loadJSON('data/stations.json'); } catch (e) { STATIONS = []; }   // 파일이 없으면 예전 방식
   try { TRAIN_TIMES = await loadJSON('data/train_times.json'); } catch (e) { TRAIN_TIMES = {}; }
   try { BUS_TIMES = await loadJSON('data/bus_times.json'); } catch (e) { BUS_TIMES = {}; }
+  try { TRAIN_TIMES_WE = await loadJSON('data/train_times_weekend.json'); } catch (e) { TRAIN_TIMES_WE = {}; }
+  try { BUS_TIMES_WE = await loadJSON('data/bus_times_weekend.json'); } catch (e) { BUS_TIMES_WE = {}; }
   return STATIONS;
 }
-function trainDirect(a, b) { return TRAIN_TIMES[a + '|' + b] || TRAIN_TIMES[b + '|' + a] || null; }
+// we = 그날이 주말(토·일)이면 주말 표 먼저, 없으면 평일 표
+function trainDirect(a, b, we) {
+  return (we && (TRAIN_TIMES_WE[a + '|' + b] || TRAIN_TIMES_WE[b + '|' + a])) || TRAIN_TIMES[a + '|' + b] || TRAIN_TIMES[b + '|' + a] || null;
+}
+// 그 여행의 가는 날(1일차)·오는 날(마지막 날)이 주말인지 (토·일 — Claude 기준, 금요일은 평일로 봄)
+function isWeekendDay(trip, d) { const w = dowOf(trip, d); return w === '토' || w === '일'; }
 // 역 a → b KTX: 실제 시간표 → 없으면 한 번 갈아타기(표의 두 구간 + 20분) → 그래도 없으면 null
 // 출력: { min, fare, via(갈아타는 역 이름 또는 null) }
-function trainRide(a, b) {
-  const d = trainDirect(a, b);
+function trainRide(a, b, we) {
+  const d = trainDirect(a, b, we);
   if (d) return { min: d[0], fare: d[2] || null, via: null };
   let best = null;
   STATIONS.forEach(function (h) {
     if (h.kind !== 'KTX' || h.name === a || h.name === b) return;
-    const x = trainDirect(a, h.name), y = trainDirect(h.name, b);
+    const x = trainDirect(a, h.name, we), y = trainDirect(h.name, b, we);
     if (!x || !y) return;
     const min = x[0] + TRANSFER_MIN + y[0];
     if (!best || min < best.min) best = { min: min, fare: x[2] && y[2] ? x[2] + y[2] : null, via: h.name };
@@ -1233,7 +1240,8 @@ function transferFor(trip, center, prefer) {
   if (trip.transport !== '대중교통' || !STATIONS.length || !center) return null;
   const home = departureOf(trip);
   if (distanceKm(home, center) < TRANSFER_MIN_KM) return null;
-  const options = [railOption(home, center), busOption(home, center, prefer)].filter(Boolean);
+  const weGo = isWeekendDay(trip, 1), weBack = isWeekendDay(trip, trip.days);
+  const options = [railOption(home, center, weGo), busOption(home, center, prefer, weGo)].filter(Boolean);
   if (!options.length) return null;
   const real = options.filter(function (o) { return o.kind === 'KTX' || o.timetable; });
   const pool = real.length ? real : options;
@@ -1245,16 +1253,21 @@ function transferFor(trip, center, prefer) {
   if (srt) booking.push(BOOKING.SRT);
   o.booking = booking; o.srt = srt;
   o.other = options.length > 1 ? options.filter(function (x) { return x !== o; })[0] : null;   // 비교한 다른 수단 (화면 안내용)
+  // 오는 날: 같은 역·터미널 쌍을 그날(평일/주말) 표로 다시 봄 — 표에 없으면 가는 날 값
+  const back = o.kind === 'KTX' ? trainRide(o.from.name, o.to.name, weBack) : busRide(o.from.name, o.to.name, prefer, weBack);
+  o.rideMinBack = back ? back.min : o.rideMin;
+  o.fareBack = back && back.fare ? Math.round(back.fare / 100) * 100 : o.fare;
+  o.weekendGo = weGo; o.weekendBack = weBack;
   return o;
 }
 // KTX: 집·여행지 근처(25km 안) 역 몇 곳씩을 짝지어 '역까지 + 타는 시간 + 역에서 여행지까지'가 가장 짧은 쌍 (Claude 설계)
 //   → 서울에서 강릉은 청량리역, 광주는 용산역처럼 노선에 맞는 역이 골라짐
-function railOption(home, center) {
+function railOption(home, center, we) {
   let best = null;
   nearStations(home, ['KTX'], KTX_NEAR_KM, 4).forEach(function (a) {
     nearStations(center, ['KTX'], KTX_NEAR_KM, 3).forEach(function (b) {
       if (a.id === b.id) return;
-      const r = trainRide(a.name, b.name);
+      const r = trainRide(a.name, b.name, we);
       const km = distanceKm(a, b);
       const rideMin = r ? r.min : Math.round(RIDE.rail.base + km * RIDE.rail.road / RIDE.rail.kmh * 60);
       const total = stationAccess(home, a).min + STATION_WAIT + rideMin + stationAccess(center, b).min;
@@ -1270,9 +1283,9 @@ function railOption(home, center) {
 }
 // 고속·시외버스 실제 시간표 (tools/fetch_bus_times.py — TAGO 고속버스정보·시외버스정보)
 //   { '출발터미널|도착터미널': { E: [보통 분, 최단 분, 요금, 편수], S: [...] } }  E=고속, S=시외
-let BUS_TIMES = {};
-function busRide(a, b, prefer) {
-  const d = BUS_TIMES[a + '|' + b] || BUS_TIMES[b + '|' + a];
+let BUS_TIMES = {}, BUS_TIMES_WE = {};
+function busRide(a, b, prefer, we) {
+  const d = (we && (BUS_TIMES_WE[a + '|' + b] || BUS_TIMES_WE[b + '|' + a])) || BUS_TIMES[a + '|' + b] || BUS_TIMES[b + '|' + a];
   if (!d) return null;
   const list = Object.keys(d).map(function (t) { return { min: d[t][0], fare: d[t][2] || null, kind: t === 'E' ? '고속버스' : '시외버스' }; });
   list.sort(prefer === 'cheap' ? function (x, y) { return ((x.fare || 1e9) - (y.fare || 1e9)) || (x.min - y.min); }
@@ -1280,13 +1293,13 @@ function busRide(a, b, prefer) {
   return list[0];
 }
 // 버스: 집·여행지 30km 안 터미널(각 5·4곳) 중 시간표가 있는 쌍에서 고름. 하나도 없으면 가장 가까운 터미널끼리 근사식
-function busOption(home, center, prefer) {
+function busOption(home, center, prefer, we) {
   const kinds = ['고속버스', '시외버스'];
   let best = null;
   nearStations(home, kinds, BUS_FAR_KM, 5).forEach(function (a) {
     nearStations(center, kinds, BUS_FAR_KM, 4).forEach(function (b) {
       if (a.id === b.id) return;
-      const r = busRide(a.name, b.name, prefer);
+      const r = busRide(a.name, b.name, prefer, we);
       if (!r) return;
       const total = stationAccess(home, a).min + STATION_WAIT + r.min + stationAccess(center, b).min;
       const fare = r.fare || distanceKm(a, b) * BUS_WON_PER_KM;
@@ -1314,7 +1327,7 @@ function stationAccess(home, st) {
 // 마지막 날 장소 p에서 집까지 (역 경유) 걸리는 시간 — 일정 만들 때 하루 활동 시간 계산에 씀
 function transferBackMin(trip, tf, p) {
   const km = distanceKm(p, tf.to);
-  return travelMin(km, '대중교통', false) + STATION_WAIT + tf.rideMin + stationAccess(departureOf(trip), tf.from).min;
+  return travelMin(km, '대중교통', false) + STATION_WAIT + tf.rideMinBack + stationAccess(departureOf(trip), tf.from).min;
 }
 
 // ---------- 5. 시간표·비용 계산 (일정 수정 후에도 이 함수로 다시 계산) ----------
@@ -1355,7 +1368,7 @@ function computeTimeline(trip, plan) {
       dayStart = userDep != null ? departMin - STATION_WAIT - acc.min : day.start;
       go = { kind: tf.kind, from: tf.from, to: tf.to, booking: tf.booking, via: tf.via, timetable: tf.timetable, other: tf.other, leaveHome: dayStart, accessMin: acc.min, accessKm: acc.km,
              departMin: departMin, arriveMin: arriveMin, rideMin: arriveMin - departMin, userSet: userDep != null,
-             fare: tf.fare * pay, accessFare: acc.fare * pay, km: tf.km };
+             fare: tf.fare * pay, weekend: tf.weekendGo, accessFare: acc.fare * pay, km: tf.km };
       addFare(go.fare + go.accessFare);
       distance += tf.km + acc.km;
       clock = arriveMin;
@@ -1420,11 +1433,11 @@ function computeTimeline(trip, plan) {
         departMin = Math.max(clock, userDep - STATION_WAIT - back.min);
       } else trainDep = ceil10(clock + back.min + STATION_WAIT);
       const atStation = departMin + back.min;
-      const arriveMin = userArr != null && userArr > trainDep ? userArr : trainDep + tf.rideMin;
+      const arriveMin = userArr != null && userArr > trainDep ? userArr : trainDep + tf.rideMinBack;
       ret = { kind: tf.kind, from: tf.to, to: tf.from, booking: tf.booking, via: tf.via, timetable: tf.timetable, other: tf.other, stationArrive: atStation, departMin: trainDep,
               arriveMin: arriveMin, rideMin: arriveMin - trainDep, accessMin: acc.min, accessKm: acc.km, homeArrive: arriveMin + acc.min,
               userSet: userDep != null, late: atStation + STATION_WAIT > trainDep,
-              fare: tf.fare * pay, accessFare: acc.fare * pay, km: tf.km };
+              fare: tf.fareBack * pay, weekend: tf.weekendBack, accessFare: acc.fare * pay, km: tf.km };
       addFare(ret.fare + ret.accessFare);
       distance += tf.km + acc.km;
       active += (trainDep - atStation) + ret.rideMin + acc.min;   // 역 대기 + 타는 시간 + 역→집 (자유 시간은 빼고)
