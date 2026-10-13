@@ -745,7 +745,7 @@
   },
   "popTop10": 3.81,
   "costMin": {
-   "lodging": 134000,
+   "lodging": 139000,
    "meal": 12000
   }
  },
@@ -1995,7 +1995,7 @@
   },
   "popTop10": 4.06,
   "costMin": {
-   "lodging": 59500,
+   "lodging": 60000,
    "meal": 12000
   }
  },
@@ -2645,7 +2645,7 @@
   },
   "popTop10": 4.65,
   "costMin": {
-   "lodging": 59500,
+   "lodging": 60000,
    "meal": 12000
   }
  },
@@ -3320,7 +3320,7 @@
   },
   "popTop10": 4.71,
   "costMin": {
-   "lodging": 59500,
+   "lodging": 60000,
    "meal": 12000
   }
  },
@@ -3520,7 +3520,7 @@
   },
   "popTop10": 4.47,
   "costMin": {
-   "lodging": 59500,
+   "lodging": 60000,
    "meal": 12000
   }
  },
@@ -3995,7 +3995,7 @@
   },
   "popTop10": 3.68,
   "costMin": {
-   "lodging": 100000,
+   "lodging": 80000,
    "meal": 12000
   }
  },

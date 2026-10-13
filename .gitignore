@@ -11,3 +11,5 @@ tools/__pycache__/
 
 # 공공데이터포털 TAGO 열차정보 인증키 (2026-10-12) — 절대 커밋 금지
 tools/tago_key.txt
+
+__pycache__/
