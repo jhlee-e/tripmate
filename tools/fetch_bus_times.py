@@ -235,6 +235,17 @@ def main():
                         seen.add(k)
                         todo.append((m[a][t][0], m[b][t][0], t, k))
     date = (datetime.date.today() + datetime.timedelta(days=1)).strftime('%Y%m%d')
+    if not WEEKEND:
+        # 2026-10-15 수정: 내일이 토·일이면 평일 표에 주말 시간표가 섞이므로 다음 월요일로 → 조회되는지 먼저 확인
+        d = datetime.date.today() + datetime.timedelta(days=1)
+        if d.weekday() >= 5:
+            while d.weekday() >= 5:
+                d += datetime.timedelta(days=1)
+            date = d.strftime('%Y%m%d')
+            test, err = api(key, SVC['E'], TIME_OPS['E'][0], depTerminalId='NAEK010', arrTerminalId='NAEK700', depPlandTime=date, numOfRows=5)
+            if not test:
+                raise SystemExit(f'내일이 주말이라 평일 기준을 {date}(월)로 잡았는데 아직 조회되지 않아요. 일요일이나 월요일에 다시 실행해 주세요.' +
+                                 (('\n' + err) if err else ''))
     if WEEKEND:
         # 내일부터 가장 가까운 토·일요일 → 서울경부→부산(늘 있는 노선)으로 그 날짜가 조회되는지 먼저 확인
         d = datetime.date.today() + datetime.timedelta(days=1)
@@ -253,6 +264,12 @@ def main():
     #   그 밖의 오류가 30번 연속이면 저장하고 멈춤. 다시 실행하면 이어서 받음
     ops = raw.setdefault('ops', {})
     got, fails, stopped = 0, 0, set()
+    # 2026-10-13: 한도에 걸리기 전 오류 없이 '0편'만 계속 오는 경우가 있었음(시외 약 1만 회) → 같은 종류에서 0편이 ZERO_RUN번 연속이면
+    #   막힌 것으로 보고 그 연속 0편 기록을 지운 뒤(다음에 다시 조회) 그 종류만 멈춤
+    ZERO_RUN = 1000   # 진짜 노선 없는 쌍이 우연히 이어지는 경우와 구분하려고 넉넉히
+    zero_keys = {'E': [], 'S': []}
+    blocks = {'E': 0, 'S': 0}
+    todo_all = list(todo)
     if OFFLINE:
         todo_left, todo = len(todo), []
     try:
@@ -264,15 +281,17 @@ def main():
             params = dict(depTerminalId=dep, arrTerminalId=arr, depPlandTime=date, numOfRows=200)
             op = ops.get(t, TIME_OPS[t][0])
             items, err = api(key, SVC[t], op, **params)
-            if items is None and '429' in err:
-                print(f'  {"고속" if t == "E" else "시외"}버스 조회가 너무 많다는 응답(429) — 30초 쉬고 다시 해 볼게요')
-                time.sleep(30)
+            wait = 30
+            while items is None and '429' in err and wait <= 960:   # 2026-10-14: 하루 한도가 아니라 속도 제한으로 보고, 30초→16분까지 늘려 가며 기다렸다 계속
+                print(f'  {"고속" if t == "E" else "시외"}버스 조회가 너무 빠르다는 응답(429) — {wait}초 쉬고 다시')
+                time.sleep(wait)
+                wait *= 2
                 items, err = api(key, SVC[t], op, **params)
-                if items is None and '429' in err:
-                    stopped.add(t)
-                    print(f'  {"고속" if t == "E" else "시외"}버스는 오늘 한도에 걸린 것 같아요 — 이 종류만 멈추고 나머지는 계속 받아요')
-                    continue
-            elif items is None:
+            if items is None and '429' in err:
+                stopped.add(t)
+                print(f'  {"고속" if t == "E" else "시외"}버스는 30분 넘게 기다려도 429 — 이 종류만 멈춰요')
+                continue
+            if items is None and '429' not in err:
                 items, err = api(key, SVC[t], op, **params)
             if items is None:
                 fails += 1
@@ -296,10 +315,29 @@ def main():
             durs = [d for d in durs if d > 0]
             tp[k] = [int(statistics.median(durs)), min(durs), int(statistics.median(fares)) if fares else 0, len(durs)] if durs else [0, 0, 0, 0]
             got += 1
+            if durs:
+                zero_keys[t] = []
+            else:
+                zero_keys[t].append(k)
+                if len(zero_keys[t]) >= ZERO_RUN:
+                    redo = set(zero_keys[t])
+                    for z in redo:
+                        tp.pop(z, None)
+                    todo += [x for x in todo_all if x[3] in redo]   # 뒤에 다시 조회
+                    got -= len(redo)
+                    zero_keys[t] = []
+                    blocks[t] += 1
+                    if blocks[t] >= 5:
+                        stopped.add(t)
+                        print(f'  {"고속" if t == "E" else "시외"}버스가 5번째로 {ZERO_RUN}번 연속 0편 — 이 종류만 멈춰요 (다음에 다시 조회)')
+                    else:
+                        print(f'  {"고속" if t == "E" else "시외"}버스가 {ZERO_RUN}번 연속 0편 — 막힌 것 같아 5분 쉬고, 그 {len(redo)}쌍은 뒤에서 다시 조회해요')
+                        time.sleep(300)
+                    continue
             if got % 200 == 0:
                 print(f'  {got} / {len(todo)}회 …')
                 json.dump(raw, open(RAW, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
-            time.sleep(0.03)
+            time.sleep(0.1)   # 2026-10-14: 0.03→0.1초 (429 줄이기)
     finally:
         json.dump(raw, open(RAW, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
 

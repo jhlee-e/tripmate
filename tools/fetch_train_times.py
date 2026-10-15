@@ -23,7 +23,7 @@ WEEKEND = '--weekend' in sys.argv
 ARGS = [a for a in sys.argv[1:] if not a.startswith('--')]
 RAW = os.path.join(HERE, 'raw', 'train_times_weekend_raw.json' if WEEKEND else 'train_times_raw.json')
 OUT = os.path.join(ROOT, 'data', 'train_times_weekend.json' if WEEKEND else 'train_times.json')
-MAX_CALLS = int(ARGS[0]) if ARGS else 950
+MAX_CALLS = int(ARGS[0]) if ARGS else 10 ** 9   # 기본: 끝까지 한 번에 (2026-10-14 이재훈 요청)
 SEOUL = ['서울역', '용산역', '청량리역', '광명역', '행신역', '상봉역', '수원역']
 HUBS = ['대전역', '동대구역', '부산역', '광주송정역', '오송역', '천안아산역', '익산역', '울산역', '강릉역', '전주역', '서대전역',
         '경주역', '포항역', '마산역', '창원중앙역', '진주역', '순천역', '여수엑스포역', '목포역', '안동역', '원주역', '서원주역', '김천구미역']
@@ -36,8 +36,16 @@ def api(key, op, **params):
     global calls
     calls += 1
     q = urllib.parse.urlencode(dict(params, serviceKey=key, _type='json', numOfRows=params.get('numOfRows', 200), pageNo=1))
-    with urllib.request.urlopen(BASE + op + '?' + q, timeout=20) as r:
-        text = r.read().decode('utf-8')
+    for tryno in range(3):   # 응답이 늦거나 끊기면 5초 쉬고 다시 (최대 3번) — 2026-10-14 수정
+        try:
+            with urllib.request.urlopen(BASE + op + '?' + q, timeout=20) as r:
+                text = r.read().decode('utf-8')
+            break
+        except (TimeoutError, OSError) as e:
+            if tryno == 2:
+                raise
+            print(f'  응답 지연({type(e).__name__}) — 5초 뒤 다시 시도')
+            time.sleep(5)
     try:
         data = json.loads(text)
     except ValueError:
@@ -95,7 +103,7 @@ def main():
             near = [t for t in tago if any(norm(m)[:2].upper() in t for m in missing)]
             print('  이름이 비슷한 TAGO 역:', ', '.join(near))
         json.dump(raw, open(RAW, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
-    ids = raw['ids']
+    raw['ids'] = ids   # 주말 모드에서 평일 기록의 역 번호를 가져온 경우도 저장 (2026-10-13 수정)
 
     # 2) 기준 날짜
     day = datetime.date.today() + datetime.timedelta(days=7)
@@ -138,7 +146,7 @@ def main():
     table = {k: v for k, v in raw['pairs'].items() if v[3] > 0}   # 바로 가는 KTX가 있는 쌍만
     json.dump(table, open(OUT, 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))
     left = len(todo) - got
-    print(f'완료: 이번 호출 {calls}회, 받은 역 쌍 {len(raw["pairs"])}개 (바로 가는 KTX 있음 {len(table)}개) → data/train_times.json')
+    print(f'완료: 이번 호출 {calls}회, 받은 역 쌍 {len(raw["pairs"])}개 (바로 가는 KTX 있음 {len(table)}개) → {os.path.relpath(OUT, ROOT)}')
     if left > 0:
         print(f'아직 {left}개 남음 — 다시 실행하면 이어서 받아요.')
 
