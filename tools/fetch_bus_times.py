@@ -22,14 +22,16 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 BASE = 'https://apis.data.go.kr/1613000/'
 # --weekend: 가장 가까운 토·일요일 시간표를 따로 받아 data/bus_times_weekend.json으로 (2026-10-12 이재훈 결정)
+#   평일 표에서 버스가 있던 쌍만 조회 (2026-10-15) → 평일 수집을 먼저 끝내고 실행
 #   버스 API는 가까운 날짜만 조회되므로 금요일(→토요일)이나 토요일(→일요일)에 실행
-WEEKEND = '--weekend' in sys.argv
+SUNDAY = '--sunday' in sys.argv   # 2026-10-16 이재훈 결정: 일요일 시간표도 따로 (data/bus_times_sunday.json) — 조회 방식은 --weekend와 같고 날짜만 일요일
+WEEKEND = '--weekend' in sys.argv or SUNDAY
 REMATCH = '--rematch' in sys.argv
 OFFLINE = '--offline' in sys.argv   # 조회 없이: 저장된 TAGO 목록(tools/raw/tago_terminals.json)으로 다시 맞추고 표만 다시 만듦   # TAGO 터미널 목록을 새로 받아 다시 맞추기 (목록은 tools/raw/tago_terminals.json에 저장)
 ARGS = [a for a in sys.argv[1:] if not a.startswith('--')]
-RAW = os.path.join(HERE, 'raw', 'bus_times_weekend_raw.json' if WEEKEND else 'bus_times_raw.json')
+RAW = os.path.join(HERE, 'raw', 'bus_times_sunday_raw.json' if SUNDAY else 'bus_times_weekend_raw.json' if WEEKEND else 'bus_times_raw.json')
 MATCH = os.path.join(HERE, 'raw', 'bus_match.json')
-OUT = os.path.join(ROOT, 'data', 'bus_times_weekend.json' if WEEKEND else 'bus_times.json')
+OUT = os.path.join(ROOT, 'data', 'bus_times_sunday.json' if SUNDAY else 'bus_times_weekend.json' if WEEKEND else 'bus_times.json')
 MAX_CALLS = int(ARGS[0]) if ARGS else 10 ** 9   # 기본: 끝까지 한 번에 (2026-10-12 이재훈 요청)
 SVC = {'E': 'ExpBusInfo', 'S': 'SuburbsBusInfo'}
 LIST_OP = {'E': 'GetExpBusTrminlList', 'S': 'GetSuberbsBusTrminlList'}
@@ -234,22 +236,31 @@ def main():
                     if k not in tp and k not in seen:
                         seen.add(k)
                         todo.append((m[a][t][0], m[b][t][0], t, k))
+    if WEEKEND:
+        # 2026-10-15 이재훈 결정: 주말은 평일에 버스가 있던 쌍만 조회 (전부면 약 33,600회 → 하루 한도로 금·토 안에 못 끝남)
+        wk = json.load(open(os.path.join(HERE, 'raw', 'bus_times_raw.json'), encoding='utf-8')).get('tpairs', {})
+        n0 = len(todo)
+        todo = [x for x in todo if x[3] in wk and wk[x[3]][3] > 0]
+        print(f'주말: 평일에 버스가 있던 쌍만 조회 ({n0}회 → {len(todo)}회)')
     date = (datetime.date.today() + datetime.timedelta(days=1)).strftime('%Y%m%d')
     if not WEEKEND:
-        # 2026-10-15 수정: 내일이 토·일이면 평일 표에 주말 시간표가 섞이므로 다음 월요일로 → 조회되는지 먼저 확인
+        # 2026-10-15 수정: 내일이 토·일이면 평일 표에 주말 시간표가 섞이므로 → 오늘이 평일이면 오늘, 아니면 다음 월요일 (조회되는지 먼저 확인)
+        # 2026-10-16 확인(tools/probe_bus_dates.py): 2일 뒤까지만 조회됨, 오늘 날짜로 조회해도 이미 떠난 버스까지 하루 전체가 나옴
         d = datetime.date.today() + datetime.timedelta(days=1)
-        if d.weekday() >= 5:
+        if d.weekday() >= 5 and datetime.date.today().weekday() < 5:
+            date = datetime.date.today().strftime('%Y%m%d')
+        elif d.weekday() >= 5:
             while d.weekday() >= 5:
                 d += datetime.timedelta(days=1)
             date = d.strftime('%Y%m%d')
             test, err = api(key, SVC['E'], TIME_OPS['E'][0], depTerminalId='NAEK010', arrTerminalId='NAEK700', depPlandTime=date, numOfRows=5)
             if not test:
-                raise SystemExit(f'내일이 주말이라 평일 기준을 {date}(월)로 잡았는데 아직 조회되지 않아요. 일요일이나 월요일에 다시 실행해 주세요.' +
+                raise SystemExit(f'오늘·내일이 주말이라 평일 기준을 {date}(월)로 잡았는데 아직 조회되지 않아요. 일요일에 다시 실행해 주세요.' +
                                  (('\n' + err) if err else ''))
     if WEEKEND:
         # 내일부터 가장 가까운 토·일요일 → 서울경부→부산(늘 있는 노선)으로 그 날짜가 조회되는지 먼저 확인
         d = datetime.date.today() + datetime.timedelta(days=1)
-        while d.weekday() < 5:
+        while d.weekday() != (6 if SUNDAY else 5) and not (not SUNDAY and d.weekday() == 6):   # --weekend: 가까운 토(토요일에 실행하면 일), --sunday: 가까운 일요일
             d += datetime.timedelta(days=1)
         date = d.strftime('%Y%m%d')
         test, err = api(key, SVC['E'], TIME_OPS['E'][0], depTerminalId='NAEK010', arrTerminalId='NAEK700', depPlandTime=date, numOfRows=5)
@@ -264,33 +275,41 @@ def main():
     #   그 밖의 오류가 30번 연속이면 저장하고 멈춤. 다시 실행하면 이어서 받음
     ops = raw.setdefault('ops', {})
     got, fails, stopped = 0, 0, set()
-    # 2026-10-13: 한도에 걸리기 전 오류 없이 '0편'만 계속 오는 경우가 있었음(시외 약 1만 회) → 같은 종류에서 0편이 ZERO_RUN번 연속이면
-    #   막힌 것으로 보고 그 연속 0편 기록을 지운 뒤(다음에 다시 조회) 그 종류만 멈춤
-    ZERO_RUN = 1000   # 진짜 노선 없는 쌍이 우연히 이어지는 경우와 구분하려고 넉넉히
+    # 2026-10-13: 한도에 걸리기 전 오류 없이 '0편'만 계속 오는 경우가 있었음(시외 약 1만 회)
+    # 2026-10-16 이재훈 요청: 오래 쉬지 말고 2~3번 해 보고 안 되면 끔
+    #   → 같은 종류에서 0편이 ZERO_RUN번 연속이면 늘 있는 노선(서울경부→부산)을 최대 3번 조회해 확인:
+    #     버스가 나오면 진짜 0편이니 계속, 안 나오면 막힌 것 → 그 연속 0편 기록은 지우고(다음에 다시 조회) 전체 종료
+    ZERO_RUN = 300
     zero_keys = {'E': [], 'S': []}
-    blocks = {'E': 0, 'S': 0}
+    def alive():
+        for i in range(3):
+            test, _ = api(key, SVC['E'], TIME_OPS['E'][0], depTerminalId='NAEK010', arrTerminalId='NAEK700', depPlandTime=date, numOfRows=5)
+            if test:
+                return True
+            time.sleep(3)
+        return False
+    quit_msg = None
     todo_all = list(todo)
     if OFFLINE:
         todo_left, todo = len(todo), []
     try:
         for dep, arr, t, k in todo:
-            if calls >= MAX_CALLS or len(stopped) == 2:
+            if calls >= MAX_CALLS or quit_msg:
                 break
             if t in stopped:
                 continue
             params = dict(depTerminalId=dep, arrTerminalId=arr, depPlandTime=date, numOfRows=200)
             op = ops.get(t, TIME_OPS[t][0])
             items, err = api(key, SVC[t], op, **params)
-            wait = 30
-            while items is None and '429' in err and wait <= 960:   # 2026-10-14: 하루 한도가 아니라 속도 제한으로 보고, 30초→16분까지 늘려 가며 기다렸다 계속
-                print(f'  {"고속" if t == "E" else "시외"}버스 조회가 너무 빠르다는 응답(429) — {wait}초 쉬고 다시')
-                time.sleep(wait)
-                wait *= 2
+            for i in range(2):   # 429(조회 과다)면 3초 쉬고 최대 2번 더 → 그래도면 종료 (2026-10-16 이재훈 요청)
+                if not (items is None and '429' in err):
+                    break
+                print(f'  조회가 너무 많다는 응답(429) — 3초 쉬고 다시 ({i + 1}/2)')
+                time.sleep(3)
                 items, err = api(key, SVC[t], op, **params)
             if items is None and '429' in err:
-                stopped.add(t)
-                print(f'  {"고속" if t == "E" else "시외"}버스는 30분 넘게 기다려도 429 — 이 종류만 멈춰요')
-                continue
+                quit_msg = '3번 해도 429(조회 과다) — 오늘 한도에 걸린 것 같아 여기서 끝내요'
+                break
             if items is None and '429' not in err:
                 items, err = api(key, SVC[t], op, **params)
             if items is None:
@@ -320,26 +339,22 @@ def main():
             else:
                 zero_keys[t].append(k)
                 if len(zero_keys[t]) >= ZERO_RUN:
-                    redo = set(zero_keys[t])
-                    for z in redo:
-                        tp.pop(z, None)
-                    todo += [x for x in todo_all if x[3] in redo]   # 뒤에 다시 조회
-                    got -= len(redo)
-                    zero_keys[t] = []
-                    blocks[t] += 1
-                    if blocks[t] >= 5:
-                        stopped.add(t)
-                        print(f'  {"고속" if t == "E" else "시외"}버스가 5번째로 {ZERO_RUN}번 연속 0편 — 이 종류만 멈춰요 (다음에 다시 조회)')
+                    if alive():
+                        zero_keys[t] = []   # 늘 있는 노선은 나옴 → 진짜 노선 없는 쌍들이었음
                     else:
-                        print(f'  {"고속" if t == "E" else "시외"}버스가 {ZERO_RUN}번 연속 0편 — 막힌 것 같아 5분 쉬고, 그 {len(redo)}쌍은 뒤에서 다시 조회해요')
-                        time.sleep(300)
-                    continue
+                        for z in zero_keys[t]:
+                            tp.pop(z, None)   # 막힌 뒤 받은 0편은 지움 → 다음 실행 때 다시 조회
+                        got -= len(zero_keys[t])
+                        quit_msg = f'{ZERO_RUN}번 연속 0편이고 서울경부→부산도 3번 다 0편 — 막힌 것 같아 여기서 끝내요 (마지막 {len(zero_keys[t])}쌍은 다음에 다시 조회)'
+                        break
             if got % 200 == 0:
                 print(f'  {got} / {len(todo)}회 …')
                 json.dump(raw, open(RAW, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
             time.sleep(0.1)   # 2026-10-14: 0.03→0.1초 (429 줄이기)
     finally:
         json.dump(raw, open(RAW, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+    if quit_msg:
+        print(quit_msg)
 
     # 4) 우리 터미널 이름 쌍으로 펼치기 (같은 TAGO 번호를 쓰는 이름은 모두 같은 값)
     table = {}

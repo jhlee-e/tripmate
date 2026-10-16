@@ -1172,7 +1172,7 @@ const BOOKING = {
 let STATIONS = [];
 // KTX 역 사이 실제 소요시간·요금 (tools/fetch_train_times.py — 국토교통부 TAGO 열차정보, 평일 하루 시간표 기준)
 //   { '서울역|강릉역': [보통 소요시간(분, 중앙값), 가장 빠른 시간, 어른 요금(원), 편수] } — 한 방향만 있으면 반대도 같다고 봄
-let TRAIN_TIMES = {}, TRAIN_TIMES_WE = {};   // 평일(수요일)·주말(토요일) 시간표 — 2026-10-12 이재훈 결정: 주말 시간표도 따로
+let TRAIN_TIMES = {}, TRAIN_TIMES_WE = {}, TRAIN_TIMES_SU = {};   // 평일(수요일)·토요일·일요일 시간표 — 2026-10-12 주말 표, 2026-10-16 일요일 표 따로 (이재훈 결정)
 const TRANSFER_MIN = 20;   // 바로 가는 KTX가 없을 때 갈아타는 데 드는 시간 (Claude 가정)
 async function loadStations() {
   try { STATIONS = await loadJSON('data/stations.json'); } catch (e) { STATIONS = []; }   // 파일이 없으면 예전 방식
@@ -1180,14 +1180,18 @@ async function loadStations() {
   try { BUS_TIMES = await loadJSON('data/bus_times.json'); } catch (e) { BUS_TIMES = {}; }
   try { TRAIN_TIMES_WE = await loadJSON('data/train_times_weekend.json'); } catch (e) { TRAIN_TIMES_WE = {}; }
   try { BUS_TIMES_WE = await loadJSON('data/bus_times_weekend.json'); } catch (e) { BUS_TIMES_WE = {}; }
+  try { TRAIN_TIMES_SU = await loadJSON('data/train_times_sunday.json'); } catch (e) { TRAIN_TIMES_SU = {}; }
+  try { BUS_TIMES_SU = await loadJSON('data/bus_times_sunday.json'); } catch (e) { BUS_TIMES_SU = {}; }
   return STATIONS;
 }
-// we = 그날이 주말(토·일)이면 주말 표 먼저, 없으면 평일 표
+// 표에서 a→b(없으면 b→a) 찾기
+function pairIn(t, a, b) { return t[a + '|' + b] || t[b + '|' + a] || null; }
+// we = 그날 요일 구분 ('일' | '토' | false=평일). 일요일은 일요일 표 → 토요일 표 → 평일 표, 토요일은 토요일 표 → 평일 표
 function trainDirect(a, b, we) {
-  return (we && (TRAIN_TIMES_WE[a + '|' + b] || TRAIN_TIMES_WE[b + '|' + a])) || TRAIN_TIMES[a + '|' + b] || TRAIN_TIMES[b + '|' + a] || null;
+  return (we === '일' && pairIn(TRAIN_TIMES_SU, a, b)) || (we && pairIn(TRAIN_TIMES_WE, a, b)) || pairIn(TRAIN_TIMES, a, b);
 }
-// 그 여행의 가는 날(1일차)·오는 날(마지막 날)이 주말인지 (토·일 — Claude 기준, 금요일은 평일로 봄)
-function isWeekendDay(trip, d) { const w = dowOf(trip, d); return w === '토' || w === '일'; }
+// 그 여행의 가는 날(1일차)·오는 날(마지막 날)이 주말인지 — '토' | '일' | false (Claude 기준, 금요일은 평일로 봄)
+function isWeekendDay(trip, d) { const w = dowOf(trip, d); return w === '토' || w === '일' ? w : false; }
 // 역 a → b KTX: 실제 시간표 → 없으면 한 번 갈아타기(표의 두 구간 + 20분) → 그래도 없으면 null
 // 출력: { min, fare, via(갈아타는 역 이름 또는 null) }
 function trainRide(a, b, we) {
@@ -1284,9 +1288,9 @@ function railOption(home, center, we) {
 }
 // 고속·시외버스 실제 시간표 (tools/fetch_bus_times.py — TAGO 고속버스정보·시외버스정보)
 //   { '출발터미널|도착터미널': { E: [보통 분, 최단 분, 요금, 편수], S: [...] } }  E=고속, S=시외
-let BUS_TIMES = {}, BUS_TIMES_WE = {};
+let BUS_TIMES = {}, BUS_TIMES_WE = {}, BUS_TIMES_SU = {};
 function busRide(a, b, prefer, we) {
-  const d = (we && (BUS_TIMES_WE[a + '|' + b] || BUS_TIMES_WE[b + '|' + a])) || BUS_TIMES[a + '|' + b] || BUS_TIMES[b + '|' + a];
+  const d = (we === '일' && pairIn(BUS_TIMES_SU, a, b)) || (we && pairIn(BUS_TIMES_WE, a, b)) || pairIn(BUS_TIMES, a, b);
   if (!d) return null;
   const list = Object.keys(d).map(function (t) { return { min: d[t][0], fare: d[t][2] || null, kind: t === 'E' ? '고속버스' : '시외버스' }; });
   list.sort(prefer === 'cheap' ? function (x, y) { return ((x.fare || 1e9) - (y.fare || 1e9)) || (x.min - y.min); }

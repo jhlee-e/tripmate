@@ -19,10 +19,11 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 BASE = 'https://apis.data.go.kr/1613000/TrainInfo/'
 # --weekend: 토요일 시간표를 따로 받아 data/train_times_weekend.json으로 (2026-10-12 이재훈 결정: 주말 시간표도 따로)
-WEEKEND = '--weekend' in sys.argv
+SUNDAY = '--sunday' in sys.argv   # 2026-10-16 이재훈 결정: 일요일 시간표도 따로 (data/train_times_sunday.json)
+WEEKEND = '--weekend' in sys.argv or SUNDAY
 ARGS = [a for a in sys.argv[1:] if not a.startswith('--')]
-RAW = os.path.join(HERE, 'raw', 'train_times_weekend_raw.json' if WEEKEND else 'train_times_raw.json')
-OUT = os.path.join(ROOT, 'data', 'train_times_weekend.json' if WEEKEND else 'train_times.json')
+RAW = os.path.join(HERE, 'raw', 'train_times_sunday_raw.json' if SUNDAY else 'train_times_weekend_raw.json' if WEEKEND else 'train_times_raw.json')
+OUT = os.path.join(ROOT, 'data', 'train_times_sunday.json' if SUNDAY else 'train_times_weekend.json' if WEEKEND else 'train_times.json')
 MAX_CALLS = int(ARGS[0]) if ARGS else 10 ** 9   # 기본: 끝까지 한 번에 (2026-10-14 이재훈 요청)
 SEOUL = ['서울역', '용산역', '청량리역', '광명역', '행신역', '상봉역', '수원역']
 HUBS = ['대전역', '동대구역', '부산역', '광주송정역', '오송역', '천안아산역', '익산역', '울산역', '강릉역', '전주역', '서대전역',
@@ -107,7 +108,7 @@ def main():
 
     # 2) 기준 날짜
     day = datetime.date.today() + datetime.timedelta(days=7)
-    while day.weekday() != (5 if WEEKEND else 2):   # 주말 모드는 토요일, 평일은 수요일
+    while day.weekday() != (6 if SUNDAY else 5 if WEEKEND else 2):   # 일요일 모드는 일요일, 주말 모드는 토요일, 평일은 수요일
         day += datetime.timedelta(days=1)
     date = raw.get('date') or day.strftime('%Y%m%d')
     raw['date'] = date
