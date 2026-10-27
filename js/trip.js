@@ -64,6 +64,7 @@ function renderInfo(trip, role) {
   const rows = [
     ['날짜', trip.start_date + ' ~ ' + trip.end_date + ' (' + trip.days + '일)'],
     ['인원', peopleText(trip) + (trip.days > 1 ? ' · 방 ' + (trip.rooms || 1) + '개' : '') + (trip.pet ? ' · 반려동물 동반' : '')],
+    ['음식', foodPrefText(trip.food_pref) ? foodPrefText(trip.food_pref) + ' (가게 이름으로만 거르니 메뉴는 직접 확인)' : '따로 없음'],
     ['출발지', trip.departure_address || '-'],
     ['이동 수단', trip.transport],
     ['템포', trip.tempo + (trip.hidden_gem ? ' · 숨은 명소 위주' : '')],
@@ -147,7 +148,7 @@ function renderSchedule(trip, plan, t) {
     let n = 0;
     day.items.forEach(function (it, i) {
       const p = it.stop.p;
-      const label = it.stop.meal ? '🍴 ' + it.stop.meal : (++n) + '';
+      const label = it.stop.meal ? stopIcon(it.stop) + ' ' + it.stop.meal : (++n) + '';
       const sigText = signatureLabel(p, plan.signature);
       html += '<li class="mini-item" data-day="' + di + '" data-i="' + i + '"><span class="mini-time">' + hhmm(it.begin) + '</span>' +
         '<span class="mini-no">' + label + '</span><span class="mini-name">' + esc(p.name) +
@@ -218,7 +219,7 @@ function renderMap(t, trip) {
     }
     if (day.startPoint.isStation) { pin(day.startPoint, '역', true); pushPt(day.startPoint); }
     else if (!day.startPoint.isHome) { pin(day.startPoint, '숙', true); pushPt(day.startPoint); }
-    day.items.forEach(function (it) { pin(it.stop.p, it.stop.meal ? '🍴' : (di + 1) + '-' + (++n), false); pushPt(it.stop.p, it.moveMode, it.stop); });
+    day.items.forEach(function (it) { pin(it.stop.p, it.stop.meal ? stopIcon(it.stop) : (di + 1) + '-' + (++n), false); pushPt(it.stop.p, it.moveMode, it.stop); });
     if (day.endPoint.isStation && !day.startPoint.isStation) pin(day.endPoint, '역', true);
     if (!day.endPoint.isHome) {
       const dayPlan = current.plan.days[di];

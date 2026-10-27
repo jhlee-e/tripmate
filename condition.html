@@ -82,6 +82,13 @@
         </div>
 
         <div class="field-group">
+          <details class="food-details" id="food-details">
+            <summary>🍽️ 음식 선호 <small>커피·알레르기·못 먹는 음식이 있으면 알려 주세요 (선택)</small></summary>
+            <div id="food-pref"></div>
+          </details>
+        </div>
+
+        <div class="field-group">
           <label for="rooms">숙소 방 수 <small class="label-note">숙소 비용 = 방 1개 1박 가격 × 방 수 × 박 수 · 당일치기면 쓰이지 않아요</small></label>
           <input type="number" id="rooms" min="1" step="1" value="1">
         </div>
@@ -146,6 +153,7 @@
   <script src="supabase.js"></script>
   <script src="js/departure.js"></script>
   <script src="js/region-pick.js"></script>
+  <script src="js/food-pref.js"></script>
   <script src="js/condition.js"></script>
   <script src="js/course-copy.js"></script>
   <script src="js/condition-edit.js"></script>

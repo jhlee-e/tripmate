@@ -218,8 +218,124 @@ function withPopularity(score, popularity, trip) {
   return score * (trip && trip.hidden_gem ? 1.5 - pop / 10 : 1 + pop / 10);
 }
 
-function isChain(name) {
-  return CHAIN_BRANDS.some(function (b) { return name.indexOf(b) !== -1; });
+// ---------- 프랜차이즈 4분류 (2026-10-27 이재훈 결정) ----------
+//   ① 전국 체인 = 추천에서 제외 (CHAIN_BRANDS)
+//   ② 지역 고유 브랜드 (성심당·이성당처럼 그 지역에서 시작해 그 지역 대표가 된 가게, 지점이 여럿이어도) = 추천 + 점수 ×1.3
+//   ③ 특별 매장 (전국 체인이지만 그 지점만의 건물·전망으로 찾아가는 곳, 예: 경주 스타벅스 대릉원점) = 추천 + 점수 ×1.3
+//   ④ 그 외 지역 소규모 체인 = 따로 규칙 없이 일반 가게처럼
+//   목록은 Claude가 웹 검색으로 정리 (tools/extra_places.json에 근거 링크), 배수 1.3은 Claude 판단
+//   근거: 헤럴드경제 2026-04-14(성심당·뚜쥬루·이성당), 식신 매거진(맘모스·풍년제과·씨엘비·명문제과·코롬방·화월당),
+//         매일신문 2024-04-21(삼송빵집·근대골목단팥빵), 레이디경향 2011(오미사꿀빵·학화호두과자·황남빵·만석닭강정·중동호떡),
+//         다음 뉴스 2025-03-26(삼진어묵), 핫플헌터·다음 뉴스(스타벅스 특별 매장) — 링크는 tools/extra_places.json
+//   데이터에 없던 가게는 tools/add_extra_places.py가 카카오 검색으로 넣고 localBrand·special 표시를 붙임
+const LOCAL_BRANDS = ['성심당', '이성당', '뚜쥬루', '삼송빵집', '근대골목단팥빵', '풍년제과', '맘모스', '코롬방', '명문제과', '씨엘비베이커리',
+  '화월당', '오미사', '학화', '황남빵', '만석닭강정', '중동호떡', '삼진어묵'];
+const SPECIAL_STORES = ['스타벅스 경주대릉원점', '스타벅스 경동1960점', '스타벅스 환구단점', '스타벅스 더양평DTR점', '스타벅스 더북한산점',
+  '스타벅스 대구종로고택점', '스타벅스 더북한강R점', '스타벅스 더여수돌산DT점'];
+const BRAND_BOOST = 1.3;
+// 입력: 장소 / 출력: 'chain'(①) · 'local'(②) · 'special'(③) · null(④·일반)
+function chainTier(p) {
+  const name = p.name || '';
+  if (p.special || SPECIAL_STORES.indexOf(name) !== -1) return 'special';
+  if (p.localBrand || LOCAL_BRANDS.some(function (b) { return name.indexOf(b) !== -1; })) return 'local';
+  if (CHAIN_BRANDS.some(function (b) { return name.indexOf(b) !== -1; })) return 'chain';
+  return null;
+}
+function isChain(nameOrPlace) {
+  return chainTier(typeof nameOrPlace === 'string' ? { name: nameOrPlace } : nameOrPlace) === 'chain';
+}
+
+// ---------- 음식 선호 표 (2026-10-27 이재훈 요청) ----------
+// trip.food_pref = { coffee: true|false, allergy: [키], no: [키], dislike: [키], diet: ''|'pesco'|'lacto'|'vegan', noWords: [단어], dislikeWords: [단어] }
+//   (키·화면 글자는 js/food-pref.js의 FOOD_PREF_ITEMS)
+// 이재훈 결정: 알레르기·못 먹음 = 추천에서 제외, 안 먹음 = 감점(×0.3, 배수는 Claude 판단) / 함께 정하기는 모든 사람의 항목을 합쳐 적용
+// 장소 데이터에 메뉴가 없어 가게 이름·분류로만 판단 (아래 단어 목록은 Claude가 정한 규칙) → 화면에 '메뉴는 직접 확인' 안내
+//   이름에 안 드러나는 재료(국물의 멸치·간장의 밀 등)는 걸러지지 않음
+const MEAT_BROTH = /국밥|곰탕|설렁탕|갈비탕|해장국|육개장|감자탕|삼계탕|부대찌개|닭한마리|사골|냉면|면옥|밀면/;
+const FOOD_RULES = {
+  갑각류: { re: /새우|대하|꽃게|게장|대게|홍게|킹크랩|크랩|랍스터|가재|게국지|해물|해산물|짬뽕/ },
+  조개류: { re: /조개|굴|전복|홍합|바지락|꼬막|가리비|재첩|키조개|소라|해물|해산물|짬뽕/ },
+  생선: { re: /횟집|회센터|물회|활어|생선|장어|복어|복국|아구|아귀|대구탕|대구뽈|고등어|갈치|조기|굴비|연어|참치|초밥|스시|매운탕|어시장|수산|명태|황태|코다리|과메기|멸치|꽁치|도다리|광어|우럭|민어|전어|어묵|오뎅|추어/ },
+  견과류: { re: /땅콩|호두|잣|아몬드|견과|피칸|마카다미아/ },
+  밀: { re: /빵|베이커리|제과|베이글|도넛|케이크|케익|타르트|쿠키|와플|크로플|국수|냉면|밀면|우동|라멘|라면|소바|짜장|짬뽕|수제비|칼제비|만두|피자|파스타|버거|돈가스|돈까스|튀김|면옥|호떡|꽈배기|핫도그|붕어빵|호두과자|꿀빵|십원빵|찐빵/,
+        cuisines: ['면', '중식', '양식·기타외국식'] },
+  우유: { re: /치즈|피자|크림|아이스크림|젤라또|라떼|우유|밀크|요거트|버터|파스타|베이커리|케이크/ },
+  달걀: { re: /계란|달걀|에그|오믈렛|카스텔라|타르트|마카롱|케이크|케익|베이커리|제과|빵/ },
+  대두: { re: /두부|순두부|콩국수|콩물|된장|청국장|비지|두유|콩/ },
+  메밀: { re: /메밀|막국수|소바/ },
+  복숭아: { re: /복숭아|피치/ },
+  토마토: { re: /토마토/ },
+  날것: { re: /횟집|회센터|물회|활어|초밥|스시|사시미|육회|게장|회덮밥|생굴|회$|회\s/ },
+  해산물: { cuisines: ['회·해산물'], incl: ['갑각류', '조개류', '생선'] },
+  돼지고기: { re: /돼지|삼겹|목살|항정|족발|보쌈|순대|수육|제육|돈가스|돈까스|감자탕|뼈해장|흑돼지|갈매기살|막창|두루치기|등갈비|국밥/ },
+  소고기: { re: /한우|소고기|쇠고기|불고기|육회|곰탕|설렁탕|갈비탕|소갈비|차돌|등심|안심|스테이크|육개장|정육|떡갈비|양곱창|소곱창|육전|사골/ },
+  닭고기: { re: /닭|치킨|삼계|백숙|찜닭|통닭/ },
+  양고기: { re: /양고기|양꼬치|양갈비|램/ },
+  오리고기: { re: /오리/ },
+  내장: { re: /곱창|막창|대창|내장|순대|선지|천엽/ },
+  고기: { re: MEAT_BROTH, cuisines: ['고기'], incl: ['돼지고기', '소고기', '닭고기', '양고기', '오리고기', '내장'] },
+  매운음식: { re: /매운|매콤|불닭|짬뽕|마라|떡볶이|낙지|쭈꾸미|주꾸미|닭볶음|아구찜|아귀찜|해물찜|두루치기|실비|땡초|불족발/ },
+  꿀: { re: /꿀/ },
+  // 채식(락토·오보·비건)용: 이름에 고기가 안 보여도 고기·멸치 국물을 쓰는 경우가 많은 메뉴 (Claude 판단)
+  국물: { re: /냉면|면옥|밀면|추어|짬뽕|우동|라멘|국밥|해장|탕$|탕\s|찌개|전골|칼국수/, cuisines: ['국밥·탕', '중식'] }
+};
+// 채식 단계 → 못 먹는 것으로 봄
+const DIET_NO = { pesco: ['고기'], lacto: ['고기', '해산물', '국물'], vegan: ['고기', '해산물', '국물', '우유', '달걀', '꿀'] };
+const DIET_ORDER = ['', 'pesco', 'lacto', 'vegan'];
+const VEGGIE_WORDS = /채식|비건|베지|사찰|산채|두부|보리밥|곤드레|나물|콩국수/;   // 채식하는 사람에게 먼저 추천 (×1.5, Claude 판단)
+const DISLIKE_MULT = 0.3;
+
+// 사람별 food_pref를 하나로 합침 (함께 정하기): 알레르기·못 먹음·안 먹음·직접 입력은 모두 합치고, 채식은 가장 엄격한 단계
+//   커피: 절반 넘게 '안 마셔요'면 안 마시는 것으로 (Claude 판단) / 입력이 없으면 마시는 것으로 봄
+function effectiveFoodPref(trip) {
+  if (trip._fp) return trip._fp;
+  const list = isGroup(trip) ? trip.group.map(function (m) { return m.food_pref; }) : [trip.food_pref];
+  const out = { allergy: [], no: [], dislike: [], diet: '', noWords: [], dislikeWords: [], coffee: true, any: false };
+  let coffeeNo = 0, coffeeYes = 0;
+  list.forEach(function (fp) {
+    if (!fp) return;
+    ['allergy', 'no', 'dislike', 'noWords', 'dislikeWords'].forEach(function (k) {
+      (fp[k] || []).forEach(function (v) { if (v && out[k].indexOf(v) === -1) out[k].push(v); });
+    });
+    if (DIET_ORDER.indexOf(fp.diet || '') > DIET_ORDER.indexOf(out.diet)) out.diet = fp.diet;
+    if (fp.coffee === false) coffeeNo++; else if (fp.coffee === true) coffeeYes++;
+  });
+  if (coffeeNo > (coffeeNo + coffeeYes) / 2) out.coffee = false;
+  out.any = !!(out.allergy.length || out.no.length || out.dislike.length || out.diet || out.noWords.length || out.dislikeWords.length);
+  const esc = function (w) { return w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); };
+  const words = function (ws) { return ws.length ? new RegExp(ws.map(esc).join('|')) : null; };
+  out._no = out.allergy.concat(out.no, DIET_NO[out.diet] || []);
+  out._noRe = words(out.noWords);
+  out._dislikeRe = words(out.dislikeWords);
+  trip._fp = out;
+  return out;
+}
+function ruleHits(key, p, cuisine) {
+  const r = FOOD_RULES[key];
+  if (!r) return false;
+  if (r.re && r.re.test(p.name || '')) return true;
+  if (r.cuisines && r.cuisines.indexOf(cuisine) !== -1) return true;
+  return !!(r.incl && r.incl.some(function (k) { return ruleHits(k, p, cuisine); }));
+}
+// 입력: 장소, trip / 출력: 'no'(못 먹음·알레르기 → 제외) · 'dislike'(안 먹음 → 감점) · null
+function foodVerdict(p, trip) {
+  if (!p || p.type !== '식당' || p.category === 'BREAKFAST' || !trip) return null;
+  const fp = effectiveFoodPref(trip);
+  if (!fp.any) return null;
+  const c = cuisineOf(p);
+  if (fp._no.some(function (k) { return ruleHits(k, p, c); }) || (fp._noRe && fp._noRe.test(p.name))) return 'no';
+  if (fp.dislike.some(function (k) { return ruleHits(k, p, c); }) || (fp._dislikeRe && fp._dislikeRe.test(p.name))) return 'dislike';
+  return null;
+}
+// 점수 배수: 안 먹는 음식 ×0.3, 채식이면 채식 가게 ×1.5, 지역 고유 브랜드·특별 매장 ×1.3
+function foodMultiplier(p, trip) {
+  if (p.type !== '식당') return 1;
+  let m = foodVerdict(p, trip) === 'dislike' ? DISLIKE_MULT : 1;
+  const fp = effectiveFoodPref(trip);
+  if (fp.diet && VEGGIE_WORDS.test(p.name || '')) m *= 1.5;
+  const tier = chainTier(p);
+  if (tier === 'local' || tier === 'special') m *= BRAND_BOOST;
+  return m;
 }
 
 function hhmm(min) {
@@ -231,12 +347,18 @@ function departureOf(trip) {
   return { name: '출발지', lat: trip.departure_lat, lng: trip.departure_lng, isHome: true };
 }
 
-// ---------- 1-2. 식당 종류 (식사 / 디저트·카페 / 주점) 와 메뉴 종류 ----------
-// TourAPI 분류: 카페·찻집·기타음료점·제과 = 디저트, 주점 = 식사 추천에서 제외
+// ---------- 1-2. 식당 종류 (식사 / 카페 / 간식 / 주점) 와 메뉴 종류 ----------
+// TourAPI 분류: 카페·찻집·기타음료점·제과 = 카페·간식, 주점 = 식사 추천에서 제외
+// 카페와 간식은 비슷한 결이지만 조금 다르게 나눔 (2026-10-27 이재훈 결정)
+//   카페 = 커피·차 중심 / 간식 = 빵·지역 특산 간식·길거리·시장 간식·아이스크림·디저트 전문점
+//   나누는 단어는 Claude가 정한 규칙: '제과' 분류이거나 이름에 빵·떡·아이스크림 같은 말이 있으면 간식, 나머지 카페·찻집은 카페
+//   길거리 간식(닭강정·호떡·어묵·꽈배기·핫도그·찐빵 등)은 일반 식당 분류여도 간식
 // 한식은 대부분 '관광식당' 한 분류라서 이름에 들어 있는 단어로 메뉴 종류를 나눔 (단어 목록은 Claude가 정한 규칙)
 //   순서대로 검사해 처음 맞는 종류로 정함 (예: '돼지국밥'은 고기보다 국밥·탕이 먼저)
 const DESSERT_CATS = ['FD050100', 'FD050200', 'FD050300', 'FD030100'];
 const DESSERT_WORDS = /카페|커피|베이커리|제과|빵|디저트|케이크|도넛|젤라또|아이스크림|빙수|티하우스|찻집|다방|로스터/;
+const SNACK_WORDS = /빵|베이커리|제과|베이글|도넛|도너츠|케이크|케익|타르트|마카롱|쿠키|와플|크로플|젤라또|아이스크림|빙수|호떡|꽈배기|닭강정|어묵|오뎅|핫도그|붕어빵|츄러스|만주|떡집|떡방|한과|약과|호두과자|단팥|꿀빵|십원빵|망개떡|찰떡|제빵|블랑제리|불랑제리|브레드|파티스리|bakery|bread/i;
+const STREET_SNACK_WORDS = /닭강정|호떡|어묵|오뎅|꽈배기|핫도그|붕어빵|찐빵|호두과자|꿀빵|십원빵|망개떡|찰떡/;
 const BAR_CATS = ['FD040100', 'FD040200', 'FD040300', 'FD040400'];
 const GROUPS = [
   ['회·해산물', /횟집|회센터|물회|수산|해물|조개|대게|킹크랩|게장|장어|복어|아구|아귀|생선|전복|굴|해녀|멍게|문어|낙지|쭈꾸미|주꾸미|꼬막|매생이|어시장/],
@@ -245,14 +367,24 @@ const GROUPS = [
   ['고기', /갈비|고기|한우|정육|숯불|삼겹|돼지|흑돼지|불고기|오리|닭갈비|막창|곱창|양꼬치|육회|떡갈비|구이/],
   ['한정식·백반', /한정식|백반|정식|밥상|쌈밥|비빔밥|보리밥|두부|순두부|한식뷔페|기사식당|솥밥|곤드레|산채/]
 ];
+// 입력: 식당 / 출력: 'meal'(식사) · 'cafe'(카페) · 'snack'(간식) · 'bar'(주점)
 function foodKind(p) {
   if (BAR_CATS.indexOf(p.category) !== -1) return 'bar';
-  if (DESSERT_CATS.indexOf(p.category) !== -1 || DESSERT_WORDS.test(p.name)) return 'dessert';
+  if (p.category === 'BREAKFAST') return 'meal';
+  if (p.category === 'FD030100') return 'snack';
+  if (DESSERT_CATS.indexOf(p.category) !== -1 || DESSERT_WORDS.test(p.name)) return SNACK_WORDS.test(p.name) ? 'snack' : 'cafe';
+  if (STREET_SNACK_WORDS.test(p.name)) return 'snack';
   return 'meal';
 }
+const SWEET_LABEL = { cafe: '카페', snack: '간식' };
+function isSweet(p) { const k = foodKind(p); return k === 'cafe' || k === 'snack'; }
+// 일정의 카페·간식 칸인지 ('디저트'는 예전에 저장된 일정)
+function isSweetStop(st) { return !!st && (st.meal === '카페' || st.meal === '간식' || st.meal === '디저트'); }
+// 일정 표시 아이콘: 카페 ☕ · 간식 🍩 · 식사 🍴
+function stopIcon(st) { return st.meal === '카페' ? '☕' : (st.meal === '간식' || st.meal === '디저트') ? '🍩' : '🍴'; }
 function cuisineOf(p) {
   if (p.category === 'BREAKFAST') return '숙소 조식';
-  if (foodKind(p) === 'dessert') return '디저트·카페';
+  if (isSweet(p)) return SWEET_LABEL[foodKind(p)];
   const c = p.category || '';
   if (c === 'FD020100') return '중식';
   if (c === 'FD020200') return '일식';
@@ -622,7 +754,8 @@ const SIG_FOOD_KM = 12;   // 대표 먹거리 식당이 지금 위치에서 이 
 
 // 여행에 넣을 수 있는 장소인지 (예산과 상관없는 조건)
 function usable(p, trip) {
-  if (!p.recommend || isChain(p.name) || p.ferry) return false;   // ferry = 배를 타야 가는 섬
+  if (!p.recommend || isChain(p) || p.ferry) return false;   // ferry = 배를 타야 가는 섬
+  if (foodVerdict(p, trip) === 'no') return false;               // 알레르기·못 먹는 음식 (음식 선호 표)
   if (needsAddressCheck(p)) return false;
   if (p.info && p.info.minPeople && trip.people < p.info.minPeople) return false;   // 2인분부터인 곳은 1명 여행에서 제외
   if (p.info && p.info.solo === false && trip.people === 1) return false;
@@ -663,14 +796,15 @@ function preparePool(trip, places) {
   const usableAll = places.filter(function (p) { return usable(p, trip); });
   const base = places.district ? districtBase(usableAll, places, trip) : usableAll;
   const month = tripMonth(trip);
-  base.forEach(function (p) { p._s = withPopularity(placeTagScore(p.tags, trip), p.popularity, trip) * infoMultiplier(p, trip) * seasonMultiplier(p, month); });
+  base.forEach(function (p) { p._s = withPopularity(placeTagScore(p.tags, trip), p.popularity, trip) * infoMultiplier(p, trip) * seasonMultiplier(p, month) * foodMultiplier(p, trip); });
 
   for (let step = 0; step <= 20; step++) {
     const relax = 1 + step * 0.1;
-    const pool = { attractions: [], restaurants: [], lodgings: [], relax: relax };
+    const pool = { attractions: [], restaurants: [], sweets: [], lodgings: [], relax: relax };
     base.forEach(function (p) {
       if (p.type === '명소' && p.cost <= caps.admission * relax) pool.attractions.push(p);
-      else if (p.type === '식당' && foodKind(p) === 'meal' && p.cost <= caps.meal * relax) pool.restaurants.push(p);   // 디저트·주점은 식사로 안 넣음
+      else if (p.type === '식당' && foodKind(p) === 'meal' && p.cost <= caps.meal * relax) pool.restaurants.push(p);   // 카페·간식·주점은 식사로 안 넣음
+      else if (p.type === '식당' && isSweet(p) && p.cost <= caps.meal * relax) pool.sweets.push(p);                   // 카페·간식 칸 후보
       else if (p.type === '숙소' && lodgingAvgRoomNight(p, trip) <= caps.lodging * relax) pool.lodgings.push(p);   // 객실·날짜별 요금 평균
     });
     const enough = pool.attractions.length >= tempo.count * trip.days &&
@@ -681,6 +815,7 @@ function preparePool(trip, places) {
       pool.all = {
         attractions: base.filter(function (p) { return p.type === '명소'; }),
         restaurants: base.filter(function (p) { return p.type === '식당' && foodKind(p) === 'meal'; }),
+        sweets: base.filter(function (p) { return p.type === '식당' && isSweet(p); }),
         lodgings: base.filter(function (p) { return p.type === '숙소'; })
       };
       return pool;
@@ -760,6 +895,31 @@ function nearestNeighbor(start, list) {
   }
   return out;
 }
+
+// ---------- 카페·간식 칸 (2026-10-27 이재훈 결정) ----------
+// 하루 최대 횟수: 알차게 2 · 균형있게 1 · 여유롭게 1 / 다음 장소로 가는 길에서 500m 안쪽 가게만 끼워 넣음 (템포 + 동선 섞기)
+// 아래 값은 Claude 판단: 10:00 이후, 식사 끝나고 60분 뒤부터 / 머무는 시간 카페 40분 · 간식 20분
+//   지역 대표 먹거리(signature.json)에 든 카페·간식은 2km 안이면 끼워 넣고 점수 ×3 (지역 고유 브랜드·특별 매장은 2km·×2)
+//   커피를 안 마시면: 대표가 아닌 카페는 점수 ×0.3, 여행 전체에서 이틀에 1번까지 → 간식 위주 (이재훈 결정: 빈도를 조금 줄이고 간식 위주,
+//   단 그 지역 대표 디저트가 카페에 있으면 커피 말고 다른 것을 마실 수 있으니 추천)
+//   같은 날 두 번째 칸은 다른 종류(카페 ↔ 간식)를 먼저 (×0.3)
+const SWEET_MAX = { 알차게: 2, 균형있게: 1, 여유롭게: 1 };
+const SWEET_NEAR_KM = 0.5, SIG_SWEET_KM = 2;
+const SWEET_FROM = 10 * 60, SWEET_AFTER_MEAL = 60;
+const SWEET_STAY = { cafe: 40, snack: 20 };
+// 점 s가 a→b 직선에서 얼마나 떨어져 있는지(km) — 짧은 거리라 평면으로 계산
+function offRouteKm(a, b, s) {
+  const kx = 111.32 * Math.cos(a.lat * Math.PI / 180), ky = 110.57;
+  const bx = (b.lng - a.lng) * kx, by = (b.lat - a.lat) * ky, sx = (s.lng - a.lng) * kx, sy = (s.lat - a.lat) * ky;
+  const L = bx * bx + by * by;
+  const t = L ? Math.max(0, Math.min(1, (sx * bx + sy * by) / L)) : 0;
+  return Math.hypot(sx - t * bx, sy - t * by);
+}
+// 지점 이름을 뗀 가게 이름 ('순두부젤라또 2호점' → '순두부젤라또', '성심당 DCC점' → '성심당')
+function brandOf(p) { return String(p.name || '').replace(/\s*\(.*\)$/, '').replace(/\s+\S*점$|\s*\d+호점$|\s*본점$/, '').trim(); }
+// 찻집·전통차 (커피를 안 마셔도 갈 만한 곳 — 줄이지 않음)
+function isTeaHouse(p) { return p.category === 'FD050200' || /찻집|전통차|다원|다실|티하우스|티룸|tea/i.test(p.name || ''); }
+function sweetStop(p) { const k = foodKind(p); return { p: p, stay: SWEET_STAY[k] || 30, meal: SWEET_LABEL[k] || '간식' }; }
 
 function makeStop(p, kind) {
   if (kind === 'lunch') return { p: p, stay: MEAL_STAY, notBefore: LUNCH.from, meal: '점심' };
@@ -844,6 +1004,35 @@ function buildPlan(type, trip, pool) {
   let mealMove = 0;
   const eaten = {};        // 메뉴 종류별 먹은 횟수 (여행 전체)
   let lastGroup = null;    // 바로 전 끼니의 메뉴 종류
+  const sweetMax = SWEET_MAX[trip.tempo] || 1;
+  const noCoffee = effectiveFoodPref(trip).coffee === false;
+  let cafeCount = 0;       // 대표가 아닌 카페를 넣은 횟수 (커피 안 마시면 이틀에 1번까지)
+  let sweetsToday = 0, sweetKindsToday = {}, lastMealEnd = -Infinity;
+  const sweetBrands = {};
+  let cafeToday = false;
+  // 지금 위치 → 다음 장소 길목의 카페·간식 고르기 / 출력: 장소 또는 null
+  function pickSweet(from, to, clock) {
+    let best = null, bestVal = 0;
+    (pool.sweets || []).forEach(function (sw) {
+      if (used.has(sw.id) || !openAt(sw, today, clock + 10)) return;
+      const sigName = signatureOf(sw, sig);
+      const brand = chainTier(sw) === 'local' || chainTier(sw) === 'special';   // 지역 고유 브랜드·특별 매장도 대표 디저트처럼 2km까지 (Claude 판단)
+      const off = offRouteKm(from, to, sw);
+      if (off > (sigName || brand ? SIG_SWEET_KM : SWEET_NEAR_KM)) return;
+      const kind = foodKind(sw);
+      const plainCafe = kind === 'cafe' && !sigName && !brand && !isTeaHouse(sw);
+      if (noCoffee && plainCafe && (cafeCount >= Math.ceil(trip.days / 2) || cafeToday)) return;   // 하루 1번, 여행 전체 이틀에 1번까지
+      let val = (sw._s || 0) + 1;
+      if (sigName) val *= 3; else if (brand) val *= 2;
+      if (noCoffee && plainCafe) val *= 0.3;
+      if (sweetKindsToday[kind]) val *= 0.3;
+      if (sweetBrands[brandOf(sw)]) val *= 0.1;   // 같은 가게의 다른 지점(1호점·2호점)은 마지막 수단
+      val /= 1 + (type === 'B' ? 3 : 1) * off;
+      if (type === 'C') val /= 1 + (sw.cost || 0) / 5000;
+      if (val > bestVal) { bestVal = val; best = sw; }
+    });
+    return best;
+  }
 
   for (let d = 1; d <= trip.days; d++) {
     const lastDay = d === trip.days;
@@ -883,6 +1072,12 @@ function buildPlan(type, trip, pool) {
     let lunch = clock > LUNCH.until, dinner = clock >= DAY_END - 60;   // 늦게 시작하면 이미 지난 끼니는 건너뜀
     carry = [];
     mealMove = 0;
+    sweetsToday = 0; sweetKindsToday = {}; lastMealEnd = -Infinity; cafeToday = false;
+    // 그날 끝에 숙소(마지막 날은 집)로 돌아갈 시간
+    const backMin = function (x) {
+      return lastDay || !lodging ? (tf ? transferBackMin(trip, tf, x) : travelMin(distanceKm(x, dep), trip.transport, true, null, [x, dep]))
+                                 : travelMin(distanceKm(x, lodging), trip.transport, false);
+    };
 
     for (let i = 0; i < ordered.length; i++) {
       const p = ordered[i];
@@ -897,11 +1092,31 @@ function buildPlan(type, trip, pool) {
         dinner = true;
         clock = addMeal(stops, 'dinner', pos, clock);
       }
+      // 카페·간식: 오늘 횟수가 남았고 다음 장소로 가는 길목에 있으면 먼저 들름 (그래도 활동 시간·마감 안에 들어올 때만)
+      if (sweetsToday < sweetMax && !pos.isHome && clock >= SWEET_FROM && clock - lastMealEnd >= SWEET_AFTER_MEAL) {
+        const sw = pickSweet(pos, p, clock);
+        if (sw) {
+          const st = sweetStop(sw);
+          const m1 = travelMin(distanceKm(pos, sw), trip.transport, false), m2 = travelMin(distanceKm(sw, p), trip.transport, false);
+          if (clock + m1 + st.stay + m2 + p.stayMin <= (p.indoor ? DAY_END : DAY_END - 60) &&
+              active + mealMove + m1 + m2 + p.stayMin + backMin(p) <= limit) {
+            if (signatureOf(sw, sig)) st.sig = signatureOf(sw, sig);
+            else if (foodKind(sw) === 'cafe' && !isTeaHouse(sw)) { cafeCount++; cafeToday = true; }
+            stops.push(st);
+            used.add(sw.id);
+            sweetsToday++;
+            sweetKindsToday[foodKind(sw)] = true;
+            sweetBrands[brandOf(sw)] = true;
+            mealMove += m1;   // 식사처럼 가는 시간만 활동 시간에 넣음
+            clock += m1 + st.stay;
+            pos = sw;
+          }
+        }
+      }
       const intercity = !!pos.isHome;
       const move = travelMin(distanceKm(pos, p), trip.transport, intercity, null, [pos, p]);
       // 그날 끝에 숙소(마지막 날은 집)로 돌아갈 시간도 활동 시간 안에 남겨 둠
-      const back = lastDay || !lodging ? (tf ? transferBackMin(trip, tf, p) : travelMin(distanceKm(p, dep), trip.transport, true, null, [p, dep]))
-                                       : travelMin(distanceKm(p, lodging), trip.transport, false);
+      const back = backMin(p);
       // 활동 시간을 넘으면 그날 마감, 남은 곳은 다음 날로 이월 (단, 하루 최소 1곳)
       // 밤 10시를 넘기는 곳도 다음 날로 (늦게 출발한 첫날은 0곳일 수 있음 — 2026-10-10 이재훈 결정)
       if (clock + move + p.stayMin > (p.indoor ? DAY_END : DAY_END - 60) ||   // 야외는 21:00까지
@@ -931,7 +1146,7 @@ function buildPlan(type, trip, pool) {
     days.forEach(function (day, di) {
       const dow = dowOf(trip, di + 1);
       day.stops.forEach(function (st, si) {
-        if (!st.meal) return;
+        if (!st.meal || isSweetStop(st)) return;
         const prev = si > 0 ? day.stops[si - 1].p : (di === 0 ? anchor : (lodging || anchor));
         sigFoods.forEach(function (r) {
           if (used.has(r.id)) return;
@@ -973,6 +1188,7 @@ function buildPlan(type, trip, pool) {
     const move = travelMin(distanceKm(pos.isHome ? anchor : pos, r), trip.transport, !!pos.isHome, null, [pos.isHome ? anchor : pos, r]);
     mealMove += move;   // 식당까지 가는 시간은 활동 시간에 포함 (식사 시간은 제외)
     const at = Math.max(clock + move, kind === 'lunch' ? LUNCH.from : DINNER_FROM);
+    lastMealEnd = at + MEAL_STAY;
     return at + MEAL_STAY;
   }
 }
@@ -1128,7 +1344,7 @@ function fitBudget(trip, plan, pool) {
         const cur = st.p;
         if (!(cur.cost > 0) || st.sig) return;   // 대표 먹거리·할거리는 예산 맞추기에서 바꾸지 않음
         const isFood = cur.type === '식당';
-        const list = isFood ? pool.all.restaurants : pool.all.attractions;
+        const list = isSweetStop(st) ? (pool.all.sweets || []) : isFood ? pool.all.restaurants : pool.all.attractions;
         const range = isFood ? 5 : 10;
         list.forEach(function (c) {
           if (c.cost >= cur.cost || used.has(c.id)) return;
@@ -1547,6 +1763,6 @@ async function loadSavedPlan(trip, places) {
 
 // node로 시험할 때 쓰도록 내보내기 (브라우저에서는 무시됨)
 if (typeof module !== 'undefined') {
-  module.exports = { transferFor, loadStations, regionCenter, STATION_WAIT, BOOKING, toMin, signatureOf, signatureLabel, dishesOf, firstDayStart, seasonMultiplier, tripMonth, varietyFactor, attractionKind, dishOf, openAt, hoursIssue, dowOf, infoMultiplier, parkingOf, issueKind, needsAddressCheck, usable, transitLegs, legKey, localMode, WALK_KM, TEMPO, rankRegions, buildPlans, buildPlan, preparePool, computeTimeline, distanceKm,
+  module.exports = { effectiveFoodPref, foodVerdict, foodMultiplier, chainTier, isSweet, isSweetStop, stopIcon, offRouteKm, SWEET_MAX, transferFor, loadStations, regionCenter, STATION_WAIT, BOOKING, toMin, signatureOf, signatureLabel, dishesOf, firstDayStart, seasonMultiplier, tripMonth, varietyFactor, attractionKind, dishOf, openAt, hoursIssue, dowOf, infoMultiplier, parkingOf, issueKind, needsAddressCheck, usable, transitLegs, legKey, localMode, WALK_KM, TEMPO, rankRegions, buildPlans, buildPlan, preparePool, computeTimeline, distanceKm,
     travelMin, budgetCaps, hhmm, PLAN_INFO, isChain, LODGING_ARRIVE, SEA_REGIONS, foodKind, cuisineOf, pickRestaurant, ensureScores, estimateMinCost, fitBudget, syncBreakfast, breakfastPlace, lodgingBreakfast };
 }

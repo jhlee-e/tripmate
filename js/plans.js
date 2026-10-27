@@ -77,7 +77,7 @@ function renderPlanCard(trip, region, row) {
   let daysHtml = '';
   t.days.forEach(function (d, i) {
     const names = d.items.map(function (it) {
-      return (it.stop.meal ? '🍴' : '') + esc(it.stop.p.name);
+      return (it.stop.meal ? stopIcon(it.stop) : '') + esc(it.stop.p.name);
     });
     daysHtml += '<li><strong>' + (i + 1) + '일차</strong> ' + names.join(' → ') + '</li>';
   });

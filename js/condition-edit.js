@@ -41,6 +41,9 @@ async function setupEditMode() {
   document.getElementById('with-pet').checked = !!data.pet;
   document.getElementById('hidden-gem').checked = !!data.hidden_gem;
   document.getElementById('together').checked = !!data.together;
+  // 음식 선호 표 (고른 게 있으면 펼쳐 둠)
+  foodPrefBox.set(data.food_pref);
+  if (data.food_pref) document.getElementById('food-details').open = true;
   // 출발 위치
   if (data.departure_lat != null) {
     presetDeparture({ address: data.departure_address || '저장한 출발 위치', lat: data.departure_lat, lng: data.departure_lng });

@@ -80,7 +80,7 @@ async function buildPrintMaps(trip) {
     function addStop(p, label, dark) { stops.push({ p: p, label: label, dark: dark }); }
     function pushPt(p, mode) { if (pts.length) modes.push(mode || null); pts.push({ lat: p.lat, lng: p.lng }); }
     if (!day.startPoint.isHome) { addStop(day.startPoint, day.startPoint.isStation ? '역' : '숙', true); pushPt(day.startPoint); }
-    day.items.forEach(function (it) { addStop(it.stop.p, it.stop.meal ? '🍴' : (di + 1) + '-' + (++n), false); pushPt(it.stop.p, it.moveMode); });
+    day.items.forEach(function (it) { addStop(it.stop.p, it.stop.meal ? stopIcon(it.stop) : (di + 1) + '-' + (++n), false); pushPt(it.stop.p, it.moveMode); });
     if (!day.endPoint.isHome) {
       if (!(day.endPoint.isStation && day.startPoint.isStation)) addStop(day.endPoint, day.endPoint.isStation ? '역' : '숙', true);
       pushPt(day.endPoint, day.backMode);

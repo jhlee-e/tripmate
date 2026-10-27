@@ -108,21 +108,25 @@ async function setupInvite() {
 // ---------- 2. 내 취향 ----------
 // 만든 사람: trips.tags를 고침 / 친구: trip_prefs에 내 줄을 넣거나 고침
 async function setupMine() {
-  let mine = trip.tags;
+  let mine = trip.tags, myFood = trip.food_pref || null;
   if (role !== 'owner') {
-    const res = await sb.from('trip_prefs').select('tags').eq('trip_id', trip.id).eq('user_id', me).maybeSingle();
+    const res = await sb.from('trip_prefs').select('*').eq('trip_id', trip.id).eq('user_id', me).maybeSingle();
     mine = res.data ? res.data.tags : [];
+    myFood = res.data ? res.data.food_pref || null : null;
   }
   const picker = makeTagPicker(document.getElementById('my-tags'), mine);
+  const food = makeFoodPref(document.getElementById('my-food'), myFood);   // 음식 선호 (2026-10-27, js/food-pref.js)
+  if (myFood) document.getElementById('my-food').parentElement.open = true;
   const msg = document.getElementById('my-msg');
   document.getElementById('my-save').addEventListener('click', async function () {
     const tags = picker.get();
     if (!tags.length) { msg.textContent = '취향을 한 개 이상 골라 주세요.'; return; }
+    const fp = foodPrefOrNull(food.get());
     const res = role === 'owner'
-      ? await sb.from('trips').update({ tags: tags }).eq('id', trip.id)
-      : await sb.from('trip_prefs').upsert({ trip_id: trip.id, user_id: me, tags: tags }, { onConflict: 'trip_id,user_id' });
-    if (res.error) return showError(res.error);
-    if (role === 'owner') trip.tags = tags;
+      ? await sb.from('trips').update({ tags: tags, food_pref: fp }).eq('id', trip.id)
+      : await sb.from('trip_prefs').upsert({ trip_id: trip.id, user_id: me, tags: tags, food_pref: fp }, { onConflict: 'trip_id,user_id' });
+    if (res.error) return showError(foodPrefError(res.error));
+    if (role === 'owner') { trip.tags = tags; trip.food_pref = fp; }
     msg.textContent = '저장했어요.';
     refresh();
   });
@@ -132,6 +136,7 @@ async function setupMine() {
 function setupProxy() {
   document.getElementById('proxy-card').hidden = false;
   const picker = makeTagPicker(document.getElementById('proxy-tags'), []);
+  const food = makeFoodPref(document.getElementById('proxy-food'), null);
   const nameInput = document.getElementById('proxy-name');
   const msg = document.getElementById('proxy-msg');
   document.getElementById('proxy-add').addEventListener('click', async function () {
@@ -139,18 +144,23 @@ function setupProxy() {
     const tags = picker.get();
     if (!name) { msg.textContent = '친구 이름을 적어 주세요.'; return; }
     if (!tags.length) { msg.textContent = '취향을 한 개 이상 골라 주세요.'; return; }
-    const { error } = await sb.from('trip_prefs').insert({ trip_id: trip.id, user_id: null, name: name, tags: tags });
-    if (error) return showError(error);
-    nameInput.value = ''; picker.set([]);
+    const { error } = await sb.from('trip_prefs').insert({ trip_id: trip.id, user_id: null, name: name, tags: tags, food_pref: foodPrefOrNull(food.get()) });
+    if (error) return showError(foodPrefError(error));
+    nameInput.value = ''; picker.set([]); food.set(null);
     msg.textContent = name + '님 취향을 넣었어요.';
     refresh();
   });
 }
 
+// food_pref 열이 없을 때 안내
+function foodPrefError(error) {
+  return error.message.indexOf('food_pref') !== -1 ? new Error('음식 선호를 저장하려면 Supabase에서 sql/add_food_pref.sql을 먼저 실행해 주세요.') : error;
+}
+
 // ---------- 모인 취향 목록 ----------
 async function refresh() {
   const [prefs, members] = await Promise.all([
-    sb.from('trip_prefs').select('id,user_id,name,tags,created_at').eq('trip_id', trip.id).order('created_at'),
+    sb.from('trip_prefs').select('*').eq('trip_id', trip.id).order('created_at'),
     sb.from('trip_members').select('user_id,created_at').eq('trip_id', trip.id).order('created_at')
   ]);
   if (prefs.error) {
@@ -158,8 +168,8 @@ async function refresh() {
     console.warn(prefs.error);
     return;
   }
-  const t = await sb.from('trips').select('tags').eq('id', trip.id).single();   // 만든 사람이 취향을 바꿨을 수 있음
-  if (t.data) trip.tags = t.data.tags;
+  const t = await sb.from('trips').select('*').eq('id', trip.id).single();   // 만든 사람이 취향을 바꿨을 수 있음
+  if (t.data) { trip.tags = t.data.tags; trip.food_pref = t.data.food_pref || null; }
   const memberIds = (members.data || []).map(function (m) { return m.user_id; });
   const ids = [trip.user_id].concat(memberIds);
   const u = await sb.from('users').select('id,nickname').in('id', ids);
@@ -171,12 +181,13 @@ async function refresh() {
   const list = document.getElementById('pref-list');
   list.innerHTML = '';
   let ready = 0, total = 0;
-  function row(name, tags, note, onDelete) {
+  function row(name, tags, note, onDelete, fp) {
     total++;
     if (tags && tags.length) ready++;
     const li = document.createElement('li');
     li.className = 'member-item';
-    li.innerHTML = '<span class="mb-name"></span><span class="mb-role">' + tagText(tags) + '</span>';
+    const ft = foodPrefText(fp);
+    li.innerHTML = '<span class="mb-name"></span><span class="mb-role">' + tagText(tags) + (ft ? '<br><small class="muted">🍽️ ' + esc(ft) + '</small>' : '') + '</span>';
     li.querySelector('.mb-name').textContent = name + (note ? ' ' + note : '');
     if (onDelete) {
       const b = document.createElement('button');
@@ -186,10 +197,10 @@ async function refresh() {
     }
     list.appendChild(li);
   }
-  row(names[trip.user_id] || '만든 사람', trip.tags, '(만든 사람' + (trip.user_id === me ? ', 나)' : ')'));
+  row(names[trip.user_id] || '만든 사람', trip.tags, '(만든 사람' + (trip.user_id === me ? ', 나)' : ')'), null, trip.food_pref);
   memberIds.forEach(function (id) {
     const p = byUser[id];
-    row(names[id] || '친구', p ? p.tags : [], id === me ? '(나)' : '(링크)');
+    row(names[id] || '친구', p ? p.tags : [], id === me ? '(나)' : '(링크)', null, p && p.food_pref);
   });
   const canEdit = role === 'owner' || role === 'editor';
   prefs.data.filter(function (p) { return !p.user_id; }).forEach(function (p) {
@@ -198,7 +209,7 @@ async function refresh() {
       const { error } = await sb.from('trip_prefs').delete().eq('id', p.id);
       if (error) return showError(error);
       refresh();
-    } : null);
+    } : null, p.food_pref);
   });
   document.getElementById('count-text').textContent = total + '명 중 ' + ready + '명 입력';
   trip._ready = ready; trip._total = total;

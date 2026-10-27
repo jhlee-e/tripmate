@@ -13,3 +13,6 @@ tools/__pycache__/
 tools/tago_key.txt
 
 __pycache__/
+
+# Claude 작업용 임시 패치 스크립트
+tools/patch/

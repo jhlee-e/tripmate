@@ -1,0 +1,18 @@
+[
+ {"query": "삼송빵집 본점", "region": "대구", "addr": "대구", "kind": "snack", "brand": "local", "cost": 6000, "basis": "1957년 대구 남문시장에서 시작한 대구 빵집", "source": "https://www.imaeil.com/page/view/2024042114550780281"},
+ {"query": "근대골목단팥빵 본점", "region": "대구", "addr": "대구", "kind": "snack", "brand": "local", "cost": 5000, "basis": "대구에서 시작한 단팥빵 가게", "source": "https://www.imaeil.com/page/view/2024042114550780281"},
+ {"query": "PNB풍년제과 본점", "region": "전주", "addr": "전주", "kind": "snack", "brand": "local", "cost": 6000, "basis": "전주 대표 빵집(초코파이)", "source": "https://www.siksinhot.com/theme/magazine/1964"},
+ {"query": "오미사꿀빵 본점", "region": "통영", "addr": "통영", "kind": "snack", "brand": "local", "cost": 6000, "basis": "통영 꿀빵", "source": "https://lady.khan.co.kr/cooking/article/201106071739471"},
+ {"query": "학화호두과자 본점", "region": "천안", "addr": "천안", "kind": "snack", "brand": "local", "cost": 6000, "basis": "천안 호두과자", "source": "https://lady.khan.co.kr/cooking/article/201106071739471"},
+ {"query": "만석닭강정 중앙시장", "region": "속초", "addr": "속초", "kind": "snack", "brand": "local", "cost": 10000, "basis": "속초 닭강정", "source": "https://lady.khan.co.kr/cooking/article/201106071739471"},
+ {"query": "삼진어묵 영도본점", "region": "부산", "addr": "영도구", "kind": "snack", "brand": "local", "cost": 5000, "basis": "70여 년 된 부산 어묵 가게", "source": "https://v.daum.net/v/20250326163002343"},
+ {"query": "화월당 순천", "region": "순천", "addr": "순천", "kind": "snack", "brand": "local", "cost": 6000, "basis": "전라도 지역 빵집(찹쌀떡·볼카스테라)", "source": "https://www.siksinhot.com/theme/magazine/1964"},
+ {"query": "스타벅스 경주대릉원점", "region": "경주", "addr": "첨성로", "kind": "cafe", "brand": "special", "cost": 6000, "basis": "대릉원 옆 한옥 분위기 매장", "source": "https://hotplacehunter.co.kr/?p=62094"},
+ {"query": "스타벅스 경동1960점", "region": "서울", "addr": "동대문구", "kind": "cafe", "brand": "special", "cost": 6000, "basis": "1960년대 폐극장을 고친 매장", "source": "https://hotplacehunter.co.kr/?p=62094"},
+ {"query": "스타벅스 환구단점", "region": "서울", "addr": "중구", "kind": "cafe", "brand": "special", "cost": 6000, "basis": "환구단 옆 기와 단층 건물, 좌식 좌석", "source": "https://hotplacehunter.co.kr/?p=62094"},
+ {"query": "스타벅스 더양평DTR점", "region": "양평", "addr": "양평", "kind": "cafe", "brand": "special", "cost": 6000, "basis": "남한강 전망 매장", "source": "https://hotplacehunter.co.kr/?p=62094"},
+ {"query": "스타벅스 더북한산점", "region": "고양", "addr": "", "kind": "cafe", "brand": "special", "cost": 6000, "basis": "북한산 전경 매장", "source": "https://v.daum.net/v/Ush6oW9HTk"},
+ {"query": "스타벅스 대구종로고택점", "region": "대구", "addr": "대구", "kind": "cafe", "brand": "special", "cost": 6000, "basis": "한옥 고택 매장", "source": "https://v.daum.net/v/Ush6oW9HTk"},
+ {"query": "스타벅스 더북한강R점", "region": "남양주", "addr": "", "kind": "cafe", "brand": "special", "cost": 7000, "basis": "북한강 전망, 반려견 동반 매장", "source": "https://v.daum.net/v/Ush6oW9HTk"},
+ {"query": "스타벅스 더여수돌산DT점", "region": "여수", "addr": "여수", "kind": "cafe", "brand": "special", "cost": 6000, "basis": "바다 모양 실내, 여수 특화 메뉴", "source": "https://v.daum.net/v/Ush6oW9HTk"}
+]

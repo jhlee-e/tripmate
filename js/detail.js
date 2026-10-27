@@ -145,7 +145,7 @@ function renderDay() {
       moveLine(it.moveMode, it.moveMin, it.moveKm, p, it.begin > it.arrive ? ' · ' + durationText(it.begin - it.arrive) + ' 기다림' : '', it.stop) +
       '<div class="tl-main">' +
         '<span class="drag-handle" title="끌어서 순서 바꾸기 (날짜 탭에 놓으면 그날로 옮김)">⠿</span>' +
-        '<span class="tl-no">' + (it.stop.meal ? '🍴' : visitNo) + '</span>' +
+        '<span class="tl-no">' + (it.stop.meal ? stopIcon(it.stop) : visitNo) + '</span>' +
         '<div class="tl-body">' +
           '<p class="tl-time">' + hhmm(it.begin) + ' – ' + hhmm(it.end) + (it.stop.meal ? ' · ' + esc(it.stop.meal) : '') +
             (it.queue ? ' <small>(줄 서기 약 ' + it.queue + '분 포함)</small>' : '') + '</p>' +
@@ -161,7 +161,7 @@ function renderDay() {
         '<button type="button" class="icon-btn" data-act="prev" title="전날 끝으로" ' + (curDay === 0 ? 'disabled' : '') + '>◀</button>' +
         '<button type="button" class="icon-btn" data-act="next" title="다음 날 처음으로" ' + (lastDay ? 'disabled' : '') + '>▶</button>' +
         '<button type="button" class="icon-btn" data-act="swap" title="다른 장소로 교체">⇄</button>' +
-        (isFood ? '<button type="button" class="icon-btn" data-act="remeal" title="다른 종류 메뉴로 다시 추천">🔄</button>' : '') +
+        (isFood && !isSweetStop(it.stop) ? '<button type="button" class="icon-btn" data-act="remeal" title="다른 종류 메뉴로 다시 추천">🔄</button>' : '') +
         '<button type="button" class="icon-btn danger" data-act="del" title="삭제">✕</button>' +
       '</div>' +
       '<div class="swap-box" hidden></div>';
@@ -342,7 +342,8 @@ function openSwap(i, li) {
   const stop = plan.days[curDay].stops[i];
   const used = usedIds();
   const candidates = places.filter(function (p) {
-    return p.type === stop.p.type && p.recommend && !p.ferry && !used.has(p.id) && !isChain(p.name) && (p.type !== '명소' || p.stayMin > 0);
+    return p.type === stop.p.type && p.recommend && !p.ferry && !used.has(p.id) && !isChain(p) && foodVerdict(p, trip) !== 'no' &&
+      (p.type !== '명소' || p.stayMin > 0) && (p.type !== '식당' || isSweetStop(stop) === isSweet(p));   // 카페·간식 칸은 카페·간식끼리
   }).map(function (p) { return { p: p, km: distanceKm(stop.p, p) }; })
     .sort(function (a, b) { return a.km - b.km; }).slice(0, 15);
   const select = document.createElement('select');
@@ -365,13 +366,13 @@ function openSwap(i, li) {
 
 // 아침 식당 후보: 추천 후보 식사 식당 (체인 제외)
 function mealRestaurants() {
-  return places.filter(function (p) { return p.type === '식당' && p.recommend && !p.ferry && !isChain(p.name) && foodKind(p) === 'meal'; });
+  return places.filter(function (p) { return p.type === '식당' && p.recommend && !p.ferry && !isChain(p) && foodVerdict(p, trip) !== 'no' && foodKind(p) === 'meal'; });
 }
 
-// 식당이 디저트·카페면 '디저트', 아니면 원래 끼니 이름(디저트였으면 '식사')
+// 식당이 카페·간식이면 '카페'·'간식', 아니면 원래 끼니 이름(카페·간식 칸이었으면 '식사')
 function mealLabel(p, current) {
-  if (foodKind(p) === 'dessert') return '디저트';
-  return !current || current === '디저트' ? '식사' : current;
+  if (isSweet(p)) return foodKind(p) === 'cafe' ? '카페' : '간식';
+  return !current || isSweetStop({ meal: current }) ? '식사' : current;
 }
 
 // 🔄 다른 메뉴로 다시 추천: 지금 메뉴 종류와 '다른 종류'의 식사 식당 중에서
@@ -387,7 +388,7 @@ function remeal(i) {
   const prev = i > 0 ? day.stops[i - 1].p : timeline.days[curDay].startPoint;
   const from = prev.isHome ? stop.p : prev;
   const list = places.filter(function (p) {
-    return p.type === '식당' && p.recommend && !p.ferry && !isChain(p.name) && foodKind(p) === 'meal' && cuisineOf(p) !== current;
+    return p.type === '식당' && p.recommend && !p.ferry && !isChain(p) && foodVerdict(p, trip) !== 'no' && foodKind(p) === 'meal' && cuisineOf(p) !== current;
   });
   const pick = pickRestaurant(plan.type, list, from, usedIds(), eaten, current);
   if (!pick) { showError(new Error('근처에 다른 종류의 식당이 없어요.')); return false; }
@@ -478,9 +479,10 @@ document.getElementById('add-input').addEventListener('input', function (e) {
   }).sort(function (a, b) { return (b._s || 0) - (a._s || 0); }).slice(0, 10).forEach(function (p) {
     const li = document.createElement('li');
     li.innerHTML = '<span></span><button type="button" class="small-btn">' + (curDay + 1) + '일차에 추가</button>';
-    li.querySelector('span').textContent = p.name + ' (' + (p.type === '식당' ? cuisineOf(p) : p.type) + (p.cost ? ' · ' + won(p.cost) : '') + ')';
+    li.querySelector('span').textContent = p.name + ' (' + (p.type === '식당' ? cuisineOf(p) : p.type) + (p.cost ? ' · ' + won(p.cost) : '') + ')' +
+      (foodVerdict(p, trip) === 'no' ? ' ⚠️ 음식 선호(못 먹음)에 걸려요' : foodVerdict(p, trip) === 'dislike' ? ' · 안 먹는 음식일 수 있어요' : '');
     li.querySelector('button').addEventListener('click', function () {
-      const stop = p.type === '식당' ? { p: p, stay: 60, meal: mealLabel(p, '식사') } : { p: p, stay: p.stayMin > 0 ? p.stayMin : 60 };
+      const stop = p.type === '식당' ? (isSweet(p) ? sweetStop(p) : { p: p, stay: 60, meal: mealLabel(p, '식사') }) : { p: p, stay: p.stayMin > 0 ? p.stayMin : 60 };
       plan.days[curDay].stops.push(stop);
       e.target.value = '';
       out.innerHTML = '';
@@ -555,7 +557,7 @@ function renderMap() {
   else if (!day.startPoint.isHome) { addPoint(day.startPoint, '숙', 'lodging'); pushPt(day.startPoint); }
   let n = 0;
   day.items.forEach(function (it) {
-    addPoint(it.stop.p, it.stop.meal ? '🍴' : String(++n), it.stop.meal ? 'meal' : 'visit');
+    addPoint(it.stop.p, it.stop.meal ? stopIcon(it.stop) : String(++n), it.stop.meal ? 'meal' : 'visit');
     pushPt(it.stop.p, it.moveMode, it.stop);
   });
   if (!day.endPoint.isHome) {
