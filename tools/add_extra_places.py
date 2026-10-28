@@ -48,10 +48,14 @@ def main():
         add.setdefault(it['region'], []).append(p)
         print(it['region'], '·', p['name'], '·', p['address'])
     json.dump(found, open(CACHE, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
-    for region, ps in add.items():
-        f = os.path.join(ROOT, regions[region]['file'])
-        places = [p for p in json.load(open(f, encoding='utf-8')) if not (90000000 < int(p['id']) < 90010000 if str(p['id']).isdigit() else False)]
-        json.dump(places + ps, open(f, 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))
+    # 예전에 넣은 가게(id 9000xxxx)는 모든 지역 파일에서 지우고 새로 넣음 (지역을 바꿨을 때 옛 지역에 남지 않게)
+    is_extra = lambda p: str(p['id']).isdigit() and 90000000 < int(p['id']) < 90010000
+    for region, info in regions.items():
+        f = os.path.join(ROOT, info['file'])
+        places = json.load(open(f, encoding='utf-8'))
+        if not any(is_extra(p) for p in places) and region not in add: continue
+        places = [p for p in places if not is_extra(p)] + add.get(region, [])
+        json.dump(places, open(f, 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))
     print('추가', sum(len(v) for v in add.values()), '곳')
 
 if __name__ == '__main__':

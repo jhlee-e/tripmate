@@ -11,7 +11,7 @@
  {"query": "스타벅스 경동1960점", "region": "서울", "addr": "동대문구", "kind": "cafe", "brand": "special", "cost": 6000, "basis": "1960년대 폐극장을 고친 매장", "source": "https://hotplacehunter.co.kr/?p=62094"},
  {"query": "스타벅스 환구단점", "region": "서울", "addr": "중구", "kind": "cafe", "brand": "special", "cost": 6000, "basis": "환구단 옆 기와 단층 건물, 좌식 좌석", "source": "https://hotplacehunter.co.kr/?p=62094"},
  {"query": "스타벅스 더양평DTR점", "region": "양평", "addr": "양평", "kind": "cafe", "brand": "special", "cost": 6000, "basis": "남한강 전망 매장", "source": "https://hotplacehunter.co.kr/?p=62094"},
- {"query": "스타벅스 더북한산점", "region": "고양", "addr": "", "kind": "cafe", "brand": "special", "cost": 6000, "basis": "북한산 전경 매장", "source": "https://v.daum.net/v/Ush6oW9HTk"},
+ {"query": "스타벅스 더북한산점", "region": "서울", "addr": "은평구", "kind": "cafe", "brand": "special", "cost": 6000, "basis": "북한산 전경 매장", "source": "https://v.daum.net/v/Ush6oW9HTk"},
  {"query": "스타벅스 대구종로고택점", "region": "대구", "addr": "대구", "kind": "cafe", "brand": "special", "cost": 6000, "basis": "한옥 고택 매장", "source": "https://v.daum.net/v/Ush6oW9HTk"},
  {"query": "스타벅스 더북한강R점", "region": "남양주", "addr": "", "kind": "cafe", "brand": "special", "cost": 7000, "basis": "북한강 전망, 반려견 동반 매장", "source": "https://v.daum.net/v/Ush6oW9HTk"},
  {"query": "스타벅스 더여수돌산DT점", "region": "여수", "addr": "여수", "kind": "cafe", "brand": "special", "cost": 6000, "basis": "바다 모양 실내, 여수 특화 메뉴", "source": "https://v.daum.net/v/Ush6oW9HTk"}
