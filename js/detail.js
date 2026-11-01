@@ -470,6 +470,8 @@ document.getElementById('day-start').addEventListener('change', function (e) {
 });
 
 // 장소 추가: 이름 검색
+// 추천에서 빠진 장소인지 (recommend: false = 비여행지로 분류, 또는 체인점) → 1이면 검색 결과 맨 아래에 표시만
+function excludedPlace(p) { return (p.recommend === false || isChain(p)) ? 1 : 0; }
 document.getElementById('add-input').addEventListener('input', function (e) {
   const q = e.target.value.trim();
   const out = document.getElementById('add-results');
@@ -478,10 +480,14 @@ document.getElementById('add-input').addEventListener('input', function (e) {
   const used = usedIds();
   places.filter(function (p) {
     return (p.type === '명소' || p.type === '식당') && !p.ferry && !used.has(p.id) && p.name.indexOf(q) !== -1;
-  }).sort(function (a, b) { return (b._s || 0) - (a._s || 0); }).slice(0, 10).forEach(function (p) {
+  }).sort(function (a, b) {
+    // 추천에서 빠진 장소(체인점·비여행지)는 넣을 수는 있지만 맨 아래로 (2026-11-01 이재훈 결정)
+    return (excludedPlace(a) - excludedPlace(b)) || ((b._s || 0) - (a._s || 0));
+  }).slice(0, 10).forEach(function (p) {
     const li = document.createElement('li');
     li.innerHTML = '<span></span><button type="button" class="small-btn">' + (curDay + 1) + '일차에 추가</button>';
     li.querySelector('span').textContent = p.name + ' (' + (p.type === '식당' ? cuisineOf(p) : p.type) + (p.cost ? ' · ' + won(p.cost) : '') + ')' +
+      (excludedPlace(p) ? ' · 추천 제외 장소(체인점·비여행지)' : '') +
       (foodVerdict(p, trip) === 'no' ? ' ⚠️ 음식 선호(못 먹음)에 걸려요' : foodVerdict(p, trip) === 'dislike' ? ' · 안 먹는 음식일 수 있어요' : '');
     li.querySelector('button').addEventListener('click', function () {
       const stop = p.type === '식당' ? (isSweet(p) ? sweetStop(p) : { p: p, stay: 60, meal: mealLabel(p, '식사') }) : { p: p, stay: p.stayMin > 0 ? p.stayMin : 60 };
