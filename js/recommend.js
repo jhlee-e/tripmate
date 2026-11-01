@@ -790,7 +790,7 @@ function districtBase(usableAll, places, trip) {
 }
 
 // 예산 상한 이하 후보만 고름. 부족하면 상한을 10%씩 올려 다시 (최대 3배까지 — 2026-10-07 변경, 예산이 빠듯해도 여행지 5곳을 보여 주기 위함)
-// relax가 1보다 크면 화면에 '예산 상한을 올려서 찾음'을 표시하고, 총비용이 최대 예산을 넘으면 빨간색으로 경고
+// relax가 1보다 크면 화면에 '어느 항목 상한을 얼마까지 올렸는지'(pool.relaxItems)를 표시하고, 총비용이 최대 예산을 넘으면 빨간색으로 경고
 // 출력: { attractions, restaurants, lodgings, relax } 또는 null(예산 조정 필요)
 function preparePool(trip, places) {
   const caps = budgetCaps(trip);
@@ -801,8 +801,10 @@ function preparePool(trip, places) {
   const month = tripMonth(trip);
   base.forEach(function (p) { p._s = withPopularity(placeTagScore(p.tags, trip), p.popularity, trip) * infoMultiplier(p, trip) * seasonMultiplier(p, month) * foodMultiplier(p, trip); });
 
+  // 항목별로 처음 충분해진 배율 (화면 안내용: 실제로 모자랐던 항목만 '상한을 올림'으로 표시 — 2026-11-01 메시지 오류 수정)
+  const firstOk = { 명소: null, 식사: null, 숙소: null };
   for (let step = 0; step <= 20; step++) {
-    const relax = 1 + step * 0.1;
+    const relax = Math.round((1 + step * 0.1) * 10) / 10;
     const pool = { attractions: [], restaurants: [], sweets: [], lodgings: [], relax: relax };
     base.forEach(function (p) {
       if (p.type === '명소' && p.cost <= caps.admission * relax) pool.attractions.push(p);
@@ -810,10 +812,17 @@ function preparePool(trip, places) {
       else if (p.type === '식당' && isSweet(p) && p.cost <= caps.meal * relax) pool.sweets.push(p);                   // 카페·간식 칸 후보
       else if (p.type === '숙소' && lodgingAvgRoomNight(p, trip) <= caps.lodging * relax) pool.lodgings.push(p);   // 객실·날짜별 요금 평균
     });
-    const enough = pool.attractions.length >= tempo.count * trip.days &&
-                   pool.restaurants.length >= 2 * trip.days &&
-                   (nights === 0 || pool.lodgings.length > 0);
+    const ok = { 명소: pool.attractions.length >= tempo.count * trip.days,
+                 식사: pool.restaurants.length >= 2 * trip.days,
+                 숙소: nights === 0 || pool.lodgings.length > 0 };
+    Object.keys(ok).forEach(function (k) { if (ok[k] && firstOk[k] === null) firstOk[k] = relax; });
+    const enough = ok.명소 && ok.식사 && ok.숙소;
     if (enough) {
+      // 상한을 올린 항목: [{ item: '식사', from: 원래 상한, to: 올린 상한, pct }]
+      const capOf = { 명소: caps.admission, 식사: caps.meal, 숙소: caps.lodging };
+      pool.relaxItems = Object.keys(firstOk).filter(function (k) { return firstOk[k] > 1; }).map(function (k) {
+        return { item: k, from: capOf[k], to: capOf[k] * firstOk[k], pct: Math.round((firstOk[k] - 1) * 100) };
+      });
       // 예산 맞추기(fitBudget)에서 쓸, 상한 없이 쓸 수 있는 전체 후보
       pool.all = {
         attractions: base.filter(function (p) { return p.type === '명소'; }),
@@ -1141,7 +1150,7 @@ function buildPlan(type, trip, pool) {
     days.push({ start: dayStart, stops: stops });
   }
   if (!sigFoodDone) forceSignatureFood();
-  return { type: type, region: pool.region, lodging: lodging, days: days, relax: pool.relax };
+  return { type: type, region: pool.region, lodging: lodging, days: days, relax: pool.relax, relaxItems: pool.relaxItems || [] };
 
   // 끝까지 대표 먹거리를 못 넣었으면: 대표 식당과 가장 가까운 끼니 하나를 바꿈 (그날 문 연 곳 우선)
   function forceSignatureFood() {
