@@ -90,9 +90,13 @@ function renderCard(trip, item, order, round) {
     .filter(function (v) { return withinBudgetLimit(trip, v); });   // 비교 화면에서도 빠지는 일정안(최대 예산 +20% 초과)은 범위에서 제외
   const low = Math.min.apply(null, totals), high = Math.max.apply(null, totals);
   // 대표 사진: 취향 점수 높은 명소 중 사진 있는 곳
-  const cover = item.places
-    .filter(function (p) { return p.type === '명소' && p.photo && p.recommend; })
-    .sort(function (a, b) { return (b._s || 0) - (a._s || 0); })[0];
+  // 구·군 지역('서울 종로구')은 장소 배열이 광역시 전체라서, 그 구 안의 명소에서만 고름
+  //   (2026-11-01 수정: 종로구 카드에 동대문구 경동시장이 대표로 나오던 오류)
+  const district = item.places.district;
+  const coverPool = item.places.filter(function (p) {
+    return p.type === '명소' && p.photo && p.recommend && (!district || p.district === district);
+  });
+  const cover = coverPool.sort(function (a, b) { return (b._s || 0) - (a._s || 0); })[0];
   // 추천 이유: 고른 취향별 지역 평균 점수
   // 함께 정하기면 모두가 고른 태그를 합쳐서 보여 줌
   const shownTags = isGroup(trip)
