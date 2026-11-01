@@ -737,6 +737,9 @@ function dishesOf(r) {
 // 입력: 장소, 그 지역 대표 목록 { foods, spots } / 출력: 대표 항목 이름(예: '게국지') 또는 null
 function signatureOf(p, sig) {
   if (!sig || !p || !p.name) return null;
+  // 추천에서 빠진 장소(체인점·비여행지)는 이름에 키워드가 있어도 대표로 보지 않음
+  //   (2026-11-01 수정: 'LG전자 베스트샵 모란점'이 키워드 '모란' 때문에 '대표 할거리 · 모란민속5일장'으로 표시되던 오류)
+  if (p.recommend === false || isChain(p)) return null;
   const list = p.type === '식당' ? sig.foods : p.type === '명소' ? sig.spots : null;
   if (!list) return null;
   for (const it of list) {
