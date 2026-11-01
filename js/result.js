@@ -103,13 +103,15 @@ function renderCard(trip, item, order, round) {
     ? trip.group.reduce(function (all, m) { m.tags.forEach(function (t) { if (all.indexOf(t) === -1) all.push(t); }); return all; }, [])
     : trip.tags;
   const tagText = shownTags.map(function (t) { return t + ' ' + info.tagAvg[t].toFixed(1); }).join(' · ');
-  // 상한을 올린 항목만 안내 (총예산은 그대로이고, 항목별 1회 상한만 넓힘 — 2026-11-01 수정)
-  const RELAX_NAME = { 명소: '명소 1곳 입장료(1인)', 식사: '한 끼 식비(1인)', 숙소: '방 1개 1박 숙박비' };
-  const relaxItems = item.plans.A.relaxItems || [];
+  // 항목별 상한을 넓힌 안내는 '예산 초과'일 때만 이유로 보여 줌 (2026-11-01 수정)
+  //   식당 비용 데이터의 중앙값이 1만 2천 원이라 한 끼 상한(식비 30% ÷ 끼니 수)이 거의 항상 모자라 넓혀짐
+  //   → 총비용이 최대 예산 안이면 사용자에게 문제가 없으므로 표시하지 않음
+  const RELAX_NAME = { 명소: '명소 입장료(1인)', 식사: '한 끼 식비(1인)', 숙소: '1박 숙박비(방 1개)' };
+  const relaxItems = item.fits ? [] : (item.plans.A.relaxItems || []);
   const relax = relaxItems.length
-    ? '<li class="warn">' + relaxItems.map(function (x) {
-        return RELAX_NAME[x.item] + ' 기준 ' + won(Math.round(x.from / 100) * 100) + '로는 후보가 모자라 ' + won(Math.round(x.to / 100) * 100) + '까지 넓혀 찾았어요';
-      }).join(' · ') + ' (총예산은 그대로)</li>'
+    ? '<li class="warn">예산 초과 이유: ' + relaxItems.map(function (x) {
+        return RELAX_NAME[x.item] + ' ' + won(Math.round(x.from / 100) * 100) + ' 안에서는 후보가 모자라 ' + won(Math.round(x.to / 100) * 100) + '까지 넣었어요';
+      }).join(' · ') + '</li>'
     : '';
 
   const card = document.createElement('a');
