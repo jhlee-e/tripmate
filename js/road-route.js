@@ -89,6 +89,43 @@ function learnCarLegs(timeline, trip) {
   })).then(function (r) { return r.reduce(function (a, b) { return a + b; }, 0); });
 }
 
+// ---------- 대중교통: 모든 날짜의 실제 시간·요금을 미리 받기 (2026-11-01) ----------
+// 입력: 시간표(computeTimeline 결과), 여행, 일정(plan) / 출력: Promise<새로 알게 된 것이 있는지 true/false> — transitLegs에 채움
+//   일정 상세는 지금 보는 날짜만 지도에 그려서, 다른 날짜는 추정 요금으로 남아 여행 정보 화면과 총비용이 달랐음
+//   (예: 성남 여행 353,600원 / 355,300원) → 지도에 그리지 않고 날짜마다 그리기 때와 같은 점·구간 방법으로 받아 둠
+//   대중교통 경로가 없는 구간은 지도 그리기 때와 똑같이 걷기(autoWalk)로 표시
+function learnTransitLegs(timeline, trip, plan) {
+  if (trip.transport !== '대중교통' || typeof transitLegs === 'undefined') return Promise.resolve(false);
+  return Promise.all(timeline.days.map(function (day, di) {
+    const pts = [], modes = [], refs = [];
+    function pushPt(p, mode, ref) {
+      if (pts.length) { modes.push(mode || null); refs.push(ref); }
+      pts.push({ lat: p.lat, lng: p.lng });
+    }
+    if (day.startPoint.isStation || !day.startPoint.isHome) pushPt(day.startPoint);
+    day.items.forEach(function (it) { pushPt(it.stop.p, it.moveMode, it.stop); });
+    if (!day.endPoint.isHome) {
+      const dayPlan = plan.days[di];
+      if (!dayPlan.backStop) dayPlan.backStop = {};
+      pushPt(day.endPoint, day.backMode, dayPlan.backStop);
+    }
+    if (pts.length < 2) return false;
+    return fetchRoadPath(pts, '/api/transit', modes).then(function (j) {
+      let changed = false;
+      (j.legs || []).forEach(function (leg, i) {
+        if (leg.mode === 'transit' || leg.noTransit) {
+          const k = legKey(pts[i], pts[i + 1]);
+          if (!transitLegs[k]) changed = true;
+          transitLegs[k] = { time: leg.time, fare: leg.fare, noTransit: !!leg.noTransit };
+        }
+        const ref = refs[i];
+        if (leg.noTransit && ref && !ref.legMode && !ref.autoWalk) { ref.autoWalk = true; changed = true; }
+      });
+      return changed;
+    }).catch(function () { return false; });
+  })).then(function (r) { return r.some(Boolean); });
+}
+
 // 반환: { remove() } — 화면을 다시 그릴 때 remove()로 지움
 function drawRoute(map, points, color, onResult, transport, modes) {
   const lines = [];
