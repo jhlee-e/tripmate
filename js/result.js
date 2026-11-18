@@ -133,6 +133,22 @@ function renderCard(trip, item, order, round) {
         ' <small>/ 최대 예산 ' + won(trip.budget_max) + '</small></p>' +
     '</div>';
   document.getElementById('region-cards').appendChild(card);
+  mustPickerFor(trip, r.region, item.places, card.href);
+}
+
+// 지역 카드 아래 '꼭 가고 싶은 명소 고르기' (2026-11-18 피드백 반영 — 최세민 1번)
+// 입력: trip, 지역 이름, 그 지역 장소 배열, 일정안 비교 주소 / 출력: 카드 바로 아래 접힌 상자 — 펼치면 명소 목록(js/must-pick.js)
+function mustPickerFor(trip, region, places, plansUrl) {
+  const det = document.createElement('details');
+  det.className = 'card must-card';
+  const n = mustIds(trip, region).length;
+  det.innerHTML = '<summary>📍 ' + esc(region) + '에서 꼭 가고 싶은 명소 고르기' + (n ? ' <small>(' + n + '곳 고름)</small>' : ' <small>(선택)</small>') + '</summary><div></div>';
+  det.addEventListener('toggle', function () {
+    if (!det.open || det.dataset.ready) return;
+    det.dataset.ready = '1';
+    makeMustPicker(det.querySelector('div'), trip, region, places, function () { location.href = plansUrl; });
+  });
+  document.getElementById('region-cards').appendChild(det);
 }
 
 start();

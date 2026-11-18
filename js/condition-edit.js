@@ -23,6 +23,10 @@ async function setupEditMode() {
   startInput.value = data.start_date;
   endInput.value = data.end_date;
   endInput.min = data.start_date;
+  // 출발·집 도착 시각 (분 → 'HH:MM', 2026-11-18 추가)
+  const hm = function (m) { return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'); };
+  if (data.start_time != null) document.getElementById('start-time').value = hm(data.start_time);
+  document.getElementById('end-time').value = data.end_time != null ? hm(data.end_time) : '';
   checkDates();
   // 예산 (쉼표 넣어서)
   [['budget-min', data.budget_min], ['budget-max', data.budget_max]].forEach(function (b) {

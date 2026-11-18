@@ -1,8 +1,9 @@
 // 음식 선호 표 (2026-10-27 이재훈 요청) — 조건 입력·함께 정하기 화면이 같이 씀
 // 입력: 표를 넣을 상자(element), 처음 값(trips.food_pref / trip_prefs.food_pref, 없으면 null)
 // 출력: { get() → food_pref 객체, set(값) }
-//   food_pref = { coffee: true|false, allergy: [키], no: [키], dislike: [키], diet: ''|'pesco'|'lacto'|'vegan', noWords: [단어], dislikeWords: [단어] }
-// 추천에서 쓰는 방법(알레르기·못 먹음 = 제외, 안 먹음 = 감점)은 js/recommend.js의 FOOD_RULES·foodVerdict
+//   food_pref = { coffee: true|false, allergy: [키], no: [키], dislike: [키], like: [키], diet: ''|'pesco'|'lacto'|'vegan', noWords: [단어], dislikeWords: [단어], likeWords: [단어] }
+//   like·likeWords = 먹고 싶은 음식 (2026-11-18 피드백 반영 — 조정인 3번 '먹고 싶은 음식도 설정')
+// 추천에서 쓰는 방법(알레르기·못 먹음 = 제외, 안 먹음 = 감점, 먹고 싶어요 = 가산)은 js/recommend.js의 FOOD_RULES·foodVerdict
 // 알레르기 항목은 식품 알레르기 표시 대상 중 가게 이름으로 알아볼 수 있는 것만 골랐음 (Claude 판단)
 
 const FOOD_ALLERGY_ITEMS = [
@@ -20,7 +21,7 @@ const FOOD_DIETS = [
   ['vegan', '비건 — 우유·달걀·꿀까지 안 먹어요']
 ];
 
-function emptyFoodPref() { return { coffee: true, allergy: [], no: [], dislike: [], diet: '', noWords: [], dislikeWords: [] }; }
+function emptyFoodPref() { return { coffee: true, allergy: [], no: [], dislike: [], like: [], diet: '', noWords: [], dislikeWords: [], likeWords: [] }; }
 
 // 화면 요약 글자 ('커피 안 마심 · 알레르기: 갑각류 · 못 먹음: 회·날것 · 안 먹음: 매운 음식') — 없으면 ''
 function foodPrefText(fp) {
@@ -31,6 +32,8 @@ function foodPrefText(fp) {
   if (fp.allergy && fp.allergy.length) parts.push('알레르기: ' + fp.allergy.map(function (k) { return name(FOOD_ALLERGY_ITEMS, k); }).join(', '));
   const no = (fp.no || []).map(function (k) { return name(FOOD_KIND_ITEMS, k); }).concat(fp.noWords || []);
   const dis = (fp.dislike || []).map(function (k) { return name(FOOD_KIND_ITEMS, k); }).concat(fp.dislikeWords || []);
+  const like = (fp.like || []).map(function (k) { return name(FOOD_KIND_ITEMS, k); }).concat(fp.likeWords || []);
+  if (like.length) parts.push('먹고 싶음: ' + like.join(', '));
   if (no.length) parts.push('못 먹음: ' + no.join(', '));
   if (dis.length) parts.push('안 먹음: ' + dis.join(', '));
   if (fp.diet) parts.push(name(FOOD_DIETS, fp.diet).split(' — ')[0]);
@@ -49,16 +52,17 @@ function makeFoodPref(box, init) {
       return '<label><input type="checkbox" data-allergy="' + it[0] + '"> ' + it[1] + '</label>';
     }).join('') + '</div>' +
     '<p class="fp-label">🍽️ 음식 종류</p>' +
-    '<table class="fp-table"><thead><tr><th></th><th>괜찮아요</th><th>안 먹어요<small>뒤로 미룸</small></th><th>못 먹어요<small>빼기</small></th></tr></thead><tbody>' +
+    '<table class="fp-table"><thead><tr><th></th><th>먹고 싶어요<small>먼저 추천</small></th><th>괜찮아요</th><th>안 먹어요<small>뒤로 미룸</small></th><th>못 먹어요<small>빼기</small></th></tr></thead><tbody>' +
       FOOD_KIND_ITEMS.map(function (it) {
         const n = uid + '-' + it[0];
-        return '<tr><td>' + it[1] + '</td>' + ['', 'dislike', 'no'].map(function (v) {
+        return '<tr><td>' + it[1] + '</td>' + ['like', '', 'dislike', 'no'].map(function (v) {
           return '<td><input type="radio" name="' + n + '" value="' + v + '" data-kind="' + it[0] + '"' + (v === '' ? ' checked' : '') + ' aria-label="' + it[1] + '"></td>';
         }).join('') + '</tr>';
       }).join('') + '</tbody></table>' +
     '<label class="fp-label" for="' + uid + '-diet">🥗 채식 단계</label>' +
     '<select id="' + uid + '-diet">' + FOOD_DIETS.map(function (d) { return '<option value="' + d[0] + '">' + d[1] + '</option>'; }).join('') + '</select>' +
     '<p class="fp-label">✍️ 직접 입력 <small class="label-note">쉼표로 나눠서 · 가게 이름에 그 말이 들어간 곳을 걸러요</small></p>' +
+    '<input type="text" id="' + uid + '-like" placeholder="먹고 싶은 음식 (예: 막국수, 순두부, 회)">' +
     '<input type="text" id="' + uid + '-no" placeholder="못 먹는 음식 (예: 오이, 가지)">' +
     '<input type="text" id="' + uid + '-dislike" placeholder="안 먹는 음식 (예: 고수)">' +
     '<p class="helper-text muted fp-note">가게 메뉴 정보가 없어 가게 이름·분류로만 걸러요. 이름에 안 드러나는 재료(국물·소스 등)까지는 알 수 없으니, 알레르기가 있으면 꼭 가게에 직접 확인해 주세요.</p>';
@@ -74,6 +78,7 @@ function makeFoodPref(box, init) {
       if (r.checked && r.value) fp[r.value].push(r.dataset.kind);
     });
     fp.diet = $('#' + uid + '-diet').value;
+    fp.likeWords = words($('#' + uid + '-like').value);
     fp.noWords = words($('#' + uid + '-no').value);
     fp.dislikeWords = words($('#' + uid + '-dislike').value);
     return fp;
@@ -83,10 +88,11 @@ function makeFoodPref(box, init) {
     box.querySelector('input[name="' + uid + '-coffee"][value="' + (fp.coffee === false ? 'no' : 'yes') + '"]').checked = true;
     box.querySelectorAll('[data-allergy]').forEach(function (c) { c.checked = fp.allergy.indexOf(c.dataset.allergy) !== -1; });
     FOOD_KIND_ITEMS.forEach(function (it) {
-      const v = fp.no.indexOf(it[0]) !== -1 ? 'no' : fp.dislike.indexOf(it[0]) !== -1 ? 'dislike' : '';
+      const v = fp.no.indexOf(it[0]) !== -1 ? 'no' : fp.dislike.indexOf(it[0]) !== -1 ? 'dislike' : fp.like.indexOf(it[0]) !== -1 ? 'like' : '';
       box.querySelector('input[name="' + uid + '-' + it[0] + '"][value="' + v + '"]').checked = true;
     });
     $('#' + uid + '-diet').value = fp.diet || '';
+    $('#' + uid + '-like').value = fp.likeWords.join(', ');
     $('#' + uid + '-no').value = fp.noWords.join(', ');
     $('#' + uid + '-dislike').value = fp.dislikeWords.join(', ');
   }
@@ -96,5 +102,5 @@ function makeFoodPref(box, init) {
 
 // 저장할 값: 아무것도 안 골랐으면(커피 마심 + 빈칸) null
 function foodPrefOrNull(fp) {
-  return fp && (fp.coffee === false || fp.allergy.length || fp.no.length || fp.dislike.length || fp.diet || fp.noWords.length || fp.dislikeWords.length) ? fp : null;
+  return fp && (fp.coffee === false || fp.allergy.length || fp.no.length || fp.dislike.length || fp.like.length || fp.diet || fp.noWords.length || fp.dislikeWords.length || fp.likeWords.length) ? fp : null;
 }

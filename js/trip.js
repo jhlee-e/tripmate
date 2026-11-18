@@ -62,7 +62,8 @@ async function start() {
 
 function renderInfo(trip, role) {
   const rows = [
-    ['날짜', trip.start_date + ' ~ ' + trip.end_date + ' (' + trip.days + '일)'],
+    ['날짜', trip.start_date + ' ~ ' + trip.end_date + ' (' + trip.days + '일)' +
+      (trip.start_time != null ? ' · ' + hhmm(trip.start_time) + ' 출발' : '') + (trip.end_time != null ? ' · ' + hhmm(trip.end_time) + '까지 집 도착' : '')],
     ['인원', peopleText(trip) + (trip.days > 1 ? ' · 방 ' + (trip.rooms || 1) + '개' : '') + (trip.pet ? ' · 반려동물 동반' : '')],
     ['음식', foodPrefText(trip.food_pref) ? foodPrefText(trip.food_pref) + ' (가게 이름으로만 거르니 메뉴는 직접 확인)' : '따로 없음'],
     ['출발지', trip.departure_address || '-'],
@@ -153,6 +154,8 @@ function renderSchedule(trip, plan, t) {
       html += '<li class="mini-item" data-day="' + di + '" data-i="' + i + '"><span class="mini-time">' + hhmm(it.begin) + '</span>' +
         '<span class="mini-no">' + label + '</span><span class="mini-name">' + esc(p.name) +
           (sigText ? ' <span class="sig-badge">★ ' + esc(sigText) + '</span>' : '') +
+          (foodVerdict(p, trip) === 'like' ? ' <span class="like-badge">😋 먹고 싶은 음식</span>' : '') +
+          (isMustPlace(p, trip, plan.region) ? ' <span class="must-badge">📍 꼭 갈 곳</span>' : '') +
           (it.hoursIssue ? ' <span class="over-text" title="' + esc(it.hoursIssue) + '">⚠ ' + esc(it.hoursIssue) + '</span>' : '') +
           (it.queue ? ' <small class="muted">줄 약 ' + it.queue + '분</small>' : '') + '</span>' +
         '<span class="mini-cost">' + (it.cost ? won(it.cost) : '') + '</span></li>';

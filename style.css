@@ -808,3 +808,28 @@ body.print-layout .print-map { border: 1px solid #ccc; border-radius: 8px; }
 .food-pref .fp-table td:first-child { text-align: left; }
 .food-pref select, .food-pref input[type="text"] { width: 100%; margin-bottom: 6px; }
 .food-pref .fp-note { font-size: 0.78rem; }
+
+/* 입력 화면 넓게 (피드백: 노트북에서 입력 폼 폭이 좁음) — 760px 이상 화면에서만 넓히고, 모바일은 그대로 */
+@media (min-width: 760px) {
+  .page.form-page { max-width: 860px; }
+  .field-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 0 20px; }
+}
+
+/* hidden 속성이 붙은 요소는 언제나 숨김 (피드백: 공개 코스 목록 아래 빈 흰 칸)
+   .detail-layout 처럼 display: grid 를 준 클래스가 hidden 을 덮어써서, 숨겨야 할 '코스 하나' 화면의 빈 카드가 목록 아래에 보였음 */
+[hidden] { display: none !important; }
+.notice:empty { display: none; }
+.like-badge { display: inline-block; margin: 2px 0 0 4px; padding: 1px 8px; border-radius: 999px; background: #ffe4ea; color: #a8324f; font-size: 0.75rem; font-weight: 600; white-space: nowrap; }
+.must-badge { display: inline-block; margin: 2px 0 0 4px; padding: 1px 8px; border-radius: 999px; background: #e3f0ff; color: #1d5fa8; font-size: 0.75rem; font-weight: 600; white-space: nowrap; }
+
+/* 꼭 가고 싶은 명소 고르기 (js/must-pick.js) */
+.must-card summary { cursor: pointer; font-weight: 600; }
+.must-card summary small { font-weight: 400; color: var(--text-muted); }
+.must-pick { margin-top: 12px; }
+.must-pick .must-search { width: 100%; }
+.must-pick .must-list { list-style: none; padding: 0; margin: 10px 0; max-height: 320px; overflow-y: auto; border: 1px solid var(--border); border-radius: 10px; }
+.must-pick .must-list li { padding: 6px 10px; border-top: 1px solid var(--border); font-size: 0.88rem; }
+.must-pick .must-list li:first-child { border-top: none; }
+.must-pick .must-list label { display: flex; gap: 8px; align-items: baseline; cursor: pointer; }
+.must-pick .must-chosen { font-size: 0.88rem; color: var(--accent); }
+.region-cards .must-card { margin-top: -10px; padding-top: 12px; padding-bottom: 12px; }

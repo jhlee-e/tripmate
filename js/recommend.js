@@ -47,16 +47,21 @@ const DINNER_FROM = 17 * 60 + 30;
 const LODGING_ARRIVE = 20 * 60;   // 숙소 도착 시각: 20:00 이후 (이재훈 결정, 상세 화면에서 바꿀 수 있음). 마지막 날 집 도착은 제한 없음
 const MEAL_STAY = 60;
 const DAY_END = 22 * 60;          // 명소 방문은 22:00 전에 끝나게 (2026-10-10 추가)
-// 여행 시작일이 오늘이면 1일차 출발 시각 = 지금 + 준비 30분 (10분 단위 올림), 아니면 09:00 (2026-10-10 이재훈 요청)
+// 1일차 집 출발 시각 = 조건 입력의 '출발 시각'(trips.start_time, 분) — 없으면 09:00
+//   (2026-11-18 피드백 반영 — 조정인 1번 '시작/종료 시간도 처음부터 입력')
+// 여행 시작일이 오늘이면 지금 + 준비 30분(10분 단위 올림)보다 이르게는 못 떠남 (2026-10-10 이재훈 요청)
 // 입력: trip, 지금 시각(시험용, 없으면 현재) / 출력: 분 단위 시각
 function firstDayStart(trip, now) {
+  const base = trip.start_time != null ? trip.start_time : DAY_START;
   now = now || new Date();
   const pad = function (n) { return String(n).padStart(2, '0'); };
   const today = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate());
-  if (trip.start_date !== today) return DAY_START;
+  if (trip.start_date !== today) return base;
   const m = Math.ceil((now.getHours() * 60 + now.getMinutes() + 30) / 10) * 10;
-  return Math.min(Math.max(DAY_START, m), 23 * 60 + 50);
+  return Math.min(Math.max(base, m), 23 * 60 + 50);
 }
+// 마지막 날 집 도착 희망 시각 (trips.end_time, 분) — 비워 두면 null (제한 없음, 이재훈 결정)
+function homeArriveLimit(trip) { return trip.end_time != null ? trip.end_time : null; }
 // 흔한 체인점(프랜차이즈) 이름 — 이름에 들어 있으면 추천에서 제외 (이재훈 결정: 브랜드 이름 목록 방식)
 const CHAIN_BRANDS = ['스타벅스', '투썸플레이스', '이디야', '메가커피', '메가MGC', '컴포즈커피', '빽다방', '할리스',
   '엔제리너스', '커피빈', '폴바셋', '파스쿠찌', '탐앤탐스', '카페베네', '공차', '설빙', '배스킨', '던킨',
@@ -284,29 +289,31 @@ const DIET_NO = { pesco: ['고기'], lacto: ['고기', '해산물', '국물'], v
 const DIET_ORDER = ['', 'pesco', 'lacto', 'vegan'];
 const VEGGIE_WORDS = /채식|비건|베지|사찰|산채|두부|보리밥|곤드레|나물|콩국수/;   // 채식하는 사람에게 먼저 추천 (×1.5, Claude 판단)
 const DISLIKE_MULT = 0.3;
+const LIKE_MULT = 2;   // 먹고 싶은 음식 가게 점수 ×2 (2026-11-18 피드백 반영, 배수는 Claude 판단)
 
 // 사람별 food_pref를 하나로 합침 (함께 정하기): 알레르기·못 먹음·안 먹음·직접 입력은 모두 합치고, 채식은 가장 엄격한 단계
 //   커피: 절반 넘게 '안 마셔요'면 안 마시는 것으로 (Claude 판단) / 입력이 없으면 마시는 것으로 봄
 function effectiveFoodPref(trip) {
   if (trip._fp) return trip._fp;
   const list = isGroup(trip) ? trip.group.map(function (m) { return m.food_pref; }) : [trip.food_pref];
-  const out = { allergy: [], no: [], dislike: [], diet: '', noWords: [], dislikeWords: [], coffee: true, any: false };
+  const out = { allergy: [], no: [], dislike: [], like: [], diet: '', noWords: [], dislikeWords: [], likeWords: [], coffee: true, any: false };
   let coffeeNo = 0, coffeeYes = 0;
   list.forEach(function (fp) {
     if (!fp) return;
-    ['allergy', 'no', 'dislike', 'noWords', 'dislikeWords'].forEach(function (k) {
+    ['allergy', 'no', 'dislike', 'like', 'noWords', 'dislikeWords', 'likeWords'].forEach(function (k) {
       (fp[k] || []).forEach(function (v) { if (v && out[k].indexOf(v) === -1) out[k].push(v); });
     });
     if (DIET_ORDER.indexOf(fp.diet || '') > DIET_ORDER.indexOf(out.diet)) out.diet = fp.diet;
     if (fp.coffee === false) coffeeNo++; else if (fp.coffee === true) coffeeYes++;
   });
   if (coffeeNo > (coffeeNo + coffeeYes) / 2) out.coffee = false;
-  out.any = !!(out.allergy.length || out.no.length || out.dislike.length || out.diet || out.noWords.length || out.dislikeWords.length);
+  out.any = !!(out.allergy.length || out.no.length || out.dislike.length || out.like.length || out.diet || out.noWords.length || out.dislikeWords.length || out.likeWords.length);
   const esc = function (w) { return w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); };
   const words = function (ws) { return ws.length ? new RegExp(ws.map(esc).join('|')) : null; };
   out._no = out.allergy.concat(out.no, DIET_NO[out.diet] || []);
   out._noRe = words(out.noWords);
   out._dislikeRe = words(out.dislikeWords);
+  out._likeRe = words(out.likeWords);
   trip._fp = out;
   return out;
 }
@@ -317,7 +324,8 @@ function ruleHits(key, p, cuisine) {
   if (r.cuisines && r.cuisines.indexOf(cuisine) !== -1) return true;
   return !!(r.incl && r.incl.some(function (k) { return ruleHits(k, p, cuisine); }));
 }
-// 입력: 장소, trip / 출력: 'no'(못 먹음·알레르기 → 제외) · 'dislike'(안 먹음 → 감점) · null
+// 입력: 장소, trip / 출력: 'no'(못 먹음·알레르기 → 제외) · 'dislike'(안 먹음 → 감점) · 'like'(먹고 싶음 → 가산) · null
+//   같은 가게가 둘 다 걸리면 못 먹음 > 안 먹음 > 먹고 싶음 순으로 앞의 것
 function foodVerdict(p, trip) {
   if (!p || p.type !== '식당' || p.category === 'BREAKFAST' || !trip) return null;
   const fp = effectiveFoodPref(trip);
@@ -325,12 +333,14 @@ function foodVerdict(p, trip) {
   const c = cuisineOf(p);
   if (fp._no.some(function (k) { return ruleHits(k, p, c); }) || (fp._noRe && fp._noRe.test(p.name))) return 'no';
   if (fp.dislike.some(function (k) { return ruleHits(k, p, c); }) || (fp._dislikeRe && fp._dislikeRe.test(p.name))) return 'dislike';
+  if (fp.like.some(function (k) { return ruleHits(k, p, c); }) || (fp._likeRe && fp._likeRe.test(p.name))) return 'like';
   return null;
 }
-// 점수 배수: 안 먹는 음식 ×0.3, 채식이면 채식 가게 ×1.5, 지역 고유 브랜드·특별 매장 ×1.3
+// 점수 배수: 안 먹는 음식 ×0.3, 먹고 싶은 음식 ×2, 채식이면 채식 가게 ×1.5, 지역 고유 브랜드·특별 매장 ×1.3
 function foodMultiplier(p, trip) {
   if (p.type !== '식당') return 1;
-  let m = foodVerdict(p, trip) === 'dislike' ? DISLIKE_MULT : 1;
+  const v = foodVerdict(p, trip);
+  let m = v === 'dislike' ? DISLIKE_MULT : v === 'like' ? LIKE_MULT : 1;
   const fp = effectiveFoodPref(trip);
   if (fp.diet && VEGGIE_WORDS.test(p.name || '')) m *= 1.5;
   const tier = chainTier(p);
@@ -792,7 +802,19 @@ function districtBase(usableAll, places, trip) {
 // 예산 상한 이하 후보만 고름. 부족하면 상한을 10%씩 올려 다시 (최대 3배까지 — 2026-10-07 변경, 예산이 빠듯해도 여행지 5곳을 보여 주기 위함)
 // relax가 1보다 크면 화면에 '어느 항목 상한을 얼마까지 올렸는지'(pool.relaxItems)를 표시하고, 총비용이 최대 예산을 넘으면 빨간색으로 경고
 // 출력: { attractions, restaurants, lodgings, relax } 또는 null(예산 조정 필요)
-function preparePool(trip, places) {
+// ---------- 꼭 가고 싶은 명소 (2026-11-18 피드백 반영 — 최세민 1번·조정인 5번) ----------
+// trips.must_places = { region: '강릉', ids: [장소 id …] } — 여행지 추천·일정안 비교 화면에서 고름 (js/must-pick.js)
+// 이재훈 결정: 개수 제한 없음. A·B·C안 모두에 반드시 넣고, 예산 맞추기에서도 바꾸지 않음
+// 입력: trip, 지역 이름 / 출력: 그 지역의 꼭 갈 명소 id 배열 (다른 지역에서 고른 것이면 [])
+function mustIds(trip, region) {
+  const m = trip && trip.must_places;
+  if (!m || !Array.isArray(m.ids)) return [];
+  if (region && m.region && m.region !== region) return [];
+  return m.ids;
+}
+function isMustPlace(p, trip, region) { return !!p && mustIds(trip, region).indexOf(p.id) !== -1; }
+
+function preparePool(trip, places, region) {   // region: 꼭 갈 명소를 고른 지역과 맞는지 볼 때만 씀
   const caps = budgetCaps(trip);
   const tempo = TEMPO[trip.tempo];
   const nights = trip.days - 1;
@@ -800,6 +822,12 @@ function preparePool(trip, places) {
   const base = places.district ? districtBase(usableAll, places, trip) : usableAll;
   const month = tripMonth(trip);
   base.forEach(function (p) { p._s = withPopularity(placeTagScore(p.tags, trip), p.popularity, trip) * infoMultiplier(p, trip) * seasonMultiplier(p, month) * foodMultiplier(p, trip); });
+  // 꼭 갈 명소: 사용자가 직접 골랐으므로 예산 상한·추천 제외(체인점 등) 규칙과 상관없이 후보에 넣음 (배 타는 섬만 제외)
+  const mustSet = new Set(mustIds(trip, region));
+  const must = places.filter(function (p) { return mustSet.has(p.id) && p.type === '명소' && !p.ferry; });
+  must.forEach(function (p) {
+    if (p._s == null || base.indexOf(p) === -1) p._s = withPopularity(placeTagScore(p.tags || {}, trip), p.popularity, trip) * infoMultiplier(p, trip) * seasonMultiplier(p, month);
+  });
 
   // 항목별로 처음 충분해진 배율 (화면 안내용: 실제로 모자랐던 항목만 '상한을 올림'으로 표시 — 2026-11-01 메시지 오류 수정)
   const firstOk = { 명소: null, 식사: null, 숙소: null };
@@ -807,11 +835,13 @@ function preparePool(trip, places) {
     const relax = Math.round((1 + step * 0.1) * 10) / 10;
     const pool = { attractions: [], restaurants: [], sweets: [], lodgings: [], relax: relax };
     base.forEach(function (p) {
-      if (p.type === '명소' && p.cost <= caps.admission * relax) pool.attractions.push(p);
+      if (p.type === '명소' && p.cost <= caps.admission * relax && !mustSet.has(p.id)) pool.attractions.push(p);
       else if (p.type === '식당' && foodKind(p) === 'meal' && p.cost <= caps.meal * relax) pool.restaurants.push(p);   // 카페·간식·주점은 식사로 안 넣음
       else if (p.type === '식당' && isSweet(p) && p.cost <= caps.meal * relax) pool.sweets.push(p);                   // 카페·간식 칸 후보
       else if (p.type === '숙소' && lodgingAvgRoomNight(p, trip) <= caps.lodging * relax) pool.lodgings.push(p);   // 객실·날짜별 요금 평균
     });
+    pool.must = must;
+    must.forEach(function (p) { pool.attractions.push(p); });
     const ok = { 명소: pool.attractions.length >= tempo.count * trip.days,
                  식사: pool.restaurants.length >= 2 * trip.days,
                  숙소: nights === 0 || pool.lodgings.length > 0 };
@@ -968,6 +998,11 @@ function buildPlan(type, trip, pool) {
     sigFoods = sigFoods.filter(function (r) { return rankOf(r) === top; });
   }
   let sigSpotTaken = !sigSpots.length, sigFoodDone = !sigFoods.length;
+  // 꼭 갈 명소: 날마다 남은 개수를 남은 날수로 나눈 만큼(올림) 먼저 넣음 → 여러 날에 고루 (Claude 판단)
+  const mustList = (pool.must || []).slice().sort(function (a, b) { return keyVal.get(b.id) - keyVal.get(a.id); });
+  const mustSet = new Set(mustList.map(function (p) { return p.id; }));
+  mustList.forEach(function (p) { taken.add(p.id); });   // 순위표에서 또 꺼내지 않게
+  let mustLeft = mustList.slice();
   let curDay = 1;
   // 다음에 넣을 명소: 일정안 점수 × 종류 반복 감점(varietyFactor)이 가장 큰 곳
   // ranked가 점수 높은 순이라, 남은 곳의 점수가 지금 최고값보다 낮아지면 더 볼 필요 없음
@@ -1067,6 +1102,14 @@ function buildPlan(type, trip, pool) {
         if (p) picks.push(p);
       }
     }
+    // 꼭 갈 명소를 오늘 몫만큼 먼저 (휴무인 곳은 다른 날로)
+    const mustToday = Math.ceil(mustLeft.length / (trip.days - d + 1));
+    let mustAdded = 0;
+    mustLeft = mustLeft.filter(function (p) {
+      if (mustAdded >= mustToday || !openAt(p, dow) || picks.indexOf(p) !== -1) return true;
+      picks.push(p); mustAdded++;
+      return false;
+    });
     while (picks.length < tempo.count) {
       const p = takeNextAttraction();
       if (!p) break;
@@ -1085,6 +1128,9 @@ function buildPlan(type, trip, pool) {
     carry = [];
     mealMove = 0;
     sweetsToday = 0; sweetKindsToday = {}; lastMealEnd = -Infinity; cafeToday = false;
+    // 마지막 날 집 도착 희망 시각: 장소·식사를 넣은 뒤 집에 가도 그 시각 안에 들어올 때만 넣음
+    const endLimit = lastDay ? homeArriveLimit(trip) : null;
+    const fitsEnd = function (atMin, x) { return endLimit == null || atMin + backMin(x) <= endLimit; };
     // 그날 끝에 숙소(마지막 날은 집)로 돌아갈 시간
     const backMin = function (x) {
       return lastDay || !lodging ? (tf ? transferBackMin(trip, tf, x) : travelMin(distanceKm(x, dep), trip.transport, true, null, [x, dep]))
@@ -1098,11 +1144,11 @@ function buildPlan(type, trip, pool) {
       if (!lunch && visited > 0 && clock >= 11 * 60 &&
           clock + travelMin(distanceKm(pos, p), trip.transport, !!pos.isHome, null, [pos, p]) + p.stayMin > 13 * 60) {
         lunch = true;
-        clock = addMeal(stops, 'lunch', pos, clock);
+        if (fitsEnd(clock + MEAL_STAY, pos)) clock = addMeal(stops, 'lunch', pos, clock);
       }
       if (!dinner && clock >= DINNER_FROM && visited > 0) {
         dinner = true;
-        clock = addMeal(stops, 'dinner', pos, clock);
+        if (fitsEnd(clock + MEAL_STAY, pos)) clock = addMeal(stops, 'dinner', pos, clock);
       }
       // 카페·간식: 오늘 횟수가 남았고 다음 장소로 가는 길목에 있으면 먼저 들름 (그래도 활동 시간·마감 안에 들어올 때만)
       if (sweetsToday < sweetMax && !pos.isHome && clock >= SWEET_FROM && clock - lastMealEnd >= SWEET_AFTER_MEAL) {
@@ -1132,12 +1178,14 @@ function buildPlan(type, trip, pool) {
       // 활동 시간을 넘으면 그날 마감, 남은 곳은 다음 날로 이월 (단, 하루 최소 1곳)
       // 밤 10시를 넘기는 곳도 다음 날로 (늦게 출발한 첫날은 0곳일 수 있음 — 2026-10-10 이재훈 결정)
       if (clock + move + p.stayMin > (p.indoor ? DAY_END : DAY_END - 60) ||   // 야외는 21:00까지
-          (visited > 0 && active + mealMove + move + p.stayMin + back > limit)) {
+          (visited > 0 && active + mealMove + move + p.stayMin + back > limit) ||
+          (endLimit != null && clock + move + p.stayMin + back > endLimit)) {   // 마지막 날 집 도착 희망 시각을 넘김
         carry = ordered.slice(i);
         break;
       }
       const vs = makeStop(p, 'visit');
       if (signatureOf(p, sig)) vs.sig = signatureOf(p, sig);
+      if (mustSet.has(p.id)) vs.must = true;
       stops.push(vs);
       used.add(p.id);
       clock += move + p.stayMin;
@@ -1145,11 +1193,13 @@ function buildPlan(type, trip, pool) {
       visited++;
       pos = p;
     }
-    if (!lunch && (visited > 0 || clock <= LUNCH.until)) clock = addMeal(stops, 'lunch', pos, clock);
-    if (!dinner && (!lastDay || clock >= DINNER_FROM)) clock = addMeal(stops, 'dinner', pos, clock);   // 마지막 날은 늦게 끝날 때만 저녁
+    if (!lunch && (visited > 0 || clock <= LUNCH.until) && fitsEnd(Math.max(clock, LUNCH.from) + MEAL_STAY, pos)) clock = addMeal(stops, 'lunch', pos, clock);
+    if (!dinner && (!lastDay || clock >= DINNER_FROM) && fitsEnd(Math.max(clock, DINNER_FROM) + MEAL_STAY, pos)) clock = addMeal(stops, 'dinner', pos, clock);   // 마지막 날은 늦게 끝날 때만 저녁
     days.push({ start: dayStart, stops: stops });
   }
   if (!sigFoodDone) forceSignatureFood();
+  forceLikedFood();
+  forceMustPlaces();
   return { type: type, region: pool.region, lodging: lodging, days: days, relax: pool.relax, relaxItems: pool.relaxItems || [] };
 
   // 끝까지 대표 먹거리를 못 넣었으면: 대표 식당과 가장 가까운 끼니 하나를 바꿈 (그날 문 연 곳 우선)
@@ -1173,6 +1223,64 @@ function buildPlan(type, trip, pool) {
     best.st.p = best.r;
     best.st.sig = signatureOf(best.r, sig);
     sigFoodDone = true;
+  }
+
+  // 시간이 모자라 끝까지 못 넣은 꼭 갈 명소: 가장 가까운 일반 명소(꼭 갈·대표 할거리 아님)와 바꿈
+  //   바꿀 명소가 없으면 그 명소와 가장 가까운 장소가 있는 날 끝에 덧붙임 (그날 활동 시간이 넘으면 일정 상세에서 경고가 뜸)
+  function forceMustPlaces() {
+    mustList.forEach(function (m) {
+      if (used.has(m.id)) return;
+      let best = null;
+      days.forEach(function (day, di) {
+        const dow = dowOf(trip, di + 1);
+        day.stops.forEach(function (st) {
+          if (st.meal || st.must || st.sig) return;
+          const km = distanceKm(st.p, m) + (openAt(m, dow) ? 0 : 1000);
+          if (!best || km < best.km) best = { km: km, st: st };
+        });
+      });
+      if (best) {
+        used.delete(best.st.p.id);
+        best.st.p = m; best.st.stay = m.stayMin; best.st.must = true;
+      } else {
+        let di = 0, bk = Infinity;
+        days.forEach(function (day, i) {
+          day.stops.forEach(function (st) { const k = distanceKm(st.p, m); if (k < bk) { bk = k; di = i; } });
+        });
+        const st = makeStop(m, 'visit'); st.must = true;
+        days[di].stops.push(st);
+      }
+      used.add(m.id);
+    });
+  }
+
+  // 먹고 싶은 음식(음식 선호 표의 '먹고 싶어요'·직접 입력)을 골랐는데 끝까지 한 끼도 못 넣었으면
+  // 그런 식당과 가장 가까운 끼니 하나를 바꿈 (대표 먹거리 끼니는 그대로) — 2026-11-18 피드백 반영 (조정인 3번)
+  //   예산 상한 안 식당 → 없으면 상한을 넘는 식당까지 (대표 먹거리와 같은 방식, Claude 판단)
+  function forceLikedFood() {
+    const fp = effectiveFoodPref(trip);
+    if (!fp.like.length && !fp.likeWords.length) return;
+    const isLiked = function (r) { return foodVerdict(r, trip) === 'like'; };
+    if (days.some(function (day) { return day.stops.some(function (st) { return st.meal && !isSweetStop(st) && isLiked(st.p); }); })) return;
+    let cands = pool.restaurants.filter(isLiked);
+    if (!cands.length) cands = pool.all.restaurants.filter(isLiked);
+    let best = null;
+    days.forEach(function (day, di) {
+      const dow = dowOf(trip, di + 1);
+      day.stops.forEach(function (st, si) {
+        if (!st.meal || isSweetStop(st) || st.sig || st.p.category === 'BREAKFAST') return;
+        const prev = si > 0 ? day.stops[si - 1].p : (di === 0 ? anchor : (lodging || anchor));
+        cands.forEach(function (r) {
+          if (used.has(r.id)) return;
+          const km = distanceKm(prev, r) + (openAt(r, dow, st.meal === '점심' ? LUNCH.from + 30 : DINNER_FROM + 30) ? 0 : 1000);
+          if (!best || km < best.km) best = { km: km, st: st, r: r };
+        });
+      });
+    });
+    if (!best) return;
+    used.delete(best.st.p.id);
+    used.add(best.r.id);
+    best.st.p = best.r;
   }
 
   // 식당을 일정에 넣고, 식사가 끝나는 시각을 돌려줌
@@ -1207,7 +1315,7 @@ function buildPlan(type, trip, pool) {
 
 // 입력: trip, 지역 이름, 그 지역 장소 배열 / 출력: { A, B, C } 또는 null(예산 안에서 후보 부족)
 function buildPlans(trip, region, places) {
-  const pool = preparePool(trip, places);
+  const pool = preparePool(trip, places, region);
   if (!pool) return null;
   pool.region = region;
   pool.signature = places.signature || null;   // loadPlaces가 붙여 줌
@@ -1354,7 +1462,7 @@ function fitBudget(trip, plan, pool) {
     plan.days.forEach(function (d) {
       d.stops.forEach(function (st) {
         const cur = st.p;
-        if (!(cur.cost > 0) || st.sig) return;   // 대표 먹거리·할거리는 예산 맞추기에서 바꾸지 않음
+        if (!(cur.cost > 0) || st.sig || st.must) return;   // 대표 먹거리·할거리·꼭 갈 명소는 예산 맞추기에서 바꾸지 않음
         const isFood = cur.type === '식당';
         const list = isSweetStop(st) ? (pool.all.sweets || []) : isFood ? pool.all.restaurants : pool.all.attractions;
         const range = isFood ? 5 : 10;
@@ -1683,7 +1791,8 @@ function computeTimeline(trip, plan) {
     }
     dc.total = dc.lodging + dc.food + dc.admission + dc.transport;
     return { cost: dc, start: dayStart, startPoint: startPoint, endPoint: endPoint, items: items, departMin: departMin, go: go, ret: ret,
-             freeMin: departMin - clock, backMin: back.min, backKm: back.km, backMode: back.mode, endMin: endMin, activeMin: active, over: active > limit };
+             freeMin: departMin - clock, backMin: back.min, backKm: back.km, backMode: back.mode, endMin: endMin, activeMin: active, over: active > limit,
+             homeLate: lastDay && homeArriveLimit(trip) != null && endMin > homeArriveLimit(trip) };   // 집 도착 희망 시각을 넘김
   });
 
   cost.total = cost.lodging + cost.food + cost.admission + cost.transport;
@@ -1775,6 +1884,6 @@ async function loadSavedPlan(trip, places) {
 
 // node로 시험할 때 쓰도록 내보내기 (브라우저에서는 무시됨)
 if (typeof module !== 'undefined') {
-  module.exports = { effectiveFoodPref, foodVerdict, foodMultiplier, chainTier, isSweet, isSweetStop, stopIcon, offRouteKm, SWEET_MAX, transferFor, loadStations, regionCenter, STATION_WAIT, BOOKING, toMin, signatureOf, signatureLabel, dishesOf, firstDayStart, seasonMultiplier, tripMonth, varietyFactor, attractionKind, dishOf, openAt, hoursIssue, dowOf, infoMultiplier, parkingOf, issueKind, needsAddressCheck, usable, transitLegs, legKey, localMode, WALK_KM, TEMPO, rankRegions, buildPlans, buildPlan, preparePool, computeTimeline, distanceKm,
+  module.exports = { mustIds, isMustPlace, homeArriveLimit, effectiveFoodPref, foodVerdict, foodMultiplier, chainTier, isSweet, isSweetStop, stopIcon, offRouteKm, SWEET_MAX, transferFor, loadStations, regionCenter, STATION_WAIT, BOOKING, toMin, signatureOf, signatureLabel, dishesOf, firstDayStart, seasonMultiplier, tripMonth, varietyFactor, attractionKind, dishOf, openAt, hoursIssue, dowOf, infoMultiplier, parkingOf, issueKind, needsAddressCheck, usable, transitLegs, legKey, localMode, WALK_KM, TEMPO, rankRegions, buildPlans, buildPlan, preparePool, computeTimeline, distanceKm,
     travelMin, budgetCaps, hhmm, PLAN_INFO, isChain, LODGING_ARRIVE, SEA_REGIONS, foodKind, cuisineOf, pickRestaurant, ensureScores, estimateMinCost, fitBudget, syncBreakfast, breakfastPlace, lodgingBreakfast };
 }

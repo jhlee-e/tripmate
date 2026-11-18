@@ -21,6 +21,7 @@ async function start() {
 
   try {
     const places = await loadPlaces(region);
+    showMustCard(trip, region, places);
     const plans = buildPlans(trip, region, places);
     const editUrl = editConditionUrl(trip.id, param('direct') ? region : null);   // 지난 입력을 불러오는 '조건 수정하기'
     const noPlan = '최대 예산(' + won(trip.budget_max) + ')의 120% 안에서는 ' + region + ' 일정을 만들 수 없어요. 최대 예산을 늘리거나 다른 지역을 골라 보세요.';
@@ -42,6 +43,23 @@ async function start() {
     console.error(e);
     document.getElementById('error-text').textContent = '오류: ' + e.message;
   }
+}
+
+// 꼭 가고 싶은 명소 (2026-11-18 피드백 반영 — 최세민 1번): 지역을 직접 골라 여행지 추천 화면을 건너뛴 경우에도 여기서 고름 (이재훈 결정)
+// 입력: trip, 지역, 장소 배열 / 출력: 맨 위 접힌 상자 — 고른 명소를 보여 주고, 다시 고르면 일정안을 새로 계산(새로고침)
+function showMustCard(trip, region, places) {
+  const card = document.getElementById('must-card');
+  const ids = mustIds(trip, region);
+  const names = places.filter(function (p) { return ids.indexOf(p.id) !== -1; }).map(function (p) { return p.name; });
+  document.getElementById('must-summary').innerHTML = names.length
+    ? '📍 꼭 갈 명소 ' + names.length + '곳: ' + esc(names.join(', ')) + ' <small>(누르면 바꾸기)</small>'
+    : '📍 꼭 가고 싶은 명소 고르기 <small>(선택 — 고르면 A·B·C안 모두에 넣어요)</small>';
+  card.hidden = false;
+  card.addEventListener('toggle', function () {
+    if (!card.open || card.dataset.ready) return;
+    card.dataset.ready = '1';
+    makeMustPicker(document.getElementById('must-box'), trip, region, places, function () { location.reload(); });
+  });
 }
 
 function renderTable(trip, rows) {
@@ -77,7 +95,7 @@ function renderPlanCard(trip, region, row) {
   let daysHtml = '';
   t.days.forEach(function (d, i) {
     const names = d.items.map(function (it) {
-      return (it.stop.meal ? stopIcon(it.stop) : '') + esc(it.stop.p.name);
+      return (it.stop.meal ? stopIcon(it.stop) : '') + (isMustPlace(it.stop.p, trip, region) ? '📍' : '') + esc(it.stop.p.name);
     });
     daysHtml += '<li><strong>' + (i + 1) + '일차</strong> ' + names.join(' → ') + '</li>';
   });

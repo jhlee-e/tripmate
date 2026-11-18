@@ -21,6 +21,10 @@
     </header>
     <main>
       <p class="notice" id="status">일정안을 만들고 있어요…</p>
+      <details class="card must-card" id="must-card" hidden>
+        <summary id="must-summary">📍 꼭 가고 싶은 명소</summary>
+        <div id="must-box"></div>
+      </details>
       <section class="card" id="compare-card" hidden>
         <h2 class="section-title">한눈에 비교 <small>더 좋은 값은 초록색</small></h2>
         <div class="table-wrap"><table class="compare-table" id="compare-table"></table></div>
@@ -33,6 +37,7 @@
   <script src="supabase.js"></script>
   <script src="js/ui.js"></script>
   <script src="js/recommend.js"></script>
+  <script src="js/must-pick.js"></script>
   <script src="js/plans.js"></script>
 </body>
 </html>

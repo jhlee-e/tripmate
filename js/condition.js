@@ -182,9 +182,19 @@ function collectCondition() {
     days = Math.round((new Date(endDate) - new Date(startDate)) / msPerDay) + 1;
   }
 
+  // 시각 'HH:MM' → 하루 시작부터 몇 분 (비어 있으면 null) — 2026-11-18 피드백 반영 (조정인 1번)
+  const timeMin = function (id) {
+    const v = document.getElementById(id).value;
+    if (!v) return null;
+    const hm = v.split(':').map(Number);
+    return hm[0] * 60 + hm[1];
+  };
+
   return {
     startDate: startDate,
     endDate: endDate,
+    startTime: timeMin('start-time'),   // 첫날 집 출발 시각 (분)
+    endTime: timeMin('end-time'),       // 마지막 날 집 도착 희망 시각 (분, 없으면 null)
     days: days,
     budgetMin: readMoney('budget-min'),
     budgetMax: readMoney('budget-max'),
@@ -211,6 +221,8 @@ function validateCondition(c) {
   if (!c.startDate || !c.endDate) return '여행 시작일과 종료일을 모두 입력해 주세요.';
   const dateMsg = checkDates();
   if (dateMsg) return dateMsg;
+  if (c.startTime == null) return '첫날 출발 시각을 입력해 주세요.';
+  if (c.days === 1 && c.endTime != null && c.endTime - c.startTime < 3 * 60) return '당일치기는 집 도착 시각이 출발 시각보다 3시간 이상 늦어야 해요.';
   if (!c.budgetMin || !c.budgetMax) return '예산의 최소·최대 금액을 모두 입력해 주세요.';
   if (c.budgetMin > c.budgetMax) return '최소 예산이 최대 예산보다 클 수 없어요.';
   const p = c.people;
@@ -258,6 +270,8 @@ async function handleSubmit(event) {
     start_date: condition.startDate,
     end_date: condition.endDate,
     days: condition.days,
+    start_time: condition.startTime,
+    end_time: condition.endTime,
     budget_min: condition.budgetMin,
     budget_max: condition.budgetMax,
     people: condition.people.total,      // 합계 (예산 ÷ 인원 계산에 사용)
@@ -283,7 +297,9 @@ async function handleSubmit(event) {
   button.disabled = false;
 
   if (error) {
-    errorText.textContent = '저장 실패: ' + (error.message.indexOf('food_pref') !== -1
+    errorText.textContent = '저장 실패: ' + (/start_time|end_time/.test(error.message)
+      ? '\'출발·도착 시각\'을 쓰려면 Supabase에서 sql/add_feedback3.sql을 먼저 실행해 주세요.'
+      : error.message.indexOf('food_pref') !== -1
       ? '\'음식 선호\'를 쓰려면 Supabase에서 sql/add_food_pref.sql을 먼저 실행해 주세요.'
       : error.message.indexOf('together') !== -1
       ? '\'함께 정하기\'를 쓰려면 Supabase에서 sql/add_together.sql을 먼저 실행해 주세요.'

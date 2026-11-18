@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="page">
+  <div class="page form-page">
     <nav class="top-nav">
       <span id="nav-user"></span>
       <a href="record.html">내 여행</a>
@@ -37,16 +37,28 @@
           <p class="map-hint" id="region-picked">시·도 이름으로 검색하면 그 안의 시·군이 모두 나와요.</p>
         </div>
 
-        <div class="field-group">
-          <label for="start-date">여행 시작일</label>
-          <input type="date" id="start-date" name="startDate" required>
-          <p class="field-warning" id="start-date-warning"></p>
+        <div class="field-pair">
+          <div class="field-group">
+            <label for="start-date">여행 시작일</label>
+            <input type="date" id="start-date" name="startDate" required>
+            <p class="field-warning" id="start-date-warning"></p>
+          </div>
+          <div class="field-group">
+            <label for="start-time">출발 시각 <small class="label-note">첫날 집에서 나서는 시각</small></label>
+            <input type="time" id="start-time" name="startTime" step="600" value="09:00" required>
+          </div>
         </div>
 
-        <div class="field-group">
-          <label for="end-date">여행 종료일</label>
-          <input type="date" id="end-date" name="endDate" required>
-          <p class="field-warning" id="end-date-warning"></p>
+        <div class="field-pair">
+          <div class="field-group">
+            <label for="end-date">여행 종료일</label>
+            <input type="date" id="end-date" name="endDate" required>
+            <p class="field-warning" id="end-date-warning"></p>
+          </div>
+          <div class="field-group">
+            <label for="end-time">집 도착 시각 <small class="label-note">마지막 날 이때까지 집에 오도록 · 비워 두면 제한 없음</small></label>
+            <input type="time" id="end-time" name="endTime" step="600">
+          </div>
         </div>
 
         <div class="field-group">

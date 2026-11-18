@@ -127,7 +127,10 @@ function renderDay() {
   startInput.disabled = !!(day.go && day.go.userSet);
   startInput.title = startInput.disabled ? '입력한 열차·버스 출발 시각에 맞춰 계산했어요' : '';
   document.getElementById('day-active').textContent = '활동 ' + durationText(day.activeMin) + ' / ' + durationText(limit) + ' (이동+관람, 식사 제외)';
-  document.getElementById('day-warning').textContent = day.over ? '이 날은 ' + trip.tempo + ' 템포의 하루 활동 시간을 넘었어요.' : '';
+  document.getElementById('day-warning').textContent = [
+    day.over ? '이 날은 ' + trip.tempo + ' 템포의 하루 활동 시간을 넘었어요.' : '',
+    day.homeLate ? '집 도착 예정 ' + hhmm(day.endMin) + ' — 조건에서 정한 도착 시각(' + hhmm(homeArriveLimit(trip)) + ')보다 늦어요. 장소를 빼거나 시간을 줄여 주세요.' : ''
+  ].filter(Boolean).join(' ');
 
   const list = document.getElementById('timeline');
   list.innerHTML = '';
@@ -155,6 +158,8 @@ function renderDay() {
           infoBadges(p) +
           '<button type="button" class="tl-name link-btn"></button>' +
           (signatureLabel(p, places.signature) ? '<span class="sig-badge">★ ' + esc(signatureLabel(p, places.signature)) + '</span>' : '') +
+          (foodVerdict(p, trip) === 'like' ? '<span class="like-badge">😋 먹고 싶은 음식</span>' : '') +
+          (isMustPlace(p, trip, plan.region) ? '<span class="must-badge">📍 꼭 갈 곳</span>' : '') +
           '<p class="tl-meta">' + esc(isFood ? cuisineOf(p) : (p.categoryName || p.type)) + ' · ' + (it.cost ? won(it.cost) : '무료') + '</p>' +
         '</div>' +
       '</div>' +
@@ -185,7 +190,8 @@ function renderDay() {
   if (!day.endPoint.isHome && day.freeMin > 0) {
     list.appendChild(pointItem(hhmm(day.departMin), '☕ 자유 시간 ' + durationText(day.freeMin) + (day.ret ? ' 뒤 역으로' : ' 뒤 숙소로')));
   }
-  const endText = day.endPoint.isHome ? '🏠 집 도착' : day.ret ? stationIcon(day.ret.kind) + ' ' + esc(day.ret.from.name) + ' 도착' :
+  const goal = curDay === timeline.days.length - 1 && homeArriveLimit(trip) != null ? ' (목표 ' + hhmm(homeArriveLimit(trip)) + (day.homeLate ? ' ⚠ 늦음' : '') + ')' : '';   // 마지막 날 집 도착 희망 시각
+  const endText = day.endPoint.isHome ? '🏠 집 도착' + goal : day.ret ? stationIcon(day.ret.kind) + ' ' + esc(day.ret.from.name) + ' 도착' :
     '🏨 숙소 도착 <label class="return-field">도착 시각 ' +
     '<input type="time" step="600" class="return-input" value="' + hhmm(plan.lodgingArrive || LODGING_ARRIVE) + '"> 이후</label>';
   const end = pointItem(hhmm(day.ret ? day.ret.stationArrive : day.endMin), endText);
@@ -200,7 +206,7 @@ function renderDay() {
   list.appendChild(end);
   if (day.ret) {   // 마지막 날: 도착역 → 열차·버스 → 출발역 → 집
     list.appendChild(transferItem(day.ret, 'back'));
-    list.appendChild(pointItem(hhmm(day.ret.homeArrive), '🏠 집 도착'));
+    list.appendChild(pointItem(hhmm(day.ret.homeArrive), '🏠 집 도착' + goal));
   }
 }
 
@@ -488,7 +494,7 @@ document.getElementById('add-input').addEventListener('input', function (e) {
     li.innerHTML = '<span></span><button type="button" class="small-btn">' + (curDay + 1) + '일차에 추가</button>';
     li.querySelector('span').textContent = p.name + ' (' + (p.type === '식당' ? cuisineOf(p) : p.type) + (p.cost ? ' · ' + won(p.cost) : '') + ')' +
       (excludedPlace(p) ? ' · 추천 제외 장소(체인점·비여행지)' : '') +
-      (foodVerdict(p, trip) === 'no' ? ' ⚠️ 음식 선호(못 먹음)에 걸려요' : foodVerdict(p, trip) === 'dislike' ? ' · 안 먹는 음식일 수 있어요' : '');
+      (foodVerdict(p, trip) === 'no' ? ' ⚠️ 음식 선호(못 먹음)에 걸려요' : foodVerdict(p, trip) === 'dislike' ? ' · 안 먹는 음식일 수 있어요' : foodVerdict(p, trip) === 'like' ? ' · 😋 먹고 싶은 음식' : '');
     li.querySelector('button').addEventListener('click', function () {
       const stop = p.type === '식당' ? (isSweet(p) ? sweetStop(p) : { p: p, stay: 60, meal: mealLabel(p, '식사') }) : { p: p, stay: p.stayMin > 0 ? p.stayMin : 60 };
       plan.days[curDay].stops.push(stop);

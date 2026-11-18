@@ -52,8 +52,10 @@ async function loadGroup(trip) {
 }
 
 function tripSummary(trip) {
+  const hm = function (m) { return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'); };
+  const times = (trip.start_time != null ? ' ' + hm(trip.start_time) + ' 출발' : '') + (trip.end_time != null ? ' · ' + hm(trip.end_time) + '까지 귀가' : '');
   return trip.start_date.slice(5).replace('-', '.') + ' ~ ' + trip.end_date.slice(5).replace('-', '.') +
-    ' (' + trip.days + '일) · ' + trip.people + '명 · ' + trip.transport + ' · ' + trip.tempo + ' · ' +
+    ' (' + trip.days + '일)' + times + ' · ' + trip.people + '명 · ' + trip.transport + ' · ' + trip.tempo + ' · ' +
     trip.tags.map(function (t) { return '#' + t; }).join(' ');
 }
 
