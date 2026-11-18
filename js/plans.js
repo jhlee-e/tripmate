@@ -22,7 +22,7 @@ async function start() {
   try {
     const places = await loadPlaces(region);
     showMustCard(trip, region, places);
-    await attachWeather(trip, places);   // 비 오는 날 야외 명소는 맑은 날로 (js/weather.js, 피드백 반영 6차시)
+    await attachWeather(trip, region);   // 비 오는 날 야외 명소는 맑은 날로 (js/weather.js, 피드백 반영 6차시)
     const wn = document.getElementById('weather-note');
     wn.textContent = weatherNote(trip);
     wn.hidden = false;

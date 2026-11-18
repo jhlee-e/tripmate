@@ -29,6 +29,7 @@ async function start() {
     const fdata = await loadFestivals();
     trip.festivalCounts = countFestivals(fdata, trip, regions);
     const ranked = rankRegions(trip, regions, round);
+    await prefetchWeather(trip, ranked.slice(0, MAX_TRY + 10).map(function (x) { return x.region; }));   // 날씨 예보를 한 번에 (js/weather.js)
     const picked = [];
     // 점수 상위부터 확인: 가장 싼 일정안이 최대 예산 +20%를 넘는 지역은 버림 (2026-10-10 이재훈 결정)
     //   예산 안에 드는 곳이 RECOMMEND_COUNT곳 모이거나 MAX_TRY곳을 확인하면 멈춤
@@ -40,7 +41,7 @@ async function start() {
       tried++;
       status.textContent = '여행지를 고르는 중… (' + ranked[i].region + ' 확인)';
       const places = await loadPlaces(ranked[i].region);
-      await attachWeather(trip, places);   // 일정안 비교 화면과 같은 일정·비용이 나오게 날씨도 반영 (js/weather.js)
+      await attachWeather(trip, ranked[i].region);   // 일정안 비교 화면과 같은 일정·비용이 나오게 날씨도 반영 (js/weather.js)
       const plans = buildPlans(trip, ranked[i].region, places);
       if (plans) {
         const cheapest = Math.min.apply(null, ['A', 'B', 'C'].map(function (k) { return computeTimeline(trip, plans[k]).cost.total; }));

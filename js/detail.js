@@ -35,7 +35,7 @@ async function start() {
     if (!region || !key) { status.textContent = '아직 고른 일정이 없어요. 여행지 추천부터 받아 주세요.'; return; }
     places = await loadPlaces(region);
     ensureScores(places, trip);
-    await attachWeather(trip, places);   // 날씨 예보 (js/weather.js): 새 일정을 만들 때 비 오는 날 야외 명소를 미루고, 날짜 탭·장소에 표시
+    await attachWeather(trip, region);   // 날씨 예보 (js/weather.js): 새 일정을 만들 때 비 오는 날 야외 명소를 미루고, 날짜 탭·장소에 표시
     document.getElementById('back-link').href = 'plans.html?trip=' + trip.id + '&region=' + encodeURIComponent(region);
 
     // 여행 기간 축제 (js/festival.js) — 추천 계산이 끝난 뒤 장소 목록에 붙임 (자동으로 일정에 들어가지 않게)
