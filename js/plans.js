@@ -22,6 +22,17 @@ async function start() {
   try {
     const places = await loadPlaces(region);
     showMustCard(trip, region, places);
+    await attachWeather(trip, places);   // 비 오는 날 야외 명소는 맑은 날로 (js/weather.js, 피드백 반영 6차시)
+    const wn = document.getElementById('weather-note');
+    wn.textContent = weatherNote(trip);
+    wn.hidden = false;
+    const fests = festivalsForTrip(await loadFestivals(), trip, region);   // 여행 기간 축제 (js/festival.js)
+    if (fests.length) {
+      const fn = document.getElementById('fest-note');
+      fn.textContent = '🎉 여행 기간 축제·행사 ' + fests.length + '개: ' + fests.slice(0, 3).map(function (f) { return f.title + '(' + festivalDateText(f) + ')'; }).join(', ') +
+        (fests.length > 3 ? ' 외 ' + (fests.length - 3) + '개' : '') + ' — 일정 상세에서 원하는 날에 넣을 수 있어요.';
+      fn.hidden = false;
+    }
     const plans = buildPlans(trip, region, places);
     const editUrl = editConditionUrl(trip.id, param('direct') ? region : null);   // 지난 입력을 불러오는 '조건 수정하기'
     const noPlan = '최대 예산(' + won(trip.budget_max) + ')의 120% 안에서는 ' + region + ' 일정을 만들 수 없어요. 최대 예산을 늘리거나 다른 지역을 골라 보세요.';
@@ -93,17 +104,25 @@ function renderPlanCard(trip, region, row) {
   card.className = 'card plan-card';
   const over = t.cost.total > trip.budget_max;
   let daysHtml = '';
+  // 가독성 개선 (피드백 반영 6차시, 차승우): '→'로 이은 긴 한 줄 대신 날짜별 줄 + 장소마다 칩, 식사는 작고 흐리게
   t.days.forEach(function (d, i) {
-    const names = d.items.map(function (it) {
-      return (it.stop.meal ? stopIcon(it.stop) : '') + (isMustPlace(it.stop.p, trip, region) ? '📍' : '') + esc(it.stop.p.name);
+    const chips = d.items.map(function (it) {
+      const meal = !!it.stop.meal;
+      return '<span class="stop-chip' + (meal ? ' meal' : '') + (rainWarn(it.stop.p, trip, i + 1) ? ' wet' : '') + '" title="' + hhmm(it.begin) + '">' +
+        (meal ? stopIcon(it.stop) + ' ' : '') + (isMustPlace(it.stop.p, trip, region) ? '📍' : '') + (it.stop.p.festival ? '🎉' : '') +
+        esc(it.stop.p.name) + (rainWarn(it.stop.p, trip, i + 1) ? ' ☔' : '') + '</span>';
     });
-    daysHtml += '<li><strong>' + (i + 1) + '일차</strong> ' + names.join(' → ') + '</li>';
+    const w = dayWeather(trip, i + 1);
+    daysHtml += '<li><span class="day-label">' + (i + 1) + '일차' + (w ? '<small>' + weatherIcon(w) + ' ' + Math.round(w.rain) + '%</small>' : '') + '</span>' +
+      '<span class="day-chips">' + chips.join('') + '</span></li>';
   });
   card.innerHTML =
     '<h2 class="section-title">' + row.key + '안 · ' + PLAN_INFO[row.key].name +
       ' <small>' + PLAN_INFO[row.key].desc + '</small></h2>' +
     '<p class="plan-total' + (over ? ' over' : '') + '">' + won(t.cost.total) +
       (over ? ' <small>최대 예산 ' + won(trip.budget_max) + ' 초과</small>' : '') + '</p>' +
+    '<p class="plan-stats"><span>🧭 총 이동 ' + t.distanceKm.toFixed(0) + 'km</span><span>📍 하루 ' + t.visitsPerDay.toFixed(1) + '곳</span>' +
+      '<span>' + (plan.lodging ? '🏨 ' + (trip.days - 1) + '박' : '☀️ 당일치기') + '</span></p>' +
     (plan.swaps && plan.swaps.length ? '<p class="helper-text swap-note">💰 예산에 맞추려고 ' + plan.swaps.length + '곳을 더 저렴한 곳으로 바꿨어요: ' +
       plan.swaps.map(function (w) { return esc(w.from) + ' → ' + esc(w.to) + '(−' + won(w.saving) + ')'; }).join(', ') + '</p>' : '') +
     (plan.lodging ? '<p class="helper-text">숙소: ' + esc(plan.lodging.name) + ' (' + esc(lodgingLabel(plan.lodging, trip)) + ' × 방 ' + trip.rooms + '개)</p>' + lodgingWarnHtml(plan.lodging, trip) : '') +

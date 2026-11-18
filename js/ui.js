@@ -20,6 +20,14 @@ function param(name) { return new URLSearchParams(location.search).get(name); }
 
 // 로그인 확인 → 닉네임 표시 → 주소의 trip 번호로 여행 한 건 불러오기 (없거나 남의 여행이면 null)
 async function loadTripFromUrl() {
+  // 로그인 없이 짜는 여행 (?trip=guest, js/guest.js) — 브라우저에 임시 보관한 여행을 불러옴
+  if (param('trip') === 'guest') {
+    const g = readGuest();
+    showGuestNav(location.pathname.split('/').pop() + location.search);
+    if (!g || !g.trip) return null;
+    if (!g.trip.rooms) g.trip.rooms = 1;
+    return g.trip;
+  }
   const user = await requireLogin();
   if (!user) return null;
   sb.from('users').select('nickname').eq('id', user.id).single().then(function (res) {
@@ -106,6 +114,7 @@ function dailyCostTable(trip, t) {
 // 이 여행에서 내 권한: 'owner'(만든 사람) | 'editor'(함께 편집) | 'viewer'(보기만) | null
 // 입력: trips 행 / 출력: 권한 문자열 — 공유 기능(sql/add_share.sql)을 아직 실행하지 않았으면 내 여행만 열리므로 'owner'
 async function tripRole(trip) {
+  if (isGuestTrip(trip)) return 'guest';   // 로그인 없이 짜는 여행: 일정은 고칠 수 있고 저장·공유는 로그인 필요
   const { data } = await sb.auth.getSession();
   if (!data.session) return null;
   if (trip.user_id === data.session.user.id) return 'owner';

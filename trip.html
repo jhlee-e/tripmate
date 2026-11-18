@@ -90,6 +90,29 @@
           </div>
         </section>
 
+        <!-- N빵 정산 (피드백 반영 6차시, js/settle.js) -->
+        <section class="card settle-card" id="settle-card" hidden>
+          <h2 class="section-title">💸 N빵 정산 <small>누가 얼마 냈는지 적으면 보낼 돈을 계산해요</small></h2>
+          <div class="settle-members-row">
+            <span class="label-note">함께 간 사람</span>
+            <div class="settle-members" id="settle-members"></div>
+            <button type="button" class="small-btn" id="settle-add-member">+ 사람 추가</button>
+          </div>
+          <div class="table-scroll">
+            <table class="settle-items">
+              <thead><tr><th>내용</th><th>금액(원)</th><th>낸 사람</th><th>나눌 사람</th><th></th></tr></thead>
+              <tbody id="settle-items"></tbody>
+            </table>
+          </div>
+          <p class="helper-text muted" id="settle-empty">아직 적은 지출이 없어요.</p>
+          <div class="settle-tools" id="settle-tools">
+            <button type="button" class="small-btn" id="settle-add-item">+ 지출 추가</button>
+            <button type="button" class="small-btn" id="settle-import">일정의 예상 비용 불러오기</button>
+          </div>
+          <div class="settle-result" id="settle-result"></div>
+          <p class="helper-text" id="settle-msg"></p>
+        </section>
+
         <!-- 아래: 준비물 · 후기 · 사진 -->
         <div class="trip-bottom">
           <section class="card checklist-card">
@@ -149,16 +172,19 @@
   <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=b16ac532d356919ddc87b6d14d8dbd01&autoload=false"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase.js"></script>
+  <script src="js/guest.js"></script>
   <script src="js/ui.js"></script>
   <script src="js/food-pref.js"></script>
   <script src="js/recommend.js"></script>
   <script src="js/road-route.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/exifr@7.1.3/dist/lite.umd.js"></script>
   <script src="js/checklist.js"></script>
+  <script src="js/weather.js"></script>
   <script src="js/packing.js"></script>
   <script src="js/memories.js"></script>
   <script src="js/export.js"></script>
   <script src="js/share.js"></script>
+  <script src="js/settle.js"></script>
   <script src="js/trip.js"></script>
 </body>
 </html>

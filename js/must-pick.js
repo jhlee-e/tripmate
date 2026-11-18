@@ -66,7 +66,9 @@ function makeMustPicker(box, trip, region, places, onDone) {
   go.addEventListener('click', async function () {
     go.disabled = true;
     const value = chosen.length ? { region: region, ids: chosen.slice() } : null;
-    const { error } = await sb.from('trips').update({ must_places: value }).eq('id', trip.id);
+    const { error } = isGuestTrip(trip)   // 로그인 없이 짜는 여행은 브라우저에 보관 (js/guest.js)
+      ? (updateGuestTrip({ must_places: value }), { error: null })
+      : await sb.from('trips').update({ must_places: value }).eq('id', trip.id);
     go.disabled = false;
     if (error) {
       box.querySelector('.must-error').textContent = '저장 실패: ' + (error.message.indexOf('must_places') !== -1

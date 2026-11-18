@@ -3,30 +3,7 @@
 // 출력: [{ item: '모자', why: ['자외선 지수 8(매우 높음)'], group: '날씨' }] — 규칙 하나하나가 '왜 추천했는지'를 함께 남김
 //       날씨 예보: Open-Meteo 무료 예보 API (키 필요 없음, 오늘부터 16일 안의 여행만). 그보다 먼 여행은 달(月) 기준 규칙만 사용
 
-const WEATHER_DAYS = 16;
-
-// ---------- 1. 날씨 예보 ----------
-// 입력: 여행지 좌표, 시작일·종료일('YYYY-MM-DD') / 출력: 날짜별 [{ date, tmax, tmin, rain, uv }] 또는 null(범위 밖·실패)
-async function fetchForecast(lat, lng, start, end) {
-  const t0 = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' });   // 오늘(한국 시간) 'YYYY-MM-DD'
-  const last = new Date(t0 + 'T00:00:00Z');
-  last.setUTCDate(last.getUTCDate() + WEATHER_DAYS - 1);
-  const t1 = last.toISOString().slice(0, 10);
-  if (end < t0 || start > t1) return null;            // 이미 지난 여행이거나 예보 범위 밖
-  const s = start < t0 ? t0 : start, e = end > t1 ? t1 : end;
-  const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + lat.toFixed(3) + '&longitude=' + lng.toFixed(3) +
-    '&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,uv_index_max' +
-    '&timezone=Asia%2FSeoul&start_date=' + s + '&end_date=' + e;
-  try {
-    const r = await fetch(url);
-    if (!r.ok) return null;
-    const d = (await r.json()).daily;
-    return d.time.map(function (date, i) {
-      return { date: date, tmax: d.temperature_2m_max[i], tmin: d.temperature_2m_min[i],
-               rain: d.precipitation_probability_max[i], uv: d.uv_index_max[i] };
-    });
-  } catch (err) { console.warn('날씨 예보를 불러오지 못했어요', err); return null; }
-}
+// 날씨 예보(fetchForecast)는 일정에도 쓰려고 js/weather.js로 옮김 (피드백 반영 6차시)
 
 // ---------- 2. 규칙 ----------
 function recommendPacking(trip, plan, forecast) {

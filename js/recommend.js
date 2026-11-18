@@ -422,6 +422,7 @@ function seededRandom(seedText) {
   return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
 }
 // 입력: 여행 id, 회차, 지역 이름 / 출력: 0.9 ~ 1.1 사이 배수
+const FESTIVAL_BONUS = 1.1;   // 여행 기간에 축제가 있는 지역 점수 배수 (Claude 판단 — 랜덤 ±10%와 같은 크기)
 function regionJitter(tripId, round, region) {
   return 1 + REGION_JITTER * (2 * seededRandom(tripId + '|' + round + '|' + region) - 1);
 }
@@ -469,15 +470,18 @@ function rankRegions(trip, regions, round) {
     const ratio = 2 * oneWayMin / totalActive;
     const taste = regionTagScore(r.tagAvg, trip, best);          // 함께 정하기면 평균 + 최소 보장
     const base = withPopularity(taste.score, r.popTop10, trip);
-    const jitter = regionJitter(trip.id, round || 0, r.region);
+    const jitter = regionJitter(trip.jitter_seed || trip.id, round || 0, r.region);   // 비로그인 여행은 번호 대신 jitter_seed (js/guest.js)
     // 예산: 이 지역에 가면 최소 얼마 드는지 추정해, 최대 예산을 넘으면 (예산 ÷ 최소 비용)² 만큼 깎음 (Claude 설계)
     //   → 예산이 빠듯하면 가깝고 싼 지역이 위로 올라옴. 예산 안이면 깎지 않음
     const estCost = estimateMinCost(trip, r, distKm);
     const budgetFactor = estCost > trip.budget_max ? Math.pow(trip.budget_max / estCost, 2) : 1;
-    const score = base * (1 - ratio) * budgetFactor * jitter;
+    // 여행 기간에 축제·행사가 열리는 지역은 ×1.1 (피드백 반영 6차시, 최세민 2번 — trip.festivalCounts는 js/festival.js가 채움)
+    const fest = (trip.festivalCounts && trip.festivalCounts[r.region]) || 0;
+    const festFactor = fest ? FESTIVAL_BONUS : 1;
+    const score = base * (1 - ratio) * budgetFactor * jitter * festFactor;
     if (score <= 0) return;
     out.push({ region: r.region, score: score, jitter: jitter, oneWayMin: oneWayMin, distKm: distKm, info: r,
-               estCost: estCost, budgetFactor: budgetFactor, sats: taste.sats });
+               estCost: estCost, budgetFactor: budgetFactor, sats: taste.sats, festivals: fest });
   });
   return out.sort(function (a, b) { return b.score - a.score; });
 }
@@ -971,6 +975,25 @@ function makeStop(p, kind) {
 
 // 일정안 하나 만들기
 // 출력: { type, region, lodging, days: [{ start, stops: [{ p, stay, notBefore?, meal? }] }], relax }
+// ---------- 날씨 예보 반영 (피드백 반영 6차시, 이승재 댓글) ----------
+// 입력: trip.weather = [{ date, tmax, tmin, rain(비 올 확률 %), uv }] (js/weather.js가 Open-Meteo에서 받아 붙임, 16일 안의 여행만)
+// 출력: 비 오는 날(확률 RAIN_PROB% 이상)에는 야외 명소(indoor === false)를 맑은 날로 미루고 실내·반실내 명소를 먼저 넣음
+//       실내/야외가 섞였거나 모르는 곳(indoor null)은 그대로 넣음. 꼭 갈 명소는 비가 와도 넣음(일정 상세에 경고만)
+const RAIN_PROB = 50;           // 준비물 추천의 '우산' 기준과 같게 (Claude 판단)
+function dayDate(trip, d) {   // d = 1부터 → 'YYYY-MM-DD'
+  const x = new Date(trip.start_date + 'T00:00:00Z');
+  x.setUTCDate(x.getUTCDate() + d - 1);
+  return x.toISOString().slice(0, 10);
+}
+function dayWeather(trip, d) {
+  if (!trip.weather) return null;
+  const key = dayDate(trip, d);
+  return trip.weather.find(function (w) { return w.date === key; }) || null;
+}
+function isRainyDay(trip, d) { const w = dayWeather(trip, d); return !!(w && w.rain != null && w.rain >= RAIN_PROB); }
+function isOutdoor(p) { return !!p && p.type === '명소' && p.indoor === false; }
+function rainWarn(p, trip, d) { return isOutdoor(p) && isRainyDay(trip, d); }
+
 function buildPlan(type, trip, pool) {
   const tempo = TEMPO[trip.tempo];
   const dep = departureOf(trip);
@@ -1046,6 +1069,7 @@ function buildPlan(type, trip, pool) {
   }
   const used = new Set();
   let carry = [], deferred = [];
+
   let today = null;   // 지금 만드는 날의 요일 (식당 영업시간 확인용)
   const days = [];
   let mealMove = 0;
@@ -1087,8 +1111,10 @@ function buildPlan(type, trip, pool) {
     // 오늘 갈 후보: 어제 못 간 곳(이월) + 순위표에서 다음 곳들
     const dow = dowOf(trip, d);
     const picks = [];
-    const later = [];   // 오늘 휴무라 다른 날로 미룬 곳
-    carry.concat(deferred).forEach(function (p) { if (openAt(p, dow)) picks.push(p); else later.push(p); });
+    const later = [];   // 오늘 휴무라(또는 비 예보라) 다른 날로 미룬 곳
+    const rainy = isRainyDay(trip, d);   // 미룬 야외 명소는 맑은 날에 들어가고, 맑은 날이 없으면 그 자리는 다음 순위 실내 명소로 채워짐
+    const rainOk = function (p) { return !rainy || !isOutdoor(p) || mustSet.has(p.id); };
+    carry.concat(deferred).forEach(function (p) { if (openAt(p, dow) && rainOk(p)) picks.push(p); else later.push(p); });
     deferred = later;
     // 함께 정하기: 매일 각자의 1순위 취향 장소를 1곳씩 먼저 넣음 (이재훈 결정)
     //   이미 오늘 후보에 그 취향 장소가 있으면 건너뜀. 하루 방문 수보다 1순위 취향 종류가 많으면 날마다 순서를 돌려 고루 넣음
@@ -1113,7 +1139,15 @@ function buildPlan(type, trip, pool) {
     while (picks.length < tempo.count) {
       const p = takeNextAttraction();
       if (!p) break;
-      if (openAt(p, dow)) picks.push(p); else deferred.push(p);
+      if (openAt(p, dow) && rainOk(p)) picks.push(p); else deferred.push(p);
+    }
+    // 비 오는 날인데 실내 명소가 다 떨어져 모자라면, 미룬 야외 명소 중 오늘 문 연 곳으로 채움
+    if (rainy) {
+      deferred = deferred.filter(function (p) {
+        if (picks.length >= tempo.count || !openAt(p, dow)) return true;
+        picks.push(p);
+        return false;
+      });
     }
     today = dow;
     const tf = pool.transfers ? pool.transfers[type === 'C' ? 'cheap' : 'fast'] : null;
@@ -1849,8 +1883,9 @@ async function loadPlaces(region) {
 // 저장된 trip_places 행 → plan 구조로 되돌리기
 // 입력: trip(region·plan_type·day_starts), 그 지역 장소 배열 / 출력: plan (저장된 일정이 없으면 null)
 async function loadSavedPlan(trip, places) {
-  const { data, error } = await sb.from('trip_places').select('*').eq('trip_id', trip.id)
-    .order('day_no').order('order_no');
+  const { data, error } = isGuestTrip(trip)   // 로그인 없이 짠 여행: 브라우저에 보관한 장소 목록 (js/guest.js)
+    ? { data: (readGuest() || {}).rows || [], error: null }
+    : await sb.from('trip_places').select('*').eq('trip_id', trip.id).order('day_no').order('order_no');
   if (error) throw error;
   if (!data.length) return null;
   const byId = {};
@@ -1884,6 +1919,6 @@ async function loadSavedPlan(trip, places) {
 
 // node로 시험할 때 쓰도록 내보내기 (브라우저에서는 무시됨)
 if (typeof module !== 'undefined') {
-  module.exports = { mustIds, isMustPlace, homeArriveLimit, effectiveFoodPref, foodVerdict, foodMultiplier, chainTier, isSweet, isSweetStop, stopIcon, offRouteKm, SWEET_MAX, transferFor, loadStations, regionCenter, STATION_WAIT, BOOKING, toMin, signatureOf, signatureLabel, dishesOf, firstDayStart, seasonMultiplier, tripMonth, varietyFactor, attractionKind, dishOf, openAt, hoursIssue, dowOf, infoMultiplier, parkingOf, issueKind, needsAddressCheck, usable, transitLegs, legKey, localMode, WALK_KM, TEMPO, rankRegions, buildPlans, buildPlan, preparePool, computeTimeline, distanceKm,
+  module.exports = { RAIN_PROB, dayWeather, isRainyDay, isOutdoor, rainWarn, dayDate, mustIds, isMustPlace, homeArriveLimit, effectiveFoodPref, foodVerdict, foodMultiplier, chainTier, isSweet, isSweetStop, stopIcon, offRouteKm, SWEET_MAX, transferFor, loadStations, regionCenter, STATION_WAIT, BOOKING, toMin, signatureOf, signatureLabel, dishesOf, firstDayStart, seasonMultiplier, tripMonth, varietyFactor, attractionKind, dishOf, openAt, hoursIssue, dowOf, infoMultiplier, parkingOf, issueKind, needsAddressCheck, usable, transitLegs, legKey, localMode, WALK_KM, TEMPO, rankRegions, buildPlans, buildPlan, preparePool, computeTimeline, distanceKm,
     travelMin, budgetCaps, hhmm, PLAN_INFO, isChain, LODGING_ARRIVE, SEA_REGIONS, foodKind, cuisineOf, pickRestaurant, ensureScores, estimateMinCost, fitBudget, syncBreakfast, breakfastPlace, lodgingBreakfast };
 }

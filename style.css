@@ -833,3 +833,68 @@ body.print-layout .print-map { border: 1px solid #ccc; border-radius: 8px; }
 .must-pick .must-list label { display: flex; gap: 8px; align-items: baseline; cursor: pointer; }
 .must-pick .must-chosen { font-size: 0.88rem; color: var(--accent); }
 .region-cards .must-card { margin-top: -10px; padding-top: 12px; padding-bottom: 12px; }
+
+/* ---------- 피드백 반영 6차시 (2026-11-18) ---------- */
+/* 날씨 예보 (이승재) */
+.weather-note { margin: 0 0 10px; padding: 10px 14px; border-radius: 10px; background: #eef4fb; color: #2b4a6f; font-size: 0.88rem; }
+.weather-note.fest-note { background: #fdf3e7; color: #7a4a12; }
+.day-weather:empty { display: none; }
+.day-weather { margin: 4px 0; color: #2b4a6f; }
+.rain-badge, .fest-badge { display: inline-block; margin-left: 4px; padding: 1px 7px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }
+.rain-badge { background: #e6eef8; color: #2b4a6f; }
+.fest-badge { background: #fdf0dc; color: #8a5300; }
+/* 지역 축제 (최세민 2번) */
+.festival-box { margin-top: 14px; padding: 12px 14px; border: 1px dashed #e0b77a; border-radius: 10px; background: #fffaf2; }
+.festival-title { margin: 0 0 6px; font-weight: 700; }
+.festival-list { list-style: none; margin: 0; padding: 0; font-size: 0.88rem; }
+.festival-list li { padding: 6px 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.festival-list li + li { border-top: 1px solid #f3e4cb; }
+.festival-list .chip { padding: 3px 10px; font-size: 0.78rem; }
+.reason-list .fest-line { color: #8a5300; }
+/* N빵 정산 (조정인 8번) */
+.settle-card { margin-top: 18px; }
+.settle-members-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; }
+.settle-members { display: flex; flex-wrap: wrap; gap: 6px; }
+.settle-member { display: inline-flex; align-items: center; gap: 2px; padding: 2px 6px; border: 1.5px solid var(--border); border-radius: 999px; }
+.settle-member input { width: 5.5em; border: none; padding: 4px; font: inherit; background: transparent; }
+.settle-items { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+.settle-items th, .settle-items td { padding: 6px 4px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: middle; }
+.settle-items input[type=text], .settle-items select { width: 100%; min-width: 6em; padding: 6px 8px; border: 1.5px solid var(--border); border-radius: 8px; font: inherit; }
+.settle-items .st-amount { text-align: right; }
+.st-split { display: flex; flex-wrap: wrap; gap: 4px 10px; }
+.st-split label { white-space: nowrap; font-size: 0.82rem; }
+.settle-tools { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+.settle-result { margin-top: 8px; padding: 12px 14px; border-radius: 10px; background: var(--accent-light); }
+.settle-total { margin: 0 0 8px; }
+.settle-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; margin-bottom: 8px; }
+.settle-table th, .settle-table td { padding: 6px; border-bottom: 1px solid #cfe7e0; text-align: right; }
+.settle-table th:first-child, .settle-table td:first-child { text-align: left; }
+.settle-table .plus { color: var(--accent); font-weight: 700; }
+.settle-table .minus { color: #c0392b; font-weight: 700; }
+.settle-transfers { list-style: none; margin: 0 0 10px; padding: 0; font-weight: 700; line-height: 1.8; }
+/* 결과 화면 가독성 (차승우) — 여행지 추천 카드·일정안 카드 */
+.fact-row { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 8px; margin: 4px 0 8px; }
+.fact { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: 10px; background: #f6f7f8; font-size: 0.86rem; line-height: 1.35; }
+.fact b { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; }
+.fact-sub { margin: 0 0 6px; font-size: 0.82rem; color: var(--text-muted); }
+.reason-list:empty { display: none; }
+.region-cost { font-size: 1.1rem; }
+.cost-label { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); }
+.method-box { margin-top: 12px; font-size: 0.88rem; }
+.method-box summary { cursor: pointer; color: var(--text-muted); }
+.plan-stats { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0 0 8px; font-size: 0.86rem; color: var(--text-muted); }
+.plan-days li { display: flex; gap: 10px; align-items: flex-start; padding: 6px 0; border-top: 1px solid #f0f0f0; margin: 0; }
+.day-label { flex: 0 0 4.2em; font-weight: 700; line-height: 1.5; }
+.day-label small { display: block; font-weight: 400; color: #2b4a6f; font-size: 0.75rem; }
+.day-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.stop-chip { display: inline-block; padding: 3px 9px; border-radius: 999px; background: var(--accent-light); color: #1d5f53; font-size: 0.82rem; line-height: 1.4; }
+.stop-chip.meal { background: #f4f4f4; color: var(--text-muted); font-size: 0.78rem; }
+.stop-chip.wet { background: #e6eef8; color: #2b4a6f; }
+@media (max-width: 560px) {
+  .fact-row { grid-template-columns: 1fr 1fr; }
+  .fact:first-child { grid-column: 1 / -1; }
+  .settle-items thead { display: none; }
+  .settle-items tr { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .settle-items td { border: none; padding: 0; }
+  .settle-items td.st-split { grid-column: 1 / -1; }
+}

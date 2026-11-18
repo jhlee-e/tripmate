@@ -291,6 +291,21 @@ async function handleSubmit(event) {
      condition.foodPref || (editId && 'food_pref' in editTrip) ? { food_pref: condition.foodPref } : {},
      (condition.together && !copyCourse) || (editId && 'together' in editTrip) ? { together: !!condition.together && !copyCourse } : {},
      copyTripFields());
+  // 로그인 없이 짜기 (피드백 반영 6차시): 이 브라우저에 임시 보관하고 'guest' 번호로 다음 화면에 감 (js/guest.js)
+  // '함께 정하기'·공개 코스 담기는 친구·코스 정보를 DB에서 써야 하므로 로그인 필요
+  if (!(await currentUser())) {
+    button.disabled = false;
+    if (condition.together || copyCourse) {
+      askLogin(condition.together ? '\'함께 정하기\'' : '공개 코스 담기');
+      return;
+    }
+    const g = saveGuestTrip(row);
+    console.log('로그인 없이 임시 보관한 여행:', g);
+    location.href = condition.mode === 'direct'
+      ? 'plans.html?trip=guest&region=' + encodeURIComponent(condition.region) + '&direct=1'
+      : 'result.html?trip=guest';
+    return;
+  }
   const { data, error } = editId
     ? await sb.from('trips').update(row).eq('id', editId).select().single()
     : await sb.from('trips').insert(row).select().single();
@@ -329,8 +344,8 @@ async function handleSubmit(event) {
 
 // 로그인 확인 후 닉네임을 위쪽 메뉴에 표시
 async function showUser() {
-  const user = await requireLogin();
-  if (!user) return;
+  const user = await currentUser();   // 로그인 안 해도 조건 입력·추천까지는 쓸 수 있음 (피드백 반영 6차시)
+  if (!user) { showGuestNav('condition.html'); return; }
   const { data } = await sb.from('users').select('nickname').eq('id', user.id).single();
   document.getElementById('nav-user').textContent = (data ? data.nickname : user.email) + '님';
 }

@@ -7,9 +7,12 @@ let editTrip = null;
 
 async function setupEditMode() {
   const params = new URLSearchParams(location.search);
+  const guest = params.get('edit') === 'guest';   // 로그인 없이 짜던 여행 (js/guest.js)
   const id = Number(params.get('edit'));
-  if (!id) return;
-  const { data, error } = await sb.from('trips').select('*').eq('id', id).maybeSingle();
+  if (!id && !guest) return;
+  const { data, error } = guest
+    ? { data: (readGuest() || {}).trip || null, error: null }
+    : await sb.from('trips').select('*').eq('id', id).maybeSingle();
   if (error || !data) { console.warn('고칠 여행을 찾지 못했어요', error); return; }
   editTrip = data;
 
@@ -77,7 +80,7 @@ async function setupEditMode() {
 
 // 저장할 때 고칠 여행 번호 (여행지를 아직 안 골랐을 때만 — 이미 일정이 있는 여행은 새로 만듦)
 function editTripId() {
-  return editTrip && !editTrip.region ? editTrip.id : null;
+  return editTrip && !editTrip.region && !isGuestTrip(editTrip) ? editTrip.id : null;   // 비로그인 여행은 저장할 때 새로 보관
 }
 
 setupEditMode();

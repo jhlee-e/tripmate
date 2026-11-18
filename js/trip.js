@@ -17,6 +17,8 @@ async function start() {
   document.getElementById('title').textContent = trip.region ? trip.region + ' 여행' : '여행 정보';
   document.getElementById('subtitle').textContent = tripTitle(trip) + ' (' + trip.days + '일)';
   renderInfo(trip, role);
+  setupSettle(trip, role, function () { return current.timeline; });   // N빵 정산 (js/settle.js, 피드백 반영 6차시)
+  if (param('moved')) status.insertAdjacentHTML('afterend', '<p class="copy-banner">✔ 로그인 전에 짠 일정을 내 여행에 저장했어요.</p>');
   status.textContent = '';
   document.getElementById('trip-layout').hidden = false;
 

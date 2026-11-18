@@ -13,6 +13,7 @@ let timeline = null;      // computeTimeline 결과
 let curDay = 0;           // 지금 보고 있는 날 (0 = 1일차)
 let dirty = false;        // 저장하지 않은 수정이 있는지
 let map = null, mapObjects = [];
+let festivals = [];       // 여행 기간과 겹치는 이 지역 축제 (js/festival.js)
 
 const errorText = document.getElementById('error-text');
 function showError(e) { errorText.textContent = e ? '오류: ' + e.message : ''; if (e) console.error(e); }
@@ -26,6 +27,7 @@ async function start() {
   // 친구에게 '보기만' 권한으로 공유받은 여행은 고칠 수 없으므로 여행 정보 화면으로
   if (await tripRole(trip) === 'viewer') { location.replace('trip.html?trip=' + trip.id); return; }
   document.getElementById('trip-summary').textContent = tripSummary(trip);
+  if (isGuestTrip(trip)) document.getElementById('save-btn').textContent = '로그인하고 이 일정 저장';   // 비로그인 (js/guest.js)
 
   try {
     const region = param('region') || trip.region;
@@ -33,16 +35,22 @@ async function start() {
     if (!region || !key) { status.textContent = '아직 고른 일정이 없어요. 여행지 추천부터 받아 주세요.'; return; }
     places = await loadPlaces(region);
     ensureScores(places, trip);
+    await attachWeather(trip, places);   // 날씨 예보 (js/weather.js): 새 일정을 만들 때 비 오는 날 야외 명소를 미루고, 날짜 탭·장소에 표시
     document.getElementById('back-link').href = 'plans.html?trip=' + trip.id + '&region=' + encodeURIComponent(region);
 
+    // 여행 기간 축제 (js/festival.js) — 추천 계산이 끝난 뒤 장소 목록에 붙임 (자동으로 일정에 들어가지 않게)
+    festivals = festivalsForTrip(await loadFestivals(), trip, region);
+    const festPlaces = festivals.map(function (f) { return festivalPlace(f, region); });
     if (param('plan')) {                       // 추천 일정 새로 만들기
       const plans = buildPlans(trip, region, places);
+      places.push.apply(places, festPlaces);
       if (!plans) { status.textContent = '이 예산으로는 일정을 만들 수 없어요.'; return; }
       plan = plans[key];
       // 다른 여행지를 고르면 예전 여행지에 맞춰 넣은 열차·버스 시각은 맞지 않으므로 비움 (저장할 때 반영)
       if (trip.transit_times && trip.region && trip.region !== region) trip.transit_times = null;
       if (trip.region) document.getElementById('save-msg').textContent = '저장하면 이 여행에 저장된 기존 일정(' + trip.region + ' ' + trip.plan_type + '안)을 덮어써요.';
     } else {                                   // 저장된 일정 불러오기
+      places.push.apply(places, festPlaces);   // 저장해 둔 축제도 장소 정보로 되살리게
       plan = await loadSavedPlan(trip, places);
       if (!plan) { status.textContent = '저장된 일정이 없어요. 여행지 추천부터 받아 주세요.'; return; }
       document.getElementById('save-msg').textContent = param('copied')
@@ -75,6 +83,7 @@ function refresh(changed) {
   renderTabs();
   renderDay();
   renderLodging();
+  renderFestivals();
   renderMap();
   // 자동차: 출발지↔여행지 실제 통행료·도로 거리·시간을 새로 받았으면 다시 계산 (8차시, 이미 받은 구간은 다시 안 부름)
   learnCarLegs(timeline, trip).then(function (n) { if (n) refresh(false); });
@@ -112,7 +121,9 @@ function renderTabs() {
     b.type = 'button';
     b.className = 'chip' + (i === curDay ? ' selected' : '') + (d.over ? ' warn' : '');
     b.dataset.day = i;
-    b.textContent = (i + 1) + '일차' + (d.over ? ' ⚠' : '');
+    const w = dayWeather(trip, i + 1);
+    b.textContent = (i + 1) + '일차' + (w ? ' ' + weatherIcon(w) : '') + (d.over ? ' ⚠' : '');
+    if (w) b.title = weatherText(w);
     b.addEventListener('click', function () { curDay = i; renderTabs(); renderDay(); renderMap(); });
     tabs.appendChild(b);
   });
@@ -127,6 +138,12 @@ function renderDay() {
   startInput.disabled = !!(day.go && day.go.userSet);
   startInput.title = startInput.disabled ? '입력한 열차·버스 출발 시각에 맞춰 계산했어요' : '';
   document.getElementById('day-active').textContent = '활동 ' + durationText(day.activeMin) + ' / ' + durationText(limit) + ' (이동+관람, 식사 제외)';
+  // 그날 날씨 (예보가 있을 때만) + 비 오는 날 남아 있는 야외 명소 안내
+  const w = dayWeather(trip, curDay + 1);
+  const wet = day.items.filter(function (it) { return rainWarn(it.stop.p, trip, curDay + 1); }).length;
+  document.getElementById('day-weather').textContent = w
+    ? weatherText(w) + (wet ? ' — 야외 명소 ' + wet + '곳이 있어요. ⇄로 실내 명소와 바꾸거나 ◀▶로 맑은 날로 옮겨 보세요.' : isRainyDay(trip, curDay + 1) ? ' — 실내 위주로 짰어요.' : '')
+    : '';
   document.getElementById('day-warning').textContent = [
     day.over ? '이 날은 ' + trip.tempo + ' 템포의 하루 활동 시간을 넘었어요.' : '',
     day.homeLate ? '집 도착 예정 ' + hhmm(day.endMin) + ' — 조건에서 정한 도착 시각(' + hhmm(homeArriveLimit(trip)) + ')보다 늦어요. 장소를 빼거나 시간을 줄여 주세요.' : ''
@@ -160,6 +177,9 @@ function renderDay() {
           (signatureLabel(p, places.signature) ? '<span class="sig-badge">★ ' + esc(signatureLabel(p, places.signature)) + '</span>' : '') +
           (foodVerdict(p, trip) === 'like' ? '<span class="like-badge">😋 먹고 싶은 음식</span>' : '') +
           (isMustPlace(p, trip, plan.region) ? '<span class="must-badge">📍 꼭 갈 곳</span>' : '') +
+          (rainWarn(p, trip, curDay + 1) ? '<span class="rain-badge">☔ 야외 · 비 예보</span>' : '') +
+          (p.festival ? '<span class="fest-badge">🎉 축제 ' + festivalDateText(p.festival) + '</span>' +
+            (dayDate(trip, curDay + 1) < p.festival.start || dayDate(trip, curDay + 1) > p.festival.end ? '<p class="field-warning">⚠ 이 날은 축제 기간이 아니에요 — ◀▶로 축제 날로 옮겨 주세요</p>' : '') : '') +
           '<p class="tl-meta">' + esc(isFood ? cuisineOf(p) : (p.categoryName || p.type)) + ' · ' + (it.cost ? won(it.cost) : '무료') + '</p>' +
         '</div>' +
       '</div>' +
@@ -352,11 +372,14 @@ function openSwap(i, li) {
   const candidates = places.filter(function (p) {
     return p.type === stop.p.type && p.recommend && !p.ferry && !used.has(p.id) && !isChain(p) && foodVerdict(p, trip) !== 'no' &&
       (p.type !== '명소' || p.stayMin > 0) && (p.type !== '식당' || isSweetStop(stop) === isSweet(p));   // 카페·간식 칸은 카페·간식끼리
-  }).map(function (p) { return { p: p, km: distanceKm(stop.p, p) }; })
-    .sort(function (a, b) { return a.km - b.km; }).slice(0, 15);
+  }).map(function (p) { return { p: p, km: distanceKm(stop.p, p) }; });
+  // 비 오는 날 명소 교체: 실내 명소를 먼저, 그다음 가까운 순 (피드백 반영 6차시, 날씨 예보)
+  const rainy = stop.p.type === '명소' && isRainyDay(trip, curDay + 1);
+  candidates.sort(function (a, b) { return (rainy ? isOutdoor(a.p) - isOutdoor(b.p) : 0) || a.km - b.km; });
+  candidates.length = Math.min(candidates.length, 15);
   const select = document.createElement('select');
-  select.innerHTML = '<option value="">가까운 ' + stop.p.type + ' 중에서 고르기</option>' + candidates.map(function (c, k) {
-    return '<option value="' + k + '">' + esc(c.p.name) + (c.p.type === '식당' ? ' · ' + cuisineOf(c.p) : '') + ' · ' +
+  select.innerHTML = '<option value="">' + (rainy ? '☔ 비 예보 — 실내 명소 먼저, 가까운 ' : '가까운 ') + stop.p.type + ' 중에서 고르기</option>' + candidates.map(function (c, k) {
+    return '<option value="' + k + '">' + (rainy ? (isOutdoor(c.p) ? '☔ ' : '🏠 ') : '') + esc(c.p.name) + (c.p.type === '식당' ? ' · ' + cuisineOf(c.p) : '') + ' · ' +
       c.km.toFixed(1) + 'km · ' + (c.p.cost ? won(c.p.cost) : '무료') + '</option>';
   }).join('');
   select.addEventListener('change', function () {
@@ -508,6 +531,38 @@ document.getElementById('add-input').addEventListener('input', function (e) {
 });
 
 // 숙소 변경: 일정 장소들의 가운데에서 가까운 숙소 30곳
+// 축제·행사 목록: 축제가 열리는 날마다 'N일차에 넣기' 버튼, 이미 넣은 축제는 '넣음' 표시 (피드백 반영 6차시, 최세민 2번)
+function renderFestivals() {
+  const box = document.getElementById('festival-box');
+  box.hidden = !festivals.length;
+  if (box.hidden) return;
+  const used = usedIds();
+  const list = document.getElementById('festival-list');
+  list.innerHTML = '';
+  festivals.forEach(function (f) {
+    const li = document.createElement('li');
+    const days = festivalDays(f, trip);
+    li.innerHTML = '<button type="button" class="link-btn fe-name"></button> <small>' + festivalDateText(f) + '</small> ' +
+      (used.has(f.id) ? '<span class="must-badge">✔ 일정에 넣음</span>'
+        : days.map(function (d) { return '<button type="button" class="chip fe-add" data-day="' + d + '">' + d + '일차에 넣기</button>'; }).join(''));
+    li.querySelector('.fe-name').textContent = f.title;
+    li.querySelector('.fe-name').addEventListener('click', function () {
+      const p = places.find(function (x) { return x.id === f.id; });
+      if (p) { showPlace(p); panTo(p); }
+    });
+    li.querySelectorAll('.fe-add').forEach(function (b) {
+      b.addEventListener('click', function () {
+        const d = Number(b.dataset.day);
+        const p = places.find(function (x) { return x.id === f.id; });
+        plan.days[d - 1].stops.push({ p: p, stay: p.stayMin });
+        curDay = d - 1;
+        refresh(true);
+      });
+    });
+    list.appendChild(li);
+  });
+}
+
 function renderLodging() {
   const box = document.getElementById('lodging-box');
   box.hidden = !plan.lodging && trip.days === 1;
@@ -661,8 +716,47 @@ function showPlace(p) {
 
 // ---------- 5. 저장 ----------
 
+// 저장할 trips 열: 여행지·일정안·총비용·날짜별 시작 시각(+숙소 도착)·예매 시각·돌아오는 길 이동 방법
+function planTripFields() {
+  return Object.assign({
+    region: plan.region, plan_type: plan.type, total_cost: Math.round(timeline.cost.total),
+    // 날짜별 시작 시각 + 맨 끝에 숙소 도착 시각 (예: 3일 여행이면 [1일차, 2일차, 3일차, 숙소 도착])
+    day_starts: plan.days.map(function (d) { return d.start; }).concat([plan.lodgingArrive || LODGING_ARRIVE])
+  }, trip.transit_times !== undefined ? { transit_times: trip.transit_times } : {},   // 예매한 열차·버스 시각 (sql/add_transit_times.sql)
+  plan.days.some(function (d) { return d.backStop && d.backStop.legMode; }) || trip.back_modes
+    ? { back_modes: plan.days.map(function (d) { return (d.backStop && d.backStop.legMode) || null; }) } : {});
+}
+
+// 저장할 trip_places 행 (숙소는 day_no 0)
+function planRows(tripId) {
+  const rows = [];
+  if (plan.lodging) {
+    rows.push({ trip_id: tripId, place_id: String(plan.lodging.id), name: plan.lodging.name, type: '숙소',
+      day_no: 0, order_no: 0, cost: timeline.cost.lodging, lat: plan.lodging.lat, lng: plan.lodging.lng });
+  }
+  timeline.days.forEach(function (d, di) {
+    d.items.forEach(function (it, oi) {
+      rows.push({ trip_id: tripId, place_id: String(it.stop.p.id), name: it.stop.p.name, type: it.stop.p.type,
+        day_no: di + 1, order_no: oi + 1, start_time: hhmm(it.begin), stay_min: it.stop.stay, cost: it.cost,
+        lat: it.stop.p.lat, lng: it.stop.p.lng, meal: it.stop.meal || null, not_before: it.stop.notBefore || null });
+      if (it.stop.legMode) rows[rows.length - 1].leg_mode = it.stop.legMode;   // 사용자가 고른 걷기/대중교통만 저장 (자동은 저장 안 함)
+    });
+  });
+  return rows;
+}
+
 document.getElementById('save-btn').addEventListener('click', async function () {
   const btn = this, msg = document.getElementById('save-msg');
+  // 로그인 없이 짠 일정 (피드백 반영 6차시): 브라우저에 보관해 두고 로그인 화면으로 → 로그인하면 내 여행으로 옮김 (js/guest.js)
+  if (isGuestTrip(trip)) {
+    Object.assign(trip, updateGuestTrip(planTripFields()));
+    saveGuestRows(planRows(null));
+    dirty = false;
+    history.replaceState(null, '', 'detail.html?trip=guest');
+    msg.textContent = '이 브라우저에 임시로 보관했어요. 로그인하면 내 여행에 저장돼요.';
+    askLogin('일정 저장');
+    return;
+  }
   btn.disabled = true;
   msg.textContent = '저장 중…';
   try {
@@ -685,32 +779,13 @@ document.getElementById('save-btn').addEventListener('click', async function () 
       if (chk.error) throw new Error('leg_mode 열이 없어요');
     }
     // 1) 여행에 고른 여행지·일정안·총비용·날짜별 시작 시각 기록
-    const up = await sb.from('trips').update(Object.assign({
-      region: plan.region, plan_type: plan.type, total_cost: Math.round(timeline.cost.total),
-      // 날짜별 시작 시각 + 맨 끝에 숙소 도착 시각 (예: 3일 여행이면 [1일차, 2일차, 3일차, 숙소 도착])
-      day_starts: plan.days.map(function (d) { return d.start; }).concat([plan.lodgingArrive || LODGING_ARRIVE])
-    }, trip.transit_times !== undefined ? { transit_times: trip.transit_times } : {},   // 예매한 열차·버스 시각 (sql/add_transit_times.sql)
-    plan.days.some(function (d) { return d.backStop && d.backStop.legMode; }) || trip.back_modes
-      ? { back_modes: plan.days.map(function (d) { return (d.backStop && d.backStop.legMode) || null; }) } : {})).eq('id', trip.id).select().single();
+    const up = await sb.from('trips').update(planTripFields()).eq('id', trip.id).select().single();
     if (up.error) throw up.error;
     trip.updated_at = up.data.updated_at;
     // 2) 예전 장소 목록 지우고 새로 넣기 (숙소는 day_no 0)
     const del = await sb.from('trip_places').delete().eq('trip_id', trip.id);
     if (del.error) throw del.error;
-    const rows = [];
-    if (plan.lodging) {
-      rows.push({ trip_id: trip.id, place_id: String(plan.lodging.id), name: plan.lodging.name, type: '숙소',
-        day_no: 0, order_no: 0, cost: timeline.cost.lodging, lat: plan.lodging.lat, lng: plan.lodging.lng });
-    }
-    timeline.days.forEach(function (d, di) {
-      d.items.forEach(function (it, oi) {
-        rows.push({ trip_id: trip.id, place_id: String(it.stop.p.id), name: it.stop.p.name, type: it.stop.p.type,
-          day_no: di + 1, order_no: oi + 1, start_time: hhmm(it.begin), stay_min: it.stop.stay, cost: it.cost,
-          lat: it.stop.p.lat, lng: it.stop.p.lng, meal: it.stop.meal || null, not_before: it.stop.notBefore || null });
-        if (it.stop.legMode) rows[rows.length - 1].leg_mode = it.stop.legMode;   // 사용자가 고른 걷기/대중교통만 저장 (자동은 저장 안 함)
-      });
-    });
-    const ins = await sb.from('trip_places').insert(rows);
+    const ins = await sb.from('trip_places').insert(planRows(trip.id));
     if (ins.error) throw ins.error;
     dirty = false;
     trip.region = plan.region; trip.plan_type = plan.type;

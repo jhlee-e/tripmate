@@ -25,6 +25,9 @@ async function start() {
   try {
     const regions = await loadRegions();
     const round = Number(param('round')) || 0;   // '다시 추천'을 누른 횟수
+    // 여행 기간에 축제가 열리는 지역은 점수 ×1.1 (js/festival.js, 피드백 반영 6차시)
+    const fdata = await loadFestivals();
+    trip.festivalCounts = countFestivals(fdata, trip, regions);
     const ranked = rankRegions(trip, regions, round);
     const picked = [];
     // 점수 상위부터 확인: 가장 싼 일정안이 최대 예산 +20%를 넘는 지역은 버림 (2026-10-10 이재훈 결정)
@@ -37,6 +40,7 @@ async function start() {
       tried++;
       status.textContent = '여행지를 고르는 중… (' + ranked[i].region + ' 확인)';
       const places = await loadPlaces(ranked[i].region);
+      await attachWeather(trip, places);   // 일정안 비교 화면과 같은 일정·비용이 나오게 날씨도 반영 (js/weather.js)
       const plans = buildPlans(trip, ranked[i].region, places);
       if (plans) {
         const cheapest = Math.min.apply(null, ['A', 'B', 'C'].map(function (k) { return computeTimeline(trip, plans[k]).cost.total; }));
@@ -64,6 +68,7 @@ async function start() {
     document.getElementById('method-note').textContent =
       '점수 = 고른 취향의 지역 평균 점수(1순위 1.5배) × 인기도 보정 × (1 − 왕복 이동 시간 ÷ 전체 활동 시간) × 예산 보정 × 랜덤(0.9~1.1). ' +
       '예산 보정: 그 지역 최소 비용 추정이 최대 예산을 넘으면 (예산 ÷ 추정)²배. 일정의 총비용이 예산을 넘으면 더 싼 숙소·식당·명소로 자동으로 바꿔요. ' +
+      '여행 기간에 축제·행사가 열리는 지역은 ×' + FESTIVAL_BONUS + '. 날씨 예보(16일 안)가 있으면 비 오는 날은 실내 명소를 먼저 넣어요. ' +
       '이동 시간과 비용은 직선거리로 계산한 추정값이에요.';
     if (isGroup(trip)) document.getElementById('method-note').textContent +=
       ' 함께 정하기: 취향 점수 대신 ' + trip.group.length + '명의 평균 만족도를 쓰고, 누군가의 만족도가 40% 미만이면 (최저 만족도 ÷ 40%)배로 깎아요. ' +
@@ -81,6 +86,14 @@ function groupLine(trip, r) {
     const pct = Math.round(r.sats[i] * 100);
     return '<span' + (r.sats[i] < GROUP_MIN_SAT ? ' class="warn"' : '') + '>' + esc(m.name) + ' ' + pct + '%</span>';
   }).join(' · ') + '</li>';
+}
+
+// 여행 기간 축제 (점수 ×1.1의 이유) — 2개까지 이름, 나머지는 개수
+function festivalLine(trip, r) {
+  if (!r.festivals) return '';
+  const list = festivalsForTrip(festivalData, trip, r.region);
+  return '<li class="fest-line">🎉 여행 기간 축제: ' + list.slice(0, 2).map(function (f) { return esc(f.title) + '(' + festivalDateText(f) + ')'; }).join(', ') +
+    (list.length > 2 ? ' 외 ' + (list.length - 2) + '개' : '') + ' <small>점수 ×' + FESTIVAL_BONUS + '</small></li>';
 }
 
 function renderCard(trip, item, order, round) {
@@ -122,13 +135,15 @@ function renderCard(trip, item, order, round) {
     '<div class="region-body">' +
       '<div class="region-head"><span class="rank-badge">' + order + '</span><strong>' + esc(r.region) + '</strong>' +
         '<small>' + esc(info.sido) + '</small><span class="region-score">' + r.score.toFixed(1) + '점<small>랜덤 ×' + r.jitter.toFixed(2) + '</small></span></div>' +
-      '<ul class="reason-list">' +
-        '<li>취향 점수(5점 만점 평균): ' + esc(tagText) + '</li>' +
-        groupLine(trip, r) +
-        '<li>인기 명소 10곳 평균 인기도 ' + info.popTop10.toFixed(1) + ' / 5' + (cover ? ' · 대표: ' + esc(cover.name) : '') + '</li>' +
-        '<li>출발지에서 편도 약 ' + durationText(r.oneWayMin) + ' (' + trip.transport + ', 추정)</li>' + relax +
-      '</ul>' +
-      '<p class="region-cost' + (item.fits ? '' : ' over') + '">예상 비용 ' + (low === high ? won(low) : won(low) + ' ~ ' + won(high)) +
+      // 가독성 개선 (피드백 반영 6차시, 차승우): 긴 문장 목록 → 아이콘 붙은 짧은 칸 3개 + 꼭 알아야 할 것만 아래 줄로
+      '<div class="fact-row">' +
+        '<span class="fact"><b>🎯 취향 점수</b>' + esc(tagText) + '</span>' +
+        '<span class="fact"><b>⭐ 인기도</b>' + info.popTop10.toFixed(1) + ' / 5</span>' +
+        '<span class="fact"><b>' + ({ 자동차: '🚗', 대중교통: '🚄', 도보: '🚶', 자전거: '🚲' }[trip.transport] || '🧭') + ' 편도</b>약 ' + durationText(r.oneWayMin) + '</span>' +
+      '</div>' +
+      (cover ? '<p class="fact-sub">대표 명소 · ' + esc(cover.name) + '</p>' : '') +
+      '<ul class="reason-list">' + groupLine(trip, r) + relax + festivalLine(trip, r) + '</ul>' +
+      '<p class="region-cost' + (item.fits ? '' : ' over') + '"><span class="cost-label">예상 비용</span> ' + (low === high ? won(low) : won(low) + ' ~ ' + won(high)) +
         (item.fits ? '' : ' · 예산 초과') +
         ' <small>/ 최대 예산 ' + won(trip.budget_max) + '</small></p>' +
     '</div>';

@@ -24,14 +24,20 @@
       <p class="notice" id="status">조건에 맞는 여행지를 찾고 있어요…</p>
       <div class="region-cards" id="region-cards"></div>
       <button type="button" class="submit-btn" id="reroll-btn" hidden>🔄 다른 여행지 다시 추천</button>
-      <p class="helper-text muted" id="method-note"></p>
+      <details class="method-box">
+        <summary>점수는 어떻게 계산했나요?</summary>
+        <p class="helper-text muted" id="method-note"></p>
+      </details>
       <p class="error-text" id="error-text" role="alert"></p>
     </main>
   </div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase.js"></script>
+  <script src="js/guest.js"></script>
   <script src="js/ui.js"></script>
   <script src="js/recommend.js"></script>
+  <script src="js/weather.js"></script>
+  <script src="js/festival.js"></script>
   <script src="js/must-pick.js"></script>
   <script src="js/result.js"></script>
 </body>
